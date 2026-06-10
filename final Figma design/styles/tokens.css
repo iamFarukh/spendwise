@@ -1,0 +1,86 @@
+/* ============================================================
+   PFOS — Mint design tokens
+   Fresh, energetic, calm. Money-oriented green system.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+:root {
+  /* ---- Mint scale (brand / primary) ---- */
+  --mint-50:  #ECFDF6;
+  --mint-100: #D2F8E7;
+  --mint-200: #A6F0D1;
+  --mint-300: #6FE5B6;
+  --mint-400: #36D49C;
+  --mint-500: #12B886;   /* primary */
+  --mint-600: #0C9E74;
+  --mint-700: #0A7D5C;
+  --mint-800: #0A6149;
+  --mint-bright: #25E6A6; /* energetic highlight / gradients */
+
+  /* ---- Ink / neutrals (green-tinted, calm) ---- */
+  --ink-900: #0E2A22;
+  --ink-800: #173B31;
+  --ink-700: #2F4D44;
+  --ink-600: #4A645B;
+  --ink-500: #6B847B;
+  --ink-400: #9AB0A8;
+  --ink-300: #C3D4CD;
+  --line:    #E2ECE7;
+  --line-soft: #EEF4F1;
+
+  /* ---- Surfaces ---- */
+  --paper:   #FFFFFF;
+  --canvas:  #F2F7F4;      /* app background */
+  --canvas-2:#E9F1ED;      /* page (outside windows) */
+  --tint:    #F6FBF8;      /* subtle card tint */
+
+  /* ---- Semantic money colors ---- */
+  --income:    #12B886;    /* money in */
+  --income-bg: #E4F8EF;
+  --expense:   #E26A57;    /* money out (calm terracotta) */
+  --expense-bg:#FCEDE9;
+  --invest:    #5B86E5;    /* investments / transfers out to assets */
+  --invest-bg: #EAF0FD;
+  --transfer:  #8A7FE0;    /* neutral movement */
+  --transfer-bg:#EFEDFB;
+  --pending:   #D99A2B;    /* awaiting review */
+  --pending-bg:#FBF1DD;
+
+  /* ---- Typography ---- */
+  --font-display: 'Quicksand', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+
+  --fs-display: 40px;
+  --fs-h1: 30px;
+  --fs-h2: 22px;
+  --fs-h3: 18px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-xs: 11.5px;
+  --fs-num-xl: 44px;
+
+  /* ---- Spacing scale ---- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+
+  /* ---- Radius ---- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-pill: 999px;
+
+  /* ---- Shadow (soft, green-tinted) ---- */
+  --shadow-xs: 0 1px 2px rgba(14, 42, 34, 0.06);
+  --shadow-sm: 0 2px 8px rgba(14, 42, 34, 0.06);
+  --shadow-md: 0 8px 24px rgba(14, 42, 34, 0.08);
+  --shadow-lg: 0 24px 60px rgba(14, 42, 34, 0.14);
+}

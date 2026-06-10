@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* SpendWise Mint design tokens — from final Figma design/styles/tokens.css */
+
+:root {
+  --mint-50: #ecfdf6;
+  --mint-100: #d2f8e7;
+  --mint-200: #a6f0d1;
+  --mint-300: #6fe5b6;
+  --mint-400: #36d49c;
+  --mint-500: #12b886;
+  --mint-600: #0c9e74;
+  --mint-700: #0a7d5c;
+  --mint-800: #0a6149;
+  --mint-bright: #25e6a6;
+
+  --ink-900: #0e2a22;
+  --ink-800: #173b31;
+  --ink-700: #2f4d44;
+  --ink-600: #4a645b;
+  --ink-500: #6b847b;
+  --ink-400: #9ab0a8;
+  --ink-300: #c3d4cd;
+  --line: #e2ece7;
+  --line-soft: #eef4f1;
+
+  --paper: #ffffff;
+  --canvas: #f2f7f4;
+  --canvas-2: #e9f1ed;
+  --tint: #f6fbf8;
+
+  --income: #12b886;
+  --income-bg: #e4f8ef;
+  --expense: #e26a57;
+  --expense-bg: #fcede9;
+  --invest: #5b86e5;
+  --invest-bg: #eaf0fd;
+  --transfer: #8a7fe0;
+  --transfer-bg: #efedfb;
+  --pending: #d99a2b;
+  --pending-bg: #fbf1dd;
+
+  --font-display: var(--font-quicksand), system-ui, sans-serif;
+  --font-body: var(--font-nunito), system-ui, sans-serif;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(14, 42, 34, 0.06);
+  --shadow-sm: 0 2px 8px rgba(14, 42, 34, 0.06);
+  --shadow-md: 0 8px 24px rgba(14, 42, 34, 0.08);
+  --shadow-lg: 0 24px 60px rgba(14, 42, 34, 0.14);
+
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --z-sticky: 30;
+  --z-dropdown: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-canvas: var(--canvas);
+  --color-canvas-2: var(--canvas-2);
+  --color-tint: var(--tint);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+
+  --color-mint-50: var(--mint-50);
+  --color-mint-100: var(--mint-100);
+  --color-mint-200: var(--mint-200);
+  --color-mint-300: var(--mint-300);
+  --color-mint-400: var(--mint-400);
+  --color-mint-500: var(--mint-500);
+  --color-mint-600: var(--mint-600);
+  --color-mint-700: var(--mint-700);
+  --color-mint-800: var(--mint-800);
+  --color-mint-bright: var(--mint-bright);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+
+  --color-income: var(--income);
+  --color-income-bg: var(--income-bg);
+  --color-expense: var(--expense);
+  --color-expense-bg: var(--expense-bg);
+  --color-invest: var(--invest);
+  --color-invest-bg: var(--invest-bg);
+  --color-transfer: var(--transfer);
+  --color-transfer-bg: var(--transfer-bg);
+  --color-pending: var(--pending);
+  --color-pending-bg: var(--pending-bg);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-press:active {
+    transform: scale(0.98);
+  }
+
+  .dropdown-panel {
+    animation: dropdown-in var(--duration-base) var(--ease-out) forwards;
+    transform-origin: top center;
+  }
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink-900);
+  background: var(--canvas-2);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Form controls use component-level focus rings; avoid stacking with :focus-visible here. */
+:focus-visible:not(input):not(textarea):not(select) {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--mint-200);
+}
+
+a {
+  transition: color var(--duration-fast) var(--ease-out);
+}
