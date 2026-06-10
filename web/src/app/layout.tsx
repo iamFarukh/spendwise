@@ -28,8 +28,11 @@ export const metadata: Metadata = {
   description:
     "A personal ledger that tracks where every unit of money came from, moved, and was spent.",
   icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
+    icon: [
+      { url: "/favicon.png", sizes: "64x64", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
   },
 };
 

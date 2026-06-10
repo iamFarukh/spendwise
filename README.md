@@ -40,9 +40,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 1. Push this repo to GitHub.
 2. Import the repo in Vercel.
-3. Set **Root Directory** to `web`.
+3. Set **Root Directory** to `web` (or use `web/vercel.json` install command for the monorepo).
 4. Add the same `NEXT_PUBLIC_FIREBASE_*` environment variables from `web/.env.local`.
 5. Deploy.
+6. **Authorize the Vercel domain in Firebase** (required for Google login):
+   - Firebase Console → Authentication → Settings → **Authorized domains**
+   - Add your deploy hostname, e.g. `spendwise-webapp.vercel.app`
+
+See [docs/vercel-deploy.md](./docs/vercel-deploy.md) for troubleshooting Google sign-in.
 
 Your app will be available at `https://<project-name>.vercel.app` — no custom domain required.
 
@@ -76,7 +81,8 @@ Last audited: 10 June 2026. Web app is ahead of Phase 0 — most of Phases 1–2
 - [x] Shared types + accounting engine
 - [x] Firebase client wiring (Auth, Firestore, Storage rules)
 - [x] Auth UI (Google + email)
-- [ ] Vercel deployment (not confirmed)
+- [x] Vercel deployment ([spendwise-webapp.vercel.app](https://spendwise-webapp.vercel.app))
+- [ ] Firebase authorized domain for production (required for Google login)
 
 ### Phase 1 — Day zero + core ledger (web)
 
