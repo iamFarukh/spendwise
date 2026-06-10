@@ -27,7 +27,7 @@ export function SetupShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
-      <header className="flex h-[78px] shrink-0 items-center gap-6 border-b border-line bg-paper px-6 lg:px-8">
+      <header className="setup-enter flex h-[78px] shrink-0 items-center gap-6 border-b border-line bg-paper px-6 lg:px-8">
         <SpendWiseBrand size={36} />
 
         <SetupStepper current={step} />
@@ -43,7 +43,7 @@ export function SetupShell({
         </Button>
       </header>
 
-      <div className="mx-auto grid w-full max-w-[1100px] flex-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:px-8">
+      <div className="setup-enter mx-auto grid w-full max-w-[1100px] flex-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:px-8">
         {children}
       </div>
     </div>
@@ -61,34 +61,52 @@ function SetupStepper({ current }: { current: SetupStep }) {
       {SETUP_STEPS.map((step, index) => {
         const done = index < currentIndex;
         const active = step === current;
+        const connectorFilled = index <= currentIndex;
 
         return (
           <div key={step} className="flex items-center gap-1">
             {index > 0 ? (
               <span
-                className={cn(
-                  "h-0.5 w-9 rounded-sm",
-                  done ? "bg-mint-300" : "bg-line",
-                )}
-              />
+                className="relative h-0.5 w-9 overflow-hidden rounded-sm bg-line"
+                aria-hidden="true"
+              >
+                <span
+                  className={cn(
+                    "absolute inset-0 origin-left rounded-sm bg-mint-300 transition-transform duration-300 ease-[var(--ease-out)]",
+                    connectorFilled ? "scale-x-100" : "scale-x-0",
+                  )}
+                />
+              </span>
             ) : null}
             <div
               className={cn(
-                "flex items-center gap-2 text-[13px] font-bold",
+                "flex items-center gap-2 text-[13px] font-bold transition-colors duration-200 ease-[var(--ease-out)]",
                 active ? "text-ink-900" : done ? "text-ink-700" : "text-ink-400",
               )}
             >
               <span
                 className={cn(
-                  "grid h-[26px] w-[26px] place-items-center rounded-full text-[13px]",
-                  active && "bg-mint-500 text-white shadow-[0_0_0_4px_var(--mint-100)]",
-                  done && !active && "bg-mint-100 text-mint-700",
-                  !active && !done && "bg-canvas-2 text-ink-400",
+                  "grid h-[26px] w-[26px] place-items-center rounded-full text-[13px] transition-[background-color,color,box-shadow,transform] duration-300 ease-[var(--ease-out)]",
+                  active &&
+                    "scale-100 bg-mint-500 text-white shadow-[0_0_0_4px_var(--mint-100)]",
+                  done && !active && "scale-100 bg-mint-100 text-mint-700",
+                  !active && !done && "scale-95 bg-canvas-2 text-ink-400",
                 )}
               >
-                {done ? <IconCheck className="h-3.5 w-3.5" /> : index + 1}
+                {done ? (
+                  <IconCheck className="setup-step-check h-3.5 w-3.5" />
+                ) : (
+                  index + 1
+                )}
               </span>
-              <span className="hidden lg:inline">{SETUP_STEP_LABELS[step]}</span>
+              <span
+                className={cn(
+                  "hidden transition-[opacity,transform] duration-300 ease-[var(--ease-out)] lg:inline",
+                  active ? "translate-x-0 opacity-100" : "translate-x-0 opacity-80",
+                )}
+              >
+                {SETUP_STEP_LABELS[step]}
+              </span>
             </div>
           </div>
         );
@@ -124,7 +142,7 @@ export function SetupIntro({
 
 export function SetupPanel({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-line bg-paper p-6 shadow-md">
+    <section className="rounded-xl border border-line bg-paper p-6 shadow-md transition-[box-shadow] duration-300 ease-[var(--ease-out)]">
       {children}
     </section>
   );
