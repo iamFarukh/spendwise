@@ -38,3 +38,14 @@ export function isDateInRange(
 ): boolean {
   return date >= start && date <= end;
 }
+
+/** Shift a calendar date by `days` and return YYYY-MM-DD in `timezone`. */
+export function addDaysInTimezone(
+  dateStr: string,
+  days: number,
+  timezone: string,
+): string {
+  const base = new Date(`${dateStr}T12:00:00`);
+  const shifted = new Date(base.getTime() + days * 86_400_000);
+  return toDateStringInTimezone(shifted, timezone);
+}

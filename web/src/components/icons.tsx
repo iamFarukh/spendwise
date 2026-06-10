@@ -99,6 +99,53 @@ export function IconSearch({ className }: IconProps) {
   );
 }
 
+export function IconDownload({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[17px] w-[17px]", className)} {...stroke}>
+      <path d="M12 4v10" />
+      <path d="m8 10 4 4 4-4" />
+      <path d="M4 20h16" />
+    </svg>
+  );
+}
+
+export function IconCalendar({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[15px] w-[15px]", className)} {...stroke}>
+      <rect x="3" y="5" width="18" height="16" rx="2.5" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </svg>
+  );
+}
+
+export function IconGlobe({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[19px] w-[19px]", className)} {...stroke}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.8 2.6 4.2 5.6 4.2 9s-1.4 6.4-4.2 9M12 3C9.2 5.6 7.8 8.6 7.8 12s1.4 6.4 4.2 9" />
+    </svg>
+  );
+}
+
+export function IconShield({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[19px] w-[19px]", className)} {...stroke}>
+      <path d="M12 3 20 7v6c0 4.4-3.2 7.4-8 9-4.8-1.6-8-4.6-8-9V7l8-4Z" />
+      <path d="m9.5 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+export function IconLogout({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[17px] w-[17px]", className)} {...stroke}>
+      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+      <path d="m15 17 5-5-5-5" />
+      <path d="M20 12H10" />
+    </svg>
+  );
+}
+
 export function IconPlus({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-[17px] w-[17px]", className)} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -119,6 +166,26 @@ export function IconCheck({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-[18px] w-[18px]", className)} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <path d="m4 12 5 5L20 6" />
+    </svg>
+  );
+}
+
+export function IconEdit({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[18px] w-[18px]", className)} {...stroke}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+export function IconTrash({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-[18px] w-[18px]", className)} {...stroke}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6M14 11v6" />
     </svg>
   );
 }
@@ -231,6 +298,22 @@ export function IconStar({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={cn("h-[11px] w-[11px]", className)} fill="currentColor">
       <path d="m12 3 2.6 5.6 6.1.7-4.5 4.1 1.2 6L12 16.9 6.6 19.4l1.2-6L3.3 9.3l6.1-.7L12 3Z" />
+    </svg>
+  );
+}
+
+export function IconHeart({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-5 w-5", className)} {...stroke}>
+      <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.6-7 10-7 10Z" />
+    </svg>
+  );
+}
+
+export function IconBolt({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={cn("h-5 w-5", className)} fill="currentColor" stroke="none">
+      <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />
     </svg>
   );
 }

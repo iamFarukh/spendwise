@@ -29,7 +29,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
 
     try {
       await signInWithGoogle();
-      router.replace("/setup");
+      router.replace("/dashboard");
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -50,7 +50,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
         await signUpWithEmail(email, password);
       }
 
-      router.replace("/setup");
+      router.replace("/dashboard");
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {

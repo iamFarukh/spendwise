@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CATEGORIES,
   DEFAULT_USER_SETTINGS,
   type Account,
   type UserSettings,
@@ -7,6 +8,7 @@ import {
 import { doc, getDoc, setDoc, writeBatch } from "firebase/firestore";
 
 import { getFirebaseDb } from "@/lib/firebase/client";
+import { touchUserDocument } from "@/lib/firebase/user-doc";
 
 import type { DraftAccount, SetupDraft } from "./types";
 
@@ -46,6 +48,9 @@ export async function saveSetupDraft(
       primaryAccountId: draft.primaryAccountId,
       setupComplete: false,
       loansEnabled: false,
+      includeTrackingInNetWorth: true,
+      roundAmounts: true,
+      lastBackupAt: null,
     },
     { merge: true },
   );
@@ -78,7 +83,14 @@ export async function completeDayZeroSetup(
     primaryAccountId: draft.primaryAccountId,
     setupComplete: true,
     loansEnabled: false,
+    includeTrackingInNetWorth: true,
+    roundAmounts: true,
+    lastBackupAt: null,
   });
+
+  for (const category of DEFAULT_CATEGORIES) {
+    batch.set(doc(db, firestorePaths.category(uid, category.id)), category);
+  }
 
   for (const [index, account] of draft.accounts.entries()) {
     const accountRef = doc(db, firestorePaths.account(uid, account.id));
@@ -100,36 +112,39 @@ export async function completeDayZeroSetup(
     batch.set(accountRef, accountDoc);
 
     const amount = parseOpeningAmount(account.openingBalance);
-    if (amount <= 0) {
-      throw new Error(`Enter an opening balance for ${account.name}.`);
+    if (amount < 0) {
+      throw new Error(`Opening balance for ${account.name} cannot be negative.`);
     }
 
-    const txnId = crypto.randomUUID();
-    const txnRef = doc(db, firestorePaths.transaction(uid, txnId));
-    batch.set(txnRef, {
-      id: txnId,
-      userId: uid,
-      date: draft.asOfDate,
-      type: "OPENING",
-      amount,
-      fromAccountId: null,
-      toAccountId: account.id,
-      categoryId: null,
-      subcategoryId: null,
-      splits: null,
-      merchant: account.name.trim(),
-      notes: "Day-zero opening balance",
-      isGlobalExpense: false,
-      linkedTransactionId: null,
-      recurringId: null,
-      source: "MANUAL",
-      status: "VERIFIED",
-      createdAt: now,
-      updatedAt: now,
-    });
+    if (amount > 0) {
+      const txnId = crypto.randomUUID();
+      const txnRef = doc(db, firestorePaths.transaction(uid, txnId));
+      batch.set(txnRef, {
+        id: txnId,
+        userId: uid,
+        date: draft.asOfDate,
+        type: "OPENING",
+        amount,
+        fromAccountId: null,
+        toAccountId: account.id,
+        categoryId: null,
+        subcategoryId: null,
+        splits: null,
+        merchant: account.name.trim(),
+        notes: "Day-zero opening balance",
+        isGlobalExpense: false,
+        linkedTransactionId: null,
+        recurringId: null,
+        source: "MANUAL",
+        status: "VERIFIED",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
   }
 
   await batch.commit();
+  await touchUserDocument(uid);
 }
 
 function parseOpeningAmount(value: string): number {

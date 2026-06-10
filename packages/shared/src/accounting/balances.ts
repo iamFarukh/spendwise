@@ -66,9 +66,16 @@ export function getTransactionAccountDeltas(
     case "TRANSFER":
     case "WITHDRAWAL":
     case "INVESTMENT":
-    case "LIABILITY_PAYMENT":
       applyDelta(deltas, txn.fromAccountId, -txn.amount);
       applyDelta(deltas, txn.toAccountId, txn.amount);
+      break;
+    case "LIABILITY_PAYMENT":
+      applyDelta(deltas, txn.fromAccountId, -txn.amount);
+      if (to?.class === "LIABILITY") {
+        applyDelta(deltas, txn.toAccountId, -txn.amount);
+      } else {
+        applyDelta(deltas, txn.toAccountId, txn.amount);
+      }
       break;
     case "REDEMPTION":
       applyDelta(deltas, txn.fromAccountId, -txn.amount);
@@ -163,7 +170,12 @@ export function sumBalancesByClass(balances: AccountBalance[]): ClassTotals {
 }
 
 /** Net worth = assets + tracking − liabilities (owed). */
-export function computeNetWorth(balances: AccountBalance[]): number {
+export function computeNetWorth(
+  balances: AccountBalance[],
+  options?: { includeTracking?: boolean },
+): number {
   const { assets, tracking, liabilities } = sumBalancesByClass(balances);
-  return assets + tracking - liabilities;
+  const trackingTotal =
+    options?.includeTracking === false ? 0 : tracking;
+  return assets + trackingTotal - liabilities;
 }

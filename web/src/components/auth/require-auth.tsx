@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 
+import { AuthLoading } from "@/components/motion/app-loading";
 import { useAuth } from "@/components/providers/auth-provider";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
@@ -17,11 +18,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }, [configured, loading, router, user]);
 
   if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-canvas text-sm text-ink-500">
-        Loading…
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   if (!configured) {

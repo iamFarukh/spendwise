@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   formatRelativeTransactionDate,
   type AccountBalance,
@@ -21,7 +23,10 @@ import {
   IconUp,
 } from "@/components/icons";
 import { AccountKindIcon } from "@/components/ledger/account-kind-icon";
+import { QuickAddExpense } from "@/components/dashboard/quick-add-expense";
 import { AppShell } from "@/components/layout/app-shell";
+import { AppLoading } from "@/components/motion/app-loading";
+import { StaggerItem } from "@/components/motion/stagger";
 import { useAuth } from "@/components/providers/auth-provider";
 import { IconChip } from "@/components/ui/icon-chip";
 import { Tag } from "@/components/ui/tag";
@@ -29,13 +34,16 @@ import { useLedgerSummary } from "@/hooks/use-ledger-summary";
 import { accountChipStyle } from "@/lib/setup/account-style";
 import {
   formatAccountBalance,
-  formatSignedMoney,
   getAccountSubtitle,
   getTransactionSubtitle,
   getTransactionTitle,
   getTransactionTone,
 } from "@/lib/ledger/display";
-import { formatMoney } from "@/lib/format/currency";
+import {
+  formatLedgerMoney,
+  formatLedgerSignedMoney,
+  type LedgerMoneySettings,
+} from "@/lib/format/currency";
 
 export default function DashboardPage() {
   return (
@@ -59,15 +67,15 @@ function DashboardContent() {
   const greeting = getGreeting();
   const timezone = settings?.timezone ?? "Asia/Kolkata";
   const today = formatToday(timezone);
-  const currency = settings?.baseCurrency ?? "INR";
+  const moneySettings: LedgerMoneySettings = settings;
 
   if (loading) {
     return (
-      <AppShell title={`${greeting}, ${firstName}`} subtitle="Loading…">
-        <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-          Loading your ledger…
-        </div>
-      </AppShell>
+      <AppLoading
+        title={`${greeting}, ${firstName}`}
+        variant="dashboard"
+        showSearch
+      />
     );
   }
 
@@ -92,26 +100,28 @@ function DashboardContent() {
     <AppShell
       title={`${greeting}, ${firstName}`}
       subtitle={`${today} · ${timezone}`}
-      primaryAction={{ label: "Add transaction" }}
+      primaryAction={{ label: "Full entry", href: "/transactions/new" }}
     >
-      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.35fr_1fr] xl:grid-rows-[auto_auto]">
+      {user ? <QuickAddExpense userId={user.uid} /> : null}
+
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.35fr_1fr] xl:grid-rows-[auto_auto]">
         <div className="xl:col-start-1 xl:row-start-1">
-          <NetWorthCard summary={summary} currency={currency} />
+          <NetWorthCard summary={summary} moneySettings={moneySettings} />
         </div>
         <div className="xl:col-start-2 xl:row-start-1">
-          <StatTiles summary={summary} currency={currency} />
+          <StatTiles summary={summary} moneySettings={moneySettings} />
         </div>
         <div className="xl:col-start-1 xl:row-start-2">
           <AccountsCard
             balances={summary.accountBalances}
-            currency={currency}
+            moneySettings={moneySettings}
           />
         </div>
         <div className="xl:col-start-2 xl:row-start-2">
           <RecentActivityCard
             transactions={summary.recentTransactions}
             balances={summary.accountBalances}
-            currency={currency}
+            moneySettings={moneySettings}
             timezone={timezone}
           />
         </div>
@@ -122,10 +132,10 @@ function DashboardContent() {
 
 function NetWorthCard({
   summary,
-  currency,
+  moneySettings,
 }: {
   summary: LedgerSummary;
-  currency: string;
+  moneySettings: LedgerMoneySettings;
 }) {
   const { classTotals, netWorth, netWorthChangeThisMonth } = summary;
   const ownedTotal = classTotals.assets + classTotals.tracking;
@@ -151,18 +161,15 @@ function NetWorthCard({
             Total net worth
           </span>
           <div className="tnum font-display text-[44px] leading-[1.1] font-bold tracking-[-1.5px]">
-            {formatMoney(netWorth, currency)}
+            {formatLedgerMoney(netWorth, moneySettings)}
           </div>
         </div>
         {netWorthChangeThisMonth !== 0 ? (
-          <Tag
-            variant={changePositive ? "income" : "expense"}
-            dot
-            className="bg-white/16 whitespace-nowrap text-[#BFF5DE]"
-          >
-            {changePositive ? "▲" : "▼"}{" "}
-            {formatMoney(Math.abs(netWorthChangeThisMonth), currency)} this month
-          </Tag>
+          <NetWorthChangePill
+            amount={netWorthChangeThisMonth}
+            positive={changePositive}
+            moneySettings={moneySettings}
+          />
         ) : null}
       </div>
 
@@ -181,25 +188,60 @@ function NetWorthCard({
         <LegendItem
           color="var(--mint-bright)"
           label="Assets"
-          value={formatMoney(classTotals.assets, currency)}
+          value={formatLedgerMoney(classTotals.assets, moneySettings)}
         />
         {classTotals.tracking > 0 ? (
           <LegendItem
             color="#9FE3FF"
             label="Tracking"
-            value={`${formatMoney(classTotals.tracking, currency)} incl.`}
+            value={`${formatLedgerMoney(classTotals.tracking, moneySettings)} incl.`}
           />
         ) : null}
         {classTotals.liabilities > 0 ? (
           <LegendItem
             color="#F3A99B"
             label="Liabilities"
-            value={`−${formatMoney(classTotals.liabilities, currency)}`}
+            value={`−${formatLedgerMoney(classTotals.liabilities, moneySettings)}`}
             negative
           />
         ) : null}
       </div>
     </section>
+  );
+}
+
+function NetWorthChangePill({
+  amount,
+  positive,
+  moneySettings,
+}: {
+  amount: number;
+  positive: boolean;
+  moneySettings: LedgerMoneySettings;
+}) {
+  return (
+    <div
+      className="max-w-[min(100%,200px)] shrink-0 rounded-pill border border-white/30 bg-white px-3 py-2 shadow-sm sm:max-w-none"
+      title={`Net worth change this month: ${formatLedgerMoney(Math.abs(amount), moneySettings)}`}
+    >
+      <p
+        className={`tnum text-right font-display text-[14px] leading-tight font-bold sm:text-[15px] ${
+          positive ? "text-mint-800" : "text-expense"
+        }`}
+      >
+        <span aria-hidden className="mr-0.5">
+          {positive ? "▲" : "▼"}
+        </span>
+        {formatLedgerMoney(Math.abs(amount), moneySettings)}
+      </p>
+      <p
+        className={`mt-0.5 text-right text-[11px] font-semibold ${
+          positive ? "text-mint-700" : "text-expense"
+        }`}
+      >
+        this month
+      </p>
+    </div>
   );
 }
 
@@ -232,10 +274,10 @@ function LegendItem({
 
 function StatTiles({
   summary,
-  currency,
+  moneySettings,
 }: {
   summary: LedgerSummary;
-  currency: string;
+  moneySettings: LedgerMoneySettings;
 }) {
   const { monthly } = summary;
 
@@ -245,7 +287,7 @@ function StatTiles({
       bg: "var(--income-bg)",
       color: "var(--income)",
       label: "Income",
-      value: formatMoney(monthly.income, currency),
+      value: formatLedgerMoney(monthly.income, moneySettings),
     },
     {
       icon: <IconUp />,
@@ -253,21 +295,21 @@ function StatTiles({
       color: "var(--expense)",
       label: "Spent",
       sub: "(expenses − refunds)",
-      value: formatMoney(monthly.expenses, currency),
+      value: formatLedgerMoney(monthly.expenses, moneySettings),
     },
     {
       icon: <IconTrend />,
       bg: "var(--invest-bg)",
       color: "var(--invest)",
       label: "Invested",
-      value: formatMoney(monthly.investments, currency),
+      value: formatLedgerMoney(monthly.investments, moneySettings),
     },
     {
       icon: <IconPig />,
       bg: "var(--mint-100)",
       color: "var(--mint-700)",
       label: "Saved this month",
-      value: formatMoney(monthly.savings, currency),
+      value: formatLedgerMoney(monthly.savings, moneySettings),
       positive: monthly.savings >= 0,
       negative: monthly.savings < 0,
     },
@@ -275,9 +317,9 @@ function StatTiles({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {stats.map((stat) => (
+      {stats.map((stat, index) => (
+        <StaggerItem key={stat.label} index={index}>
         <div
-          key={stat.label}
           className="flex items-center gap-3 rounded-lg border border-line bg-paper p-4"
         >
           <IconChip bg={stat.bg} color={stat.color}>
@@ -306,6 +348,7 @@ function StatTiles({
             </b>
           </div>
         </div>
+        </StaggerItem>
       ))}
     </div>
   );
@@ -313,14 +356,14 @@ function StatTiles({
 
 function AccountsCard({
   balances,
-  currency,
+  moneySettings,
 }: {
   balances: AccountBalance[];
-  currency: string;
+  moneySettings: LedgerMoneySettings;
 }) {
   if (balances.length === 0) {
     return (
-      <CardShell title="Accounts" link="Manage">
+      <CardShell title="Accounts" link="Manage" linkHref="/accounts">
         <p className="text-sm text-ink-500">
           No accounts yet. Finish setup to add your first account.
         </p>
@@ -329,7 +372,7 @@ function AccountsCard({
   }
 
   return (
-    <CardShell title="Accounts" link="Manage">
+    <CardShell title="Accounts" link="Manage" linkHref="/accounts">
       <div className="flex flex-col gap-1">
         {balances.map(({ account, balance }) => {
           const style = accountChipStyle(account.class, account.kind);
@@ -360,7 +403,7 @@ function AccountsCard({
               <span
                 className={`tnum font-display text-base font-bold whitespace-nowrap ${isLiability ? "text-expense" : "text-ink-900"}`}
               >
-                {formatAccountBalance(balance, account.class, currency)}
+                {formatAccountBalance(balance, account.class, moneySettings)}
               </span>
             </div>
           );
@@ -373,12 +416,12 @@ function AccountsCard({
 function RecentActivityCard({
   transactions,
   balances,
-  currency,
+  moneySettings,
   timezone,
 }: {
   transactions: Transaction[];
   balances: AccountBalance[];
-  currency: string;
+  moneySettings: LedgerMoneySettings;
   timezone: string;
 }) {
   const accountsById = new Map(
@@ -387,7 +430,7 @@ function RecentActivityCard({
 
   if (transactions.length === 0) {
     return (
-      <CardShell title="Recent activity" link="View all">
+      <CardShell title="Recent activity" link="View all" linkHref="/transactions">
         <p className="text-sm text-ink-500">
           No transactions yet besides your opening balances. Add your first
           expense or income to see activity here.
@@ -397,16 +440,17 @@ function RecentActivityCard({
   }
 
   return (
-    <CardShell title="Recent activity" link="View all">
+    <CardShell title="Recent activity" link="View all" linkHref="/transactions">
       <div className="flex flex-col">
-        {transactions.map((txn) => (
-          <ActivityRow
-            key={txn.id}
-            txn={txn}
-            accountsById={accountsById}
-            currency={currency}
-            timezone={timezone}
-          />
+        {transactions.map((txn, index) => (
+          <StaggerItem key={txn.id} index={index}>
+            <ActivityRow
+              txn={txn}
+              accountsById={accountsById}
+              moneySettings={moneySettings}
+              timezone={timezone}
+            />
+          </StaggerItem>
         ))}
       </div>
     </CardShell>
@@ -416,12 +460,12 @@ function RecentActivityCard({
 function ActivityRow({
   txn,
   accountsById,
-  currency,
+  moneySettings,
   timezone,
 }: {
   txn: Transaction;
   accountsById: Map<string, import("@pfos/shared").Account>;
-  currency: string;
+  moneySettings: LedgerMoneySettings;
   timezone: string;
 }) {
   const tone = getTransactionTone(txn);
@@ -442,10 +486,10 @@ function ActivityRow({
 
   const signedAmount =
     tone === "positive"
-      ? formatSignedMoney(txn.amount, currency)
+      ? formatLedgerSignedMoney(txn.amount, moneySettings)
       : tone === "negative"
-        ? formatSignedMoney(-txn.amount, currency)
-        : formatMoney(txn.amount, currency);
+        ? formatLedgerSignedMoney(-txn.amount, moneySettings)
+        : formatLedgerMoney(txn.amount, moneySettings);
 
   return (
     <div className="flex items-center gap-3 border-b border-line-soft px-1 py-3 last:border-b-0">
@@ -481,17 +525,28 @@ function ActivityRow({
 function CardShell({
   title,
   link,
+  linkHref,
   children,
 }: {
   title: string;
   link: string;
+  linkHref?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-xl border border-line bg-paper p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-display text-lg font-bold text-ink-900">{title}</h3>
-        <span className="text-[13px] font-bold text-mint-600">{link}</span>
+        {linkHref ? (
+          <Link
+            href={linkHref}
+            className="text-[13px] font-bold text-mint-600 hover:text-mint-700"
+          >
+            {link}
+          </Link>
+        ) : (
+          <span className="text-[13px] font-bold text-mint-600">{link}</span>
+        )}
       </div>
       {children}
     </section>

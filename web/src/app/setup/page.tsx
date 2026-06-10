@@ -14,6 +14,7 @@ import {
 } from "@/components/setup/setup-shell";
 import { IconPlus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select-field";
 import { Tag } from "@/components/ui/tag";
@@ -119,11 +120,12 @@ function SetupWizard() {
     }
 
     if (step === "balances") {
-      const missing = draft.accounts.find(
-        (a) => !a.openingBalance || Number(a.openingBalance.replace(/,/g, "")) <= 0,
-      );
-      if (missing) {
-        setError(`Enter an opening balance for ${missing.name}.`);
+      const negative = draft.accounts.find((a) => {
+        const amount = Number(a.openingBalance.replace(/,/g, "").trim() || "0");
+        return Number.isFinite(amount) && amount < 0;
+      });
+      if (negative) {
+        setError(`Opening balance for ${negative.name} cannot be negative.`);
         return;
       }
       const assetAccounts = draft.accounts.filter((a) => a.class === "ASSET");
@@ -323,11 +325,11 @@ function CurrencyStep({
         }))}
       />
 
-      <Input
+      <DateField
         label="As-of date"
-        type="date"
         value={draft.asOfDate}
-        onChange={(e) => onChange({ ...draft, asOfDate: e.target.value })}
+        onChange={(asOfDate) => onChange({ ...draft, asOfDate })}
+        timezone={draft.timezone}
         hint="Your ledger starts here. Do not backfill before this date."
       />
     </div>

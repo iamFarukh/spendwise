@@ -22,7 +22,9 @@ export function useLedgerSummary() {
     if (!settings) {
       return null;
     }
-    return computeLedgerSummary(accounts, transactions, settings.timezone);
+    return computeLedgerSummary(accounts, transactions, settings.timezone, new Date(), {
+      includeTrackingInNetWorth: settings.includeTrackingInNetWorth,
+    });
   }, [accounts, settings, transactions]);
 
   return {
