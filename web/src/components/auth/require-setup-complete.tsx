@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 
+import { AuthLoading } from "@/components/motion/app-loading";
 import { useUserSettings } from "@/hooks/use-user-settings";
 
 export function RequireSetupComplete({ children }: { children: ReactNode }) {
@@ -16,11 +17,7 @@ export function RequireSetupComplete({ children }: { children: ReactNode }) {
   }, [loading, router, setupComplete]);
 
   if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-canvas text-sm text-ink-500">
-        Loading…
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   if (!setupComplete) {

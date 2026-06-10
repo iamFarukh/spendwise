@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { AuthLoading } from "@/components/motion/app-loading";
 import { SpendWiseLogoHero } from "@/components/brand/spendwise-logo";
 import { IconCheck } from "@/components/icons";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -19,11 +20,7 @@ export default function LoginPage() {
   }, [loading, router, user]);
 
   if (loading) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-canvas-2 text-sm text-ink-500">
-        Checking session…
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   if (user) {
@@ -34,9 +31,9 @@ export default function LoginPage() {
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <AuthHero />
       <div className="grid place-items-center bg-paper p-8 lg:p-12">
-        <div className="w-full max-w-[360px]">
+        <div className="auth-enter w-full max-w-[360px]">
           {!configured ? (
-            <div className="mb-6 rounded-xl border border-pending/30 bg-pending-bg p-5 text-sm leading-6 text-[var(--peringatan-700)]">
+            <div className="mb-6 rounded-xl border border-pending/30 bg-pending-bg p-5 text-sm leading-6 text-ink-700">
               <p className="font-bold">Firebase is not configured.</p>
               <p className="mt-2 text-ink-700">
                 Copy <code className="font-mono">web/.env.example</code> to{" "}

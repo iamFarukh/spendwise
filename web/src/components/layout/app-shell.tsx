@@ -16,8 +16,10 @@ import {
   IconSearch,
   IconWallet,
 } from "@/components/icons";
+import { PageEnter } from "@/components/motion/page-enter";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
+import { usePendingCount } from "@/hooks/use-transaction";
 import { cn } from "@/lib/cn";
 
 type NavItem = {
@@ -34,10 +36,10 @@ const overviewNav: NavItem[] = [
   { href: "/categories", label: "Categories", icon: <IconGrid /> },
 ];
 
-const manageNav: NavItem[] = [
+const manageNavBase: Omit<NavItem, "badge">[] = [
   { href: "/recurring", label: "Recurring", icon: <IconRepeat /> },
   { href: "/reports", label: "Reports", icon: <IconChart /> },
-  { href: "/pending", label: "Pending", icon: <IconClock />, badge: "3" },
+  { href: "/pending", label: "Pending", icon: <IconClock /> },
 ];
 
 type AppShellProps = {
@@ -46,6 +48,7 @@ type AppShellProps = {
   subtitle?: string;
   showSearch?: boolean;
   primaryAction?: { label: string; href?: string };
+  headerActions?: React.ReactNode;
 };
 
 export function AppShell({
@@ -54,9 +57,17 @@ export function AppShell({
   subtitle,
   showSearch = true,
   primaryAction,
+  headerActions,
 }: AppShellProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { count: pendingCount } = usePendingCount();
+
+  const manageNav: NavItem[] = manageNavBase.map((item) =>
+    item.href === "/pending" && pendingCount > 0
+      ? { ...item, badge: String(pendingCount) }
+      : item,
+  );
 
   const displayName =
     user?.displayName ?? user?.email?.split("@")[0] ?? "User";
@@ -118,7 +129,9 @@ export function AppShell({
               Search transactions
             </div>
           ) : null}
-          {primaryAction ? (
+          {headerActions ? (
+            headerActions
+          ) : primaryAction ? (
             primaryAction.href ? (
               <Link href={primaryAction.href}>
                 <Button>
@@ -135,7 +148,9 @@ export function AppShell({
           ) : null}
         </header>
 
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        <main className="flex-1 overflow-auto p-8">
+          <PageEnter>{children}</PageEnter>
+        </main>
       </div>
     </div>
   );
@@ -162,7 +177,10 @@ function NavGroup({
           label={item.label}
           icon={item.icon}
           badge={item.badge}
-          active={pathname === item.href}
+          active={
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href))
+          }
         />
       ))}
     </div>
@@ -187,7 +205,7 @@ function NavLink({
       href={href}
       className={cn(
         "mb-0.5 flex items-center gap-3 rounded-md px-3 py-2.5 text-[15px] font-semibold",
-        "transition-[background-color,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
+        "motion-press transition-[background-color,color,box-shadow,transform] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
         active
           ? "bg-mint-500 text-white shadow-sm"
           : "text-ink-600 hover:bg-tint hover:text-ink-800",

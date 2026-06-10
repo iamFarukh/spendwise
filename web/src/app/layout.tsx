@@ -3,6 +3,8 @@ import { Nunito, Quicksand } from "next/font/google";
 
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { FirebaseAnalytics } from "@/components/providers/firebase-analytics";
+import { LedgerDataProvider } from "@/components/providers/ledger-data-provider";
+import { RecurringRunner } from "@/components/providers/recurring-runner";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
 import "./globals.css";
@@ -43,8 +45,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>
-          <FirebaseAnalytics />
-          {children}
+          <LedgerDataProvider>
+            <FirebaseAnalytics />
+            <RecurringRunner />
+            {children}
+          </LedgerDataProvider>
         </AuthProvider>
       </body>
     </html>

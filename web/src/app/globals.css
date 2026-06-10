@@ -135,9 +135,47 @@
     transform: scale(0.98);
   }
 
-  .dropdown-panel {
+  .motion-chip:active {
+    transform: scale(0.97);
+  }
+
+  .dropdown-panel,
+  .date-picker-panel {
     animation: dropdown-in var(--duration-base) var(--ease-out) forwards;
     transform-origin: top center;
+  }
+
+  .date-picker-panel.origin-bottom {
+    animation: dropdown-in-up var(--duration-base) var(--ease-out) forwards;
+    transform-origin: bottom center;
+  }
+
+  .page-enter {
+    animation: page-enter 240ms var(--ease-out) forwards;
+  }
+
+  .tab-crossfade {
+    animation: tab-crossfade 220ms var(--ease-out) forwards;
+  }
+
+  .stagger-item {
+    animation: stagger-in 280ms var(--ease-out) backwards;
+    animation-delay: calc(var(--stagger-index, 0) * 42ms);
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--line-soft) 0%,
+      var(--tint) 45%,
+      var(--line-soft) 90%
+    );
+    background-size: 220% 100%;
+    animation: shimmer 1.35s var(--ease-standard) infinite;
+  }
+
+  .auth-enter {
+    animation: page-enter 320ms var(--ease-out) forwards;
   }
 }
 
@@ -149,6 +187,66 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdown-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tab-crossfade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    background: var(--line-soft);
+    animation: none;
   }
 }
 

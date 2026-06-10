@@ -35,8 +35,9 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "motion-press inline-flex items-center justify-center gap-2 font-bold",
-        "transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+        "motion-press motion-chip inline-flex items-center justify-center gap-2 font-bold",
+        "transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
+        "hover:-translate-y-px hover:shadow-sm active:translate-y-0",
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-mint-200",
         "disabled:cursor-not-allowed disabled:opacity-60 disabled:active:transform-none",
         variantClasses[variant],

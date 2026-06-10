@@ -65,6 +65,15 @@ export function computeMonthlySummary(
       case "REFUND":
         expenses -= txn.amount;
         break;
+      case "RECON_ADJUST":
+        if (txn.fromAccountId) {
+          expenses += txn.amount;
+        } else if (txn.categoryId) {
+          expenses -= txn.amount;
+        } else {
+          income += txn.amount;
+        }
+        break;
       case "INVESTMENT":
         investments += txn.amount;
         break;
@@ -86,15 +95,22 @@ export function computeLedgerSummary(
   transactions: Transaction[],
   timezone: string,
   referenceDate = new Date(),
+  options?: { includeTrackingInNetWorth?: boolean },
 ): LedgerSummary {
+  const netWorthOptions = {
+    includeTracking: options?.includeTrackingInNetWorth !== false,
+  };
   const accountBalances = deriveAccountBalances(accounts, transactions);
   const classTotals = sumBalancesByClass(accountBalances);
-  const netWorth = computeNetWorth(accountBalances);
+  const netWorth = computeNetWorth(accountBalances, netWorthOptions);
   const { start: monthStart } = getMonthRange(timezone, referenceDate);
   const balancesAtMonthStart = deriveAccountBalances(accounts, transactions, {
     beforeDate: monthStart,
   });
-  const netWorthAtMonthStart = computeNetWorth(balancesAtMonthStart);
+  const netWorthAtMonthStart = computeNetWorth(
+    balancesAtMonthStart,
+    netWorthOptions,
+  );
   const monthly = computeMonthlySummary(transactions, timezone, referenceDate);
 
   const recentTransactions = [...transactions]
