@@ -14,10 +14,13 @@ import { RequireSetupComplete } from "@/components/auth/require-setup-complete";
 import { IconPlus, IconSearch } from "@/components/icons";
 import { TransactionDetailPanel } from "@/components/transactions/transaction-detail-panel";
 import { TransactionTypeIcon } from "@/components/transactions/transaction-type-icon";
+import { useToast } from "@/components/providers/toast-provider";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
 import { TabCrossfade } from "@/components/motion/tab-crossfade";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { FilterChip } from "@/components/ui/filter-chip";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -81,6 +84,7 @@ function TransactionsContent() {
     return { year, month };
   }, [timezone]);
 
+  const toast = useToast();
   const [monthYear, setMonthYear] = useState(initialMonth);
   const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("ALL");
   const [search, setSearch] = useState("");
@@ -88,6 +92,15 @@ function TransactionsContent() {
   const [deleting, setDeleting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
+
+  // Seed the search box from the global header search (/transactions?q=…).
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      setSearch(q);
+    }
+  }, []);
 
   const monthWindow = getMonthWindow(
     timezone,
@@ -126,18 +139,10 @@ function TransactionsContent() {
     [filtered],
   );
 
+  // Selection is derived: a stale or empty selectedId falls back to the
+  // first visible transaction, so no syncing effect is needed.
   const selected =
     filtered.find((txn) => txn.id === selectedId) ?? filtered[0] ?? null;
-
-  useEffect(() => {
-    if (!selectedId && filtered[0]) {
-      setSelectedId(filtered[0].id);
-      return;
-    }
-    if (selectedId && !filtered.some((txn) => txn.id === selectedId)) {
-      setSelectedId(filtered[0]?.id ?? null);
-    }
-  }, [filtered, selectedId]);
 
   const loading =
     settingsLoading || accountsLoading || categoriesLoading || transactionsLoading;
@@ -157,37 +162,49 @@ function TransactionsContent() {
     setError(null);
     try {
       await verifyTransaction(user.uid, txn.id);
+      toast.success("Transaction confirmed.");
     } catch (err) {
-      setError(getFirestoreErrorMessage(err, "Could not confirm transaction."));
+      const message = getFirestoreErrorMessage(
+        err,
+        "Could not confirm transaction.",
+      );
+      setError(message);
+      toast.error(message);
     } finally {
       setVerifying(false);
     }
   }
 
-  async function handleDelete(txn: Transaction) {
-    if (!user) {
-      return;
-    }
+  function requestDelete(txn: Transaction) {
     if (!isEditableTransaction(txn)) {
-      setError("Opening balance entries cannot be deleted.");
+      const message = "Opening balance entries cannot be deleted.";
+      setError(message);
+      toast.error(message);
       return;
     }
-    const confirmed = window.confirm(
-      `Delete "${getTransactionTitle(txn)}"? This cannot be undone.`,
-    );
-    if (!confirmed) {
-      return;
-    }
+    setPendingDelete(txn);
+  }
 
+  async function confirmDelete() {
+    if (!user || !pendingDelete) {
+      return;
+    }
     setDeleting(true);
     setError(null);
     try {
-      await deleteTransaction(user.uid, txn.id);
-      if (selectedId === txn.id) {
+      await deleteTransaction(user.uid, pendingDelete.id);
+      if (selected?.id === pendingDelete.id) {
         setSelectedId(null);
       }
+      toast.success("Transaction deleted.");
+      setPendingDelete(null);
     } catch (err) {
-      setError(getFirestoreErrorMessage(err, "Could not delete transaction."));
+      const message = getFirestoreErrorMessage(
+        err,
+        "Could not delete transaction.",
+      );
+      setError(message);
+      toast.error(message);
     } finally {
       setDeleting(false);
     }
@@ -271,16 +288,16 @@ function TransactionsContent() {
           >
             <div className="overflow-hidden rounded-lg border border-line bg-paper">
               {filtered.length === 0 ? (
-                <div className="p-10 text-center text-sm text-ink-500">
-                  No transactions match these filters.{" "}
-                  <Link
-                    href="/transactions/new"
-                    className="font-bold text-mint-700"
-                  >
-                    Add one
-                  </Link>
-                  .
-                </div>
+                <EmptyState
+                  animation="receipt-search"
+                  title="No transactions found"
+                  description="Nothing matches these filters. Try a different month or type — or add one now."
+                  action={
+                    <EmptyStateAction href="/transactions/new">
+                      Add a transaction
+                    </EmptyStateAction>
+                  }
+                />
               ) : (
                 (() => {
                   let rowIndex = 0;
@@ -319,12 +336,32 @@ function TransactionsContent() {
           timezone={timezone}
           accountsById={accountsById}
           categoriesById={categoriesById}
-          onDelete={handleDelete}
+          onDelete={requestDelete}
           onVerify={handleVerify}
           deleting={deleting}
           verifying={verifying}
         />
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete transaction?"
+        description={
+          pendingDelete ? (
+            <>
+              This permanently removes{" "}
+              <b className="text-ink-900">
+                {getTransactionTitle(pendingDelete)}
+              </b>{" "}
+              from your ledger. This cannot be undone.
+            </>
+          ) : null
+        }
+        confirmLabel="Delete"
+        destructive
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+      />
     </AppShell>
   );
 }

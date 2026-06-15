@@ -17,6 +17,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/motion/skeleton";
 import { StaggerItem } from "@/components/motion/stagger";
 import { TabCrossfade } from "@/components/motion/tab-crossfade";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { useAllCategories } from "@/hooks/use-all-categories";
 import { useTransactions } from "@/hooks/use-transactions";
@@ -188,13 +189,17 @@ function CategoriesContent() {
           />
 
           {displayCategories.length === 0 ? (
-            <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-              No categories yet.{" "}
-              <Link href="/categories/new" className="font-bold text-mint-700">
-                Create your first category
-              </Link>
-              .
-            </div>
+            <EmptyState
+              bordered
+              animation="categories"
+              title="No categories yet"
+              description="Categories turn raw spending into a story — groceries, rent, fun money."
+              action={
+                <EmptyStateAction href="/categories/new" variant="primary">
+                  Create your first category
+                </EmptyStateAction>
+              }
+            />
           ) : (
             <div className="cat-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {displayCategories.map((category, index) => (

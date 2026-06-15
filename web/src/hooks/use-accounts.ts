@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { getFirestoreErrorMessage } from "@/lib/firebase/errors";
+import { entitiesFromSnapshot } from "@/lib/firebase/snapshot";
 
 export function useAccounts() {
   const { user, configured } = useAuth();
@@ -34,8 +35,7 @@ export function useAccounts() {
     const unsubscribe = onSnapshot(
       ref,
       (snap) => {
-        const next = snap.docs
-          .map((doc) => doc.data() as Account)
+        const next = entitiesFromSnapshot<Account>(snap.docs)
           .filter((account) => !account.archived)
           .sort((a, b) => a.sortOrder - b.sortOrder);
         setAccounts(next);

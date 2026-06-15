@@ -20,13 +20,22 @@ type DateFieldProps = {
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  error?: string;
   minDate?: string;
   maxDate?: string;
   timezone?: string;
   disabled?: boolean;
+  required?: boolean;
   id?: string;
   className?: string;
 };
+
+function addDaysToDateString(date: string, delta: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + delta))
+    .toISOString()
+    .slice(0, 10);
+}
 
 type PopoverPosition = {
   top?: number;
@@ -41,10 +50,12 @@ export function DateField({
   value,
   onChange,
   hint,
+  error,
   minDate,
   maxDate,
   timezone,
   disabled = false,
+  required = false,
   id,
   className,
 }: DateFieldProps) {
@@ -54,19 +65,22 @@ export function DateField({
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
+  const [focusDate, setFocusDate] = useState<string | null>(null);
 
   const selected = value ? parseDateString(value) : null;
   const [viewYear, setViewYear] = useState(selected?.year ?? new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(selected?.month ?? new Date().getMonth() + 1);
 
-  useEffect(() => {
-    if (!value) {
-      return;
+  // Derived-state pattern: snap the visible month to an externally changed value.
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    if (value) {
+      const parsed = parseDateString(value);
+      setViewYear(parsed.year);
+      setViewMonth(parsed.month);
     }
-    const parsed = parseDateString(value);
-    setViewYear(parsed.year);
-    setViewMonth(parsed.month);
-  }, [value]);
+  }
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) {
@@ -157,6 +171,40 @@ export function DateField({
     : new Date().toISOString().slice(0, 10);
 
   const days = buildCalendarMonth(viewYear, viewMonth);
+  const rovingDate =
+    focusDate && days.some((day) => day.date === focusDate)
+      ? focusDate
+      : days.some((day) => day.date === value)
+        ? value
+        : days.some((day) => day.date === today)
+          ? today
+          : days.find((day) => day.inMonth)?.date;
+
+  useEffect(() => {
+    if (!open || !focusDate) return;
+    panelRef.current
+      ?.querySelector<HTMLButtonElement>(`[data-date="${focusDate}"]`)
+      ?.focus();
+  }, [open, focusDate]);
+
+  function handleGridKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const deltas: Record<string, number> = {
+      ArrowLeft: -1,
+      ArrowRight: 1,
+      ArrowUp: -7,
+      ArrowDown: 7,
+    };
+    const delta = deltas[event.key];
+    if (delta === undefined) return;
+    event.preventDefault();
+    const next = addDaysToDateString(rovingDate ?? today, delta);
+    setFocusDate(next);
+    const parsed = parseDateString(next);
+    if (parsed.year !== viewYear || parsed.month !== viewMonth) {
+      setViewYear(parsed.year);
+      setViewMonth(parsed.month);
+    }
+  }
 
   function shiftMonth(delta: number) {
     const date = new Date(viewYear, viewMonth - 1 + delta, 1);
@@ -193,6 +241,11 @@ export function DateField({
         className="mb-[7px] block text-[13px] font-bold text-ink-700"
       >
         {label}
+        {required ? (
+          <span className="ml-0.5 text-expense" aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </span>
 
       <button
@@ -203,10 +256,13 @@ export function DateField({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-labelledby={`${fieldId}-label`}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setFocusDate(null);
+          setOpen((current) => !current);
+        }}
         className={cn(
-          "flex h-[46px] w-full items-center justify-between gap-2 rounded-md border border-line bg-canvas px-3.5 text-left transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
-          "hover:border-mint-200",
+          "flex h-[46px] w-full items-center justify-between gap-2 rounded-md border bg-canvas px-3.5 text-left transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
+          error ? "border-expense" : "border-line hover:border-mint-200",
           "focus-visible:border-mint-400 focus-visible:shadow-[0_0_0_3px_var(--mint-100)] focus-visible:outline-none",
           open && "border-mint-400 shadow-[0_0_0_3px_var(--mint-100)]",
           disabled && "cursor-not-allowed opacity-60",
@@ -223,7 +279,17 @@ export function DateField({
         <IconCalendar className="shrink-0 text-mint-600" />
       </button>
 
-      {hint ? <p className="mt-2 text-[13px] text-ink-500">{hint}</p> : null}
+      {error ? (
+        <p
+          key={error}
+          role="alert"
+          className="input-shake mt-2 text-[13px] font-bold text-expense-strong"
+        >
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="mt-2 text-[13px] text-ink-500">{hint}</p>
+      ) : null}
 
       {open && position
         ? createPortal(
@@ -275,7 +341,10 @@ export function DateField({
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-0.5">
+              <div
+                className="grid grid-cols-7 gap-0.5"
+                onKeyDown={handleGridKeyDown}
+              >
                 {days.map((day) => {
                   const selectedDay = day.date === value;
                   const isToday = day.date === today;
@@ -289,6 +358,8 @@ export function DateField({
                     <button
                       key={day.date}
                       type="button"
+                      data-date={day.date}
+                      tabIndex={day.date === rovingDate ? 0 : -1}
                       disabled={disabledDay}
                       onClick={() => selectDate(day.date)}
                       className={cn(

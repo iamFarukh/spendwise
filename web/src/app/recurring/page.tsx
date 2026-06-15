@@ -11,6 +11,7 @@ import { IconPlus } from "@/components/icons";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { RecurringCard } from "@/components/recurring/recurring-card";
 import { RecurringSummary } from "@/components/recurring/recurring-summary";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -126,13 +127,17 @@ function RecurringContent() {
         ) : null}
 
         {templates.length === 0 ? (
-          <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-            No recurring templates yet.{" "}
-            <Link href="/recurring/new" className="font-bold text-mint-700">
-              Create your first template
-            </Link>
-            .
-          </div>
+          <EmptyState
+            bordered
+            animation="recurring"
+            title="Nothing on repeat yet"
+            description="Rent, salary, subscriptions — set them once and SpendWise posts them on schedule."
+            action={
+              <EmptyStateAction href="/recurring/new" variant="primary">
+                Create your first template
+              </EmptyStateAction>
+            }
+          />
         ) : (
           <div className="recur-list flex flex-col gap-3">
             {templates.map((template, index) => (

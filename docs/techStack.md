@@ -1,7 +1,7 @@
 # PFOS — Technical Stack
 
 **Version:** 1.0  
-**Last updated:** 10 June 2026  
+**Last updated:** 14 June 2026  
 **Principle:** Free tier everywhere. No custom domain. One developer. Mobile + web share one backend and one accounting engine.
 
 ---
@@ -11,7 +11,7 @@
 | Layer | Choice | Why |
 | ----- | ------ | --- |
 | **Web app** | Next.js 15 (App Router) on Vercel | Free hosting, great DX, `*.vercel.app` URL |
-| **Mobile app** | Expo (React Native) | Fast iteration, Android SMS via config plugin, OTA updates |
+| **Mobile app** | React Native (bare / CLI — no Expo) | Full native control for Android SMS, Firebase, and store builds |
 | **Backend** | Firebase (Spark / free) | Auth + real-time DB + file storage; no server to maintain |
 | **Database** | Cloud Firestore | Real-time sync, offline on mobile, UID-scoped security rules |
 | **Auth** | Firebase Auth | Google + Email/Password, free, works on web and mobile |
@@ -19,7 +19,7 @@
 | **Language** | TypeScript everywhere | Shared types and logic between web and mobile |
 | **Monorepo** | npm workspaces | One repo, shared packages, single source of truth for math |
 | **Styling (web)** | Tailwind CSS + shadcn/ui | Fast, consistent dashboard UI |
-| **Styling (mobile)** | NativeWind v4 (Tailwind for RN) | Same utility mindset as web |
+| **Styling (mobile)** | StyleSheet + shared design tokens (optional: NativeWind) | Match web spacing/typography where practical |
 | **Charts (web)** | Recharts | Simple, React-native charts for reports |
 | **Dates** | date-fns + date-fns-tz | Timezone-correct day boundaries for reports |
 
@@ -27,6 +27,7 @@
 
 | Skipped | Reason |
 | ------- | ------ |
+| Expo | Prefer bare React Native for SMS, native modules, and full Android/iOS project control |
 | Custom domain | Not buying one; Vercel subdomain is enough |
 | Cloud Functions (initially) | Not on Firebase Spark free plan; client-side recurring is fine for one user |
 | PostgreSQL / Supabase | Firestore + offline sync is simpler for this use case |
@@ -41,7 +42,7 @@
 ```
 expense-tracker/                    ← monorepo root (git repo)
 ├── web/                            ← Next.js → Vercel (set Root Directory = web)
-├── mobile/                         ← Expo app (add later, Phase 3+)
+├── mobile/                         ← React Native app (add later, Phase 3+ — bare RN, no Expo)
 ├── packages/
 │   └── shared/                     ← accounting engine, types, validators
 ├── firebase/
@@ -51,7 +52,7 @@ expense-tracker/                    ← monorepo root (git repo)
 └── package.json                    ← npm workspaces root
 ```
 
-**Build order:** Web first (`web/`). Mobile (`mobile/`) is added once the web dashboard is working.
+**Build order:** Web first (`web/`). Mobile (`mobile/`) is added once the web dashboard is working — scaffolded with React Native CLI (`npx @react-native-community/cli init`), not Expo.
 
 ### Data flow
 
@@ -181,27 +182,27 @@ Create composite indexes as Firestore prompts (typical queries):
 
 ---
 
-## 5. Mobile App (Expo)
+## 5. Mobile App (React Native — bare, no Expo)
 
-### 5.1 Why Expo
+### 5.1 Why bare React Native
 
-- Single codebase for Android (+ iOS later if wanted)
-- Expo Router for file-based navigation (same mental model as Next.js)
-- EAS Build for Android APK with SMS permissions
-- Expo Updates for OTA fixes without store submission
+- Full access to native Android/iOS projects (`android/`, `ios/`) without Expo abstraction
+- Direct SMS permissions and native modules on Android (Phase 3)
+- Standard Gradle/Xcode builds — sideload APK or Play Store when ready
+- Same TypeScript + Firebase JS SDK stack as web; shared logic via `@pfos/shared`
+- **Not using Expo** — no Expo Go, EAS, or Expo Router; navigation via React Navigation
 
 ### 5.2 Key libraries
 
 | Package | Purpose |
 | ------- | ------- |
-| `expo` | Runtime and tooling |
-| `expo-router` | Navigation |
-| `react-native-firebase` or `firebase` JS SDK | Firestore + Auth (JS SDK is simpler to share with web) |
-| `expo-dev-client` | Custom dev build for native modules |
-| `react-native-sms-android` or custom config plugin | SMS reading (Android only, Phase 3) |
-| `nativewind` | Tailwind-style styling |
-| `@react-native-async-storage/async-storage` | Local prefs |
-| `@repo/shared`, `@repo/firebase` | Shared logic |
+| `react-native` | Core runtime |
+| `@react-navigation/native` + stack/tabs | Navigation |
+| `firebase` (JS SDK) | Firestore + Auth — same SDK as web for easier sharing |
+| `@react-native-google-signin/google-signin` | Google Sign-In on Android |
+| `@react-native-async-storage/async-storage` | Local prefs / auth persistence |
+| Custom native module or `react-native-get-sms-android` | SMS reading (Android only, Phase 3) |
+| `@pfos/shared` | Accounting logic, types, validators |
 
 ### 5.3 Mobile app responsibilities
 
@@ -223,23 +224,25 @@ Create composite indexes as Firestore prompts (typical queries):
 
 Implementation path:
 
-1. `expo-dev-client` + custom native module or community package
-2. Request `READ_SMS` permission at runtime
-3. Parse on device → create `PENDING` transaction
-4. Route to account via `smsIdentifiers` on account docs
-5. Never send SMS content to a server (privacy + free tier)
+1. Bare RN project with `READ_SMS` in `AndroidManifest.xml`
+2. Native module or community package for SMS inbox access
+3. Request `READ_SMS` permission at runtime
+4. Parse on device → create `PENDING` transaction
+5. Route to account via `smsIdentifiers` on account docs
+6. Never send SMS content to a server (privacy + free tier)
 
 ### 5.5 Build & distribute
 
 ```bash
-# Development
-npx expo start
+# Development (after mobile/ workspace exists)
+npm run dev:mobile          # Metro bundler
+npm run dev:mobile:android  # Install debug build on device/emulator
 
-# Android APK (personal install, no Play Store needed)
-eas build --platform android --profile preview
+# Release APK (personal sideload — no Play Store required)
+cd mobile/android && ./gradlew assembleRelease
 ```
 
-EAS free tier: limited builds per month — enough for personal use.
+Use Android Studio for emulator setup, signing config, and device debugging.
 
 ---
 
@@ -295,7 +298,7 @@ packages/firebase/src/
 
 | Method | Web | Mobile |
 | ------ | --- | ------ |
-| Google Sign-In | Firebase Auth popup | Expo AuthSession + Firebase |
+| Google Sign-In | Firebase Auth popup | `@react-native-google-signin/google-signin` + Firebase |
 | Email / Password | Firebase Auth form | Firebase Auth form |
 
 **Session:** Firebase persists auth token automatically. Both apps listen to `onAuthStateChanged`.
@@ -318,15 +321,16 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
 ```
 
-### Mobile (`apps/mobile/.env`)
+### Mobile (`mobile/.env`)
 
 ```bash
-EXPO_PUBLIC_FIREBASE_API_KEY=
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-EXPO_PUBLIC_FIREBASE_APP_ID=
+# Use react-native-config or similar — prefix depends on your RN setup
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_APP_ID=
 ```
 
 ### Vercel
@@ -348,8 +352,8 @@ Add the same `NEXT_PUBLIC_*` vars in the Vercel project settings.
 
 ### Mobile
 
-- **NativeWind** for consistent spacing/typography
-- Bottom tab navigation: Home, Transactions, Add, Accounts, Settings
+- **StyleSheet** or optional **NativeWind** for consistent spacing/typography
+- Bottom tab navigation (React Navigation): Home, Transactions, Add, Accounts, Settings
 - FAB or prominent quick-add on home
 - Large touch targets for pending review (swipe to confirm/category)
 
@@ -423,8 +427,8 @@ CSV: flat transaction rows for spreadsheet analysis.
 - Node.js 20+
 - npm 10+
 - Firebase CLI: `npm i -g firebase-tools`
-- Expo CLI / EAS CLI (when mobile phase starts)
-- Android Studio (for SMS testing on emulator/device)
+- Android Studio + React Native CLI (when mobile phase starts)
+- JDK 17+ and Android SDK (for Android builds)
 
 ### Initial setup
 
@@ -439,8 +443,9 @@ firebase init firestore storage
 # Run web
 npm run dev
 
-# Run mobile (later)
-npm run dev --workspace=mobile
+# Run mobile (later — scaffold bare RN in mobile/ first)
+# npm run dev:mobile
+# npm run dev:mobile:android
 ```
 
 ### Git workflow
@@ -457,8 +462,8 @@ npm run dev --workspace=mobile
 | TypeScript strict | Catch schema mistakes |
 | Vitest | Unit tests for `packages/shared` |
 | Firebase Emulator | Local Firestore + rules testing |
-| Expo Go | UI dev (no SMS) |
-| Expo Dev Client | SMS and native module testing |
+| Android Studio | Emulator, Gradle builds, SMS testing on device |
+| React Native Debugger | Metro + network/Firestore inspection |
 
 ---
 
@@ -468,7 +473,6 @@ npm run dev --workspace=mobile
 | ------- | ------------ |
 | Vercel Hobby | ₹0 |
 | Firebase Spark | ₹0 |
-| Expo EAS (free tier) | ₹0 |
 | Domain | ₹0 (not using one) |
 | **Total** | **₹0** |
 
@@ -497,13 +501,11 @@ Pin these when scaffolding; upgrade deliberately.
   "next": "^15",
   "react": "^19",
   "react-native": "0.79.x",
-  "expo": "~53",
   "firebase": "^11",
   "typescript": "^5.7",
   "tailwindcss": "^4",
   "date-fns": "^4",
-  "recharts": "^2",
-  "turbo": "^2"
+  "recharts": "^2"
 }
 ```
 
@@ -514,15 +516,16 @@ Pin these when scaffolding; upgrade deliberately.
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                        YOUR DEV MACHINE                       │
-│  npm run dev → Next.js (localhost:3000) + Expo later (8081)    │
+│  npm run dev → Next.js (localhost:3000)                       │
+│  npm run dev:mobile → Metro (8081) when mobile/ exists       │
 └────────────────────────────┬─────────────────────────────────┘
                              │
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
         ┌──────────┐  ┌──────────┐  ┌──────────────┐
-        │  Vercel  │  │ Firebase │  │  EAS Build   │
-        │  (web)   │  │  Auth    │  │  (Android    │
-        │          │  │  Firestore│  │   APK)       │
+        │  Vercel  │  │ Firebase │  │ Gradle build │
+        │  (web)   │  │  Auth    │  │ (Android APK)│
+        │          │  │  Firestore│  │              │
         │          │  │  Storage │  │              │
         └────┬─────┘  └────┬─────┘  └──────┬───────┘
              │             │               │
@@ -533,7 +536,7 @@ Pin these when scaffolding; upgrade deliberately.
                     Real-time sync
 ```
 
-**You** use the mobile app daily → data goes to Firestore → web dashboard on Vercel shows the same data instantly.
+**You** use the React Native mobile app daily → data goes to Firestore → web dashboard on Vercel shows the same data instantly.
 
 ---
 
@@ -541,9 +544,9 @@ Pin these when scaffolding; upgrade deliberately.
 
 Follow [implementationPlan.md](./implementationPlan.md) Phase 0:
 
-1. Scaffold the monorepo
+1. Scaffold the monorepo (`web/` + `packages/shared` — done)
 2. Create the Firebase project
-3. Wire auth on web and mobile
+3. Wire auth on web (mobile auth when `mobile/` is added)
 4. Deploy Firestore rules
 5. Deploy web to Vercel
 

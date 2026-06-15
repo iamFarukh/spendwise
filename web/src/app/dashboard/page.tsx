@@ -28,6 +28,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
 import { useAuth } from "@/components/providers/auth-provider";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { IconChip } from "@/components/ui/icon-chip";
 import { Tag } from "@/components/ui/tag";
 import { useLedgerSummary } from "@/hooks/use-ledger-summary";
@@ -364,9 +365,17 @@ function AccountsCard({
   if (balances.length === 0) {
     return (
       <CardShell title="Accounts" link="Manage" linkHref="/accounts">
-        <p className="text-sm text-ink-500">
-          No accounts yet. Finish setup to add your first account.
-        </p>
+        <EmptyState
+          compact
+          animation="wallet"
+          title="No accounts yet"
+          description="Add your first account to start tracking balances."
+          action={
+            <EmptyStateAction href="/accounts/new">
+              Add account
+            </EmptyStateAction>
+          }
+        />
       </CardShell>
     );
   }
@@ -431,10 +440,17 @@ function RecentActivityCard({
   if (transactions.length === 0) {
     return (
       <CardShell title="Recent activity" link="View all" linkHref="/transactions">
-        <p className="text-sm text-ink-500">
-          No transactions yet besides your opening balances. Add your first
-          expense or income to see activity here.
-        </p>
+        <EmptyState
+          compact
+          animation="receipt-search"
+          title="No activity yet"
+          description="Add your first expense or income to see it here."
+          action={
+            <EmptyStateAction href="/transactions/new">
+              Add transaction
+            </EmptyStateAction>
+          }
+        />
       </CardShell>
     );
   }

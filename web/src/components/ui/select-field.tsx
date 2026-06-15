@@ -18,6 +18,7 @@ type SelectFieldProps = {
   onChange: (value: string) => void;
   options: SelectOption[];
   disabled?: boolean;
+  required?: boolean;
   id?: string;
   name?: string;
   className?: string;
@@ -30,6 +31,7 @@ export function SelectField({
   onChange,
   options,
   disabled = false,
+  required = false,
   id,
   name,
   className,
@@ -38,11 +40,19 @@ export function SelectField({
   const fieldId = id ?? name ?? generatedId;
   const listboxId = `${fieldId}-listbox`;
   const rootRef = useRef<HTMLDivElement>(null);
+  const typeaheadRef = useRef({ query: "", at: 0 });
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const selectedIndex = options.findIndex((option) => option.value === value);
   const selected = options[selectedIndex];
+
+  useEffect(() => {
+    if (!open || highlightedIndex < 0) return;
+    document
+      .getElementById(`${fieldId}-option-${highlightedIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [open, highlightedIndex, fieldId]);
 
   useEffect(() => {
     if (!open) return;
@@ -67,11 +77,10 @@ export function SelectField({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (open) {
-      setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
-    }
-  }, [open, selectedIndex]);
+  function openList() {
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    setOpen(true);
+  }
 
   function selectOption(index: number) {
     const option = options[index];
@@ -85,10 +94,12 @@ export function SelectField({
 
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      if (open && highlightedIndex >= 0) {
+      if (!open) {
+        openList();
+      } else if (highlightedIndex >= 0) {
         selectOption(highlightedIndex);
       } else {
-        setOpen((current) => !current);
+        setOpen(false);
       }
       return;
     }
@@ -96,7 +107,7 @@ export function SelectField({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       if (!open) {
-        setOpen(true);
+        openList();
         return;
       }
       setHighlightedIndex((current) =>
@@ -108,12 +119,55 @@ export function SelectField({
     if (event.key === "ArrowUp") {
       event.preventDefault();
       if (!open) {
-        setOpen(true);
+        openList();
         return;
       }
       setHighlightedIndex((current) =>
         current > 0 ? current - 1 : options.length - 1,
       );
+      return;
+    }
+
+    if (event.key === "Home" && open) {
+      event.preventDefault();
+      setHighlightedIndex(0);
+      return;
+    }
+
+    if (event.key === "End" && open) {
+      event.preventDefault();
+      setHighlightedIndex(options.length - 1);
+      return;
+    }
+
+    if (event.key === "Tab") {
+      setOpen(false);
+      return;
+    }
+
+    // Typeahead: jump to the next option whose label starts with the
+    // accumulated query (resets after 500ms of inactivity).
+    if (event.key.length === 1 && !event.metaKey && !event.ctrlKey) {
+      const now = Date.now();
+      const state = typeaheadRef.current;
+      state.query =
+        now - state.at > 500
+          ? event.key.toLowerCase()
+          : state.query + event.key.toLowerCase();
+      state.at = now;
+
+      const startFrom = (open ? Math.max(highlightedIndex, 0) : selectedIndex) + 1;
+      for (let offset = 0; offset < options.length; offset += 1) {
+        const index = (startFrom + offset) % options.length;
+        if (options[index].label.toLowerCase().startsWith(state.query)) {
+          if (open) {
+            setHighlightedIndex(index);
+          } else {
+            onChange(options[index].value);
+          }
+          return;
+        }
+      }
     }
   }
 
@@ -124,6 +178,11 @@ export function SelectField({
         className="mb-[7px] block text-[13px] font-bold text-ink-700"
       >
         {label}
+        {required ? (
+          <span className="ml-0.5 text-expense" aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </span>
 
       <button
@@ -131,11 +190,24 @@ export function SelectField({
         id={fieldId}
         name={name}
         disabled={disabled}
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}
         aria-labelledby={`${fieldId}-label`}
-        onClick={() => !disabled && setOpen((current) => !current)}
+        aria-activedescendant={
+          open && highlightedIndex >= 0
+            ? `${fieldId}-option-${highlightedIndex}`
+            : undefined
+        }
+        onClick={() => {
+          if (disabled) return;
+          if (open) {
+            setOpen(false);
+          } else {
+            openList();
+          }
+        }}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
           "flex h-[46px] w-full items-stretch overflow-hidden rounded-md border border-line bg-canvas text-left transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]",
@@ -168,11 +240,6 @@ export function SelectField({
           id={listboxId}
           role="listbox"
           aria-labelledby={`${fieldId}-label`}
-          aria-activedescendant={
-            highlightedIndex >= 0
-              ? `${fieldId}-option-${highlightedIndex}`
-              : undefined
-          }
           className="dropdown-panel absolute top-[calc(100%+6px)] right-0 left-0 z-[var(--z-dropdown)] max-h-[280px] overflow-y-auto rounded-md border border-line bg-paper p-1.5 shadow-md"
         >
           {options.map((option, index) => {

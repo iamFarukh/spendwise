@@ -17,6 +17,7 @@ import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/tag";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
@@ -159,13 +160,17 @@ function PendingContent() {
         ) : null}
 
         {pending.length === 0 ? (
-          <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-            No pending entries.{" "}
-            <Link href="/transactions/new" className="font-bold text-mint-700">
-              Add a transaction
-            </Link>{" "}
-            or mark one as pending when saving.
-          </div>
+          <EmptyState
+            bordered
+            animation="caught-up"
+            title="All caught up"
+            description="Nothing needs your review. Entries you mark as pending while saving will land here."
+            action={
+              <EmptyStateAction href="/transactions/new">
+                Add a transaction
+              </EmptyStateAction>
+            }
+          />
         ) : (
           <div className="space-y-3">
             {pending.map((txn, index) => (

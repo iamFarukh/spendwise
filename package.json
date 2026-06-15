@@ -4,10 +4,14 @@
   "private": true,
   "workspaces": [
     "web",
+    "mobile",
     "packages/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=web",
+    "dev:mobile": "npm run start --workspace=@pfos/mobile",
+    "dev:mobile:android": "npm run android --workspace=@pfos/mobile",
+    "dev:mobile:ios": "npm run ios --workspace=@pfos/mobile",
     "build": "npm run build --workspace=web",
     "start": "npm run start --workspace=web",
     "lint": "npm run lint --workspace=web",
@@ -15,5 +19,9 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "overrides": {
+    "react-native": "0.79.2"
+  },
+  "packageManager": "pnpm@11.5.2+sha512.71c631e382066efc25625d5cf029075de07b61b37f6e27350fbd84b1bda5864c8c1967adc280776b45c30a715c0359a3be08fef42d5bb09e2b99029979692916"
 }

@@ -2,8 +2,8 @@
 
 **Personal Finance Operating System**  
 **Version:** 1.0 (practical build plan)  
-**Last updated:** 10 June 2026  
-**Context:** Solo/personal project. No custom domain. Free-tier hosting only.
+**Last updated:** 14 June 2026  
+**Context:** Solo/personal project. No custom domain. Free-tier hosting only. Mobile app (when added) will be **bare React Native — no Expo**.
 
 ---
 
@@ -18,7 +18,7 @@ This is **not** a budgeting app or investment performance tracker. It is a **led
 - User-defined accounts (asset / liability / tracking)
 - One governing rule: only `EXPENSE` counts as spending; transfers and investments do not
 - Day-zero opening balances (you cannot track changes without declaring what exists today)
-- Mobile for daily capture, web for review and analysis
+- Mobile for daily capture (future bare React Native app), web for review and analysis
 - Real-time sync via Firebase, scoped per user
 
 The full product spec lives in [projectPlan.md](./projectPlan.md). This document turns that spec into a **buildable, phased plan** for one developer on free tools.
@@ -42,7 +42,7 @@ The full product spec lives in [projectPlan.md](./projectPlan.md). This document
 | ------- | ------------------- | ------------- |
 | Firebase Spark | Auth, Firestore, Storage | 50K reads / 20K writes per day; no Cloud Functions on Spark |
 | Vercel Hobby | Next.js deploy, preview URLs | Serverless function limits; fine for personal use |
-| Expo | Dev + limited EAS builds | SMS needs a dev build or APK, not Expo Go alone |
+| React Native (bare) | Local Metro + Gradle builds | SMS needs a release/debug APK with native permissions; no Expo |
 
 **Implication:** Recurring transaction generation and heavy server logic run **client-side** or via a **scheduled local trigger** until you upgrade Firebase. For a personal app with one user, this is fine.
 
@@ -52,9 +52,10 @@ The full product spec lives in [projectPlan.md](./projectPlan.md). This document
 
 ```
 ┌─────────────────┐     ┌─────────────────┐
-│  Mobile (Expo)  │     │  Web (Next.js)  │
-│  Daily capture  │     │  Dashboard      │
-│  SMS (Android)  │     │  Reports/export │
+│ Mobile (RN)     │     │  Web (Next.js)  │
+│ bare, no Expo   │     │  Dashboard      │
+│ Daily capture   │     │  Reports/export │
+│ SMS (Android)   │     │                 │
 └────────┬────────┘     └────────┬────────┘
          │                       │
          └───────────┬───────────┘
@@ -108,12 +109,12 @@ Add automation (Android SMS), insights, export/backup, splits, and optional loan
 | # | Task | Done when |
 | - | ---- | --------- |
 | 0.1 | Create monorepo: `web/`, `packages/shared` (mobile added later) | Web app starts, shared package imports work |
-| 0.2 | Firebase project: Auth (Google + Email), Firestore, Storage | Console configured, env vars in both apps |
+| 0.2 | Firebase project: Auth (Google + Email), Firestore, Storage | Console configured, env vars in web (mobile later) |
 | 0.3 | Firestore security rules: `users/{uid}/**` locked to owner | Rules deployed; cross-user read fails |
 | 0.4 | Auth flow on web (mobile auth added later) | Sign in, sign out, session persists |
 | 0.5 | Vercel deploy for web — Root Directory = `web` | `your-app.vercel.app` loads |
 
-**Exit criteria:** You can log in on phone and browser as the same user. No data screens yet.
+**Exit criteria:** You can log in on web. Mobile login added when the React Native app exists. No data screens yet in Phase 0.
 
 ---
 
@@ -182,7 +183,7 @@ Add automation (Android SMS), insights, export/backup, splits, and optional loan
 
 | # | Task | Done when |
 | - | ---- | --------- |
-| 3.1 | Expo dev build with SMS read permission (Android only) | APK reads bank SMS |
+| 3.1 | Bare RN Android build with SMS read permission | Debug/release APK reads bank SMS |
 | 3.2 | SMS parser: amount, merchant, sender ID | Creates `PENDING` transactions |
 | 3.3 | Account routing via `smsIdentifiers` | SMS maps to correct user account |
 | 3.4 | Transfer pairing (debit + credit within 10 min) | Proposes single `TRANSFER` |
@@ -257,7 +258,9 @@ users/{uid}/
 
 ## 7. Screen Map (Build Order)
 
-### Mobile (build first — daily driver)
+### Mobile (build when ready — bare React Native, daily driver)
+
+Scaffold with React Native CLI (not Expo). Add `mobile/` to npm workspaces when created.
 
 1. Auth → Setup wizard (steps 1–4 minimum)
 2. Home dashboard (balances + quick add FAB)
@@ -328,11 +331,11 @@ The project is **done for personal use** when:
 
 | Week | Focus | Ship |
 | ---- | ----- | ---- |
-| 1 | Monorepo, Firebase, auth, deploy | Login works everywhere |
+| 1 | Monorepo, Firebase, auth, deploy | Web login works |
 | 2 | Setup wizard + accounts + opening balances | Day zero complete |
-| 3 | Transactions + balances + mobile dashboard | Manual ledger live |
+| 3 | Transactions + balances + web dashboard | Manual ledger live on web |
 | 4 | Recurring + reconciliation + pending queue | Trust layer live |
-| 5 | Android SMS + routing | Semi-auto capture |
+| 5 | Scaffold bare RN mobile + Android SMS + routing | Semi-auto capture |
 | 6 | Dedup, merchant memory, polish mobile | 2-min daily workflow |
 | 7 | Web dashboard, charts, export | Analysis on desktop |
 | 8+ | Splits, loans, NL entry — only if needed | Power features |

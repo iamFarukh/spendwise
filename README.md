@@ -7,12 +7,11 @@ A personal ledger for tracking where money comes from, moves, and is spent.
 ```
 .
 ├── web/                 # Next.js web app (deploy this folder to Vercel)
+├── mobile/              # Bare React Native app (no Expo) — daily capture
 ├── packages/shared/     # Shared types and accounting logic
 ├── firebase/            # Firestore and Storage security rules
 └── docs/                # Product and implementation docs
 ```
-
-Mobile app (`mobile/`) will be added later, after the web dashboard is ready.
 
 ## Prerequisites
 
@@ -35,6 +34,16 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Mobile app (bare React Native)
+
+See **[mobile/README.md](./mobile/README.md)** for full setup (Android Studio, Firebase native apps, Google Sign-In).
+
+```bash
+npm run sync-env --workspace=@pfos/mobile   # copy Firebase vars from web
+npm run dev:mobile                          # Metro bundler
+npm run dev:mobile:android                  # run on Android emulator/device
+```
 
 ## Vercel deployment
 
@@ -95,7 +104,7 @@ Last audited: 10 June 2026. Web app is ahead of Phase 0 — most of Phases 1–2
 - [x] Transaction list with filters
 - [x] Quick-add expense on dashboard (amount + category → primary account)
 - [x] Zero-balance accounts allowed at setup
-- [ ] Mobile app (`mobile/` — planned later)
+- [ ] Mobile app — scaffold started (`mobile/` bare RN); setup wizard + quick-add next
 
 ### Phase 2 — Trust layer
 
@@ -110,7 +119,7 @@ Last audited: 10 June 2026. Web app is ahead of Phase 0 — most of Phases 1–2
 
 ### Phase 3 — Android automation
 
-- [ ] Not started (no Expo workspace, no SMS capture, no merchant memory)
+- [ ] Not started (no React Native workspace, no SMS capture, no merchant memory)
 
 ### Phase 4 — Web insights (partial)
 

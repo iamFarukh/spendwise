@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { SpendWiseBrand } from "@/components/brand/spendwise-logo";
 import {
@@ -123,12 +124,7 @@ export function AppShell({
             ) : null}
           </div>
           <div className="flex-1" />
-          {showSearch ? (
-            <div className="flex h-10 w-60 items-center gap-2 rounded-pill border border-line bg-canvas px-3.5 text-[13px] font-semibold text-ink-400">
-              <IconSearch />
-              Search transactions
-            </div>
-          ) : null}
+          {showSearch ? <HeaderSearch /> : null}
           {headerActions ? (
             headerActions
           ) : primaryAction ? (
@@ -153,6 +149,35 @@ export function AppShell({
         </main>
       </div>
     </div>
+  );
+}
+
+function HeaderSearch() {
+  const router = useRouter();
+  const [value, setValue] = useState("");
+
+  return (
+    <form
+      role="search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const query = value.trim();
+        router.push(
+          query ? `/transactions?q=${encodeURIComponent(query)}` : "/transactions",
+        );
+      }}
+      className="flex h-10 w-60 items-center gap-2 rounded-pill border border-line bg-canvas px-3.5 text-[13px] font-semibold text-ink-500 transition-[border-color,box-shadow] duration-[var(--duration-fast)] focus-within:border-mint-400 focus-within:shadow-[0_0_0_3px_var(--mint-100)]"
+    >
+      <IconSearch />
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        placeholder="Search transactions"
+        aria-label="Search transactions"
+        className="w-full border-none bg-transparent text-ink-900 outline-none placeholder:font-semibold placeholder:text-ink-400"
+      />
+    </form>
   );
 }
 

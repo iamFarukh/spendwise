@@ -17,6 +17,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/motion/skeleton";
 import { StaggerItem } from "@/components/motion/stagger";
 import { Button } from "@/components/ui/button";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useReconciliations } from "@/hooks/use-reconciliations";
 import { useTransactions } from "@/hooks/use-transactions";
@@ -99,13 +100,17 @@ function AccountsContent() {
     >
       <div className="acct-page space-y-2">
         {balances.length === 0 ? (
-          <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-            No accounts yet.{" "}
-            <Link href="/accounts/new" className="font-bold text-mint-700">
-              Add your first account
-            </Link>
-            .
-          </div>
+          <EmptyState
+            bordered
+            animation="wallet"
+            title="No accounts yet"
+            description="An account is anywhere money sits — bank, wallet, cash, or a card you owe on."
+            action={
+              <EmptyStateAction href="/accounts/new" variant="primary">
+                Add your first account
+              </EmptyStateAction>
+            }
+          />
         ) : (
           <>
             <AccountSummary balances={balances} currency={currency} />

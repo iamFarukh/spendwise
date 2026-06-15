@@ -8,6 +8,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { getLastReconciliationByAccount } from "@/lib/reconciliation/display";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { getFirestoreErrorMessage } from "@/lib/firebase/errors";
+import { entitiesFromSnapshot } from "@/lib/firebase/snapshot";
 
 export function useReconciliations() {
   const { user, configured } = useAuth();
@@ -35,9 +36,9 @@ export function useReconciliations() {
     const unsubscribe = onSnapshot(
       ref,
       (snap) => {
-        const next = snap.docs
-          .map((docSnap) => docSnap.data() as Reconciliation)
-          .sort((a, b) => b.date.localeCompare(a.date));
+        const next = entitiesFromSnapshot<Reconciliation>(snap.docs).sort(
+          (a, b) => b.date.localeCompare(a.date),
+        );
         setReconciliations(next);
         setLoading(false);
         setError(null);

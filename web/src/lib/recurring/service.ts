@@ -173,14 +173,21 @@ export async function runDueRecurringTemplates(
     }
 
     const batch = writeBatch(db);
-    const transaction = buildTransactionFromRecurringTemplate(
-      uid,
-      template,
-      template.nextRunDate,
-    );
+    // Deterministic id keyed on (template, run date): if two runs race (e.g. a
+    // refocus and a second tab firing the runner simultaneously) the second
+    // write overwrites the same document instead of creating a duplicate.
+    const transactionId = `${template.id}_${template.nextRunDate}`;
+    const transaction = {
+      ...buildTransactionFromRecurringTemplate(
+        uid,
+        template,
+        template.nextRunDate,
+      ),
+      id: transactionId,
+    };
 
     batch.set(
-      doc(db, firestorePaths.transaction(uid, transaction.id)),
+      doc(db, firestorePaths.transaction(uid, transactionId)),
       transaction,
     );
     batch.update(doc(db, firestorePaths.recurringTemplate(uid, template.id)), {

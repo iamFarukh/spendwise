@@ -344,7 +344,6 @@ function SettingsContent() {
 
           {user ? (
             <SettingsSyncCard
-              uid={user.uid}
               email={email}
               transactionCount={transactionCount}
               accountCount={accountCount}
