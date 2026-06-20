@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpendWise — Mobile Screens</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/mobile.css">
+</head>
+<body>
+
+<!-- ============ ICON SPRITE ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mintGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#25E6A6"/><stop offset="1" stop-color="#0A7D5C"/></linearGradient>
+  </defs>
+  <symbol id="logo" viewBox="0 0 48 48"><rect width="48" height="48" rx="13" fill="url(#mintGrad)"/><path d="M24 35c0-7 0-11 5-15 0 8-2 12-5 15Z" fill="#fff" opacity="0.95"/><path d="M24 35c0-6-1-9-6-12 0 7 2 9 6 12Z" fill="#fff" opacity="0.8"/><rect x="22.5" y="30" width="3" height="9" rx="1.5" fill="#fff"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-5h5v5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v3"/><rect x="3" y="7.5" width="18" height="12" rx="2.5"/><path d="M16 13.5h2.5"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M8 14l3-4 3 2 4-6"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a6 6 0 0 1 6-6h6"/><path d="m14 -1 3 3-3 3" transform="translate(0,3)"/><path d="M20 16a6 6 0 0 1-6 6H8"/><path d="m10 19-3 3 3 3" transform="translate(0,-3)"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 2.6 14H2.5a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4 7.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.5 4V3.9a2 2 0 1 1 4 0V4a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21.4 10h.1a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4"/><path d="M3 8h13"/><path d="m17 20 4-4-4-4"/><path d="M21 16H8"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M16 7h5v5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M4 9h16M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5H3l9-5Z"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 21h18"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></symbol>
+  <symbol id="i-pig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a6 6 0 0 1 6-6h3a6 6 0 0 1 6 6 4 4 0 0 1-2 3.5V20h-3v-2h-3v2H8v-2.5A4 4 0 0 1 4 13Z"/><path d="M14 7l1-3M4 12H2.5"/><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-food" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a2 2 0 0 0 4 0V3M7 11v10"/><path d="M16 3c-1.5 0-3 1.8-3 5s1.5 4 3 4m0-9c1.5 0 3 1.8 3 5s-1.5 4-3 4m0 0v9"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 4 14h6l-1 7 9-11h-6l1-7Z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 12H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></symbol>
+  <symbol id="i-home2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 5l8 6"/><path d="M6 10v9h12v-9"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4l4 4L8 20H4v-4L16 4Z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3h-3v-3M6 19v-3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-9-9a4.5 4.5 0 0 1 9-2 4.5 4.5 0 0 1 9 2c-2 4.5-9 9-9 9Z"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4M5 12h10"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 3 2.6 5.6 6.1.7-4.5 4.1 1.2 6L12 16.9 6.6 19.4l1.2-6L3.3 9.3l6.1-.7L12 3Z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.7-1.6L13.6 21 11 19.4 8.3 21 5.5 19.4 5 21V3Z"/><path d="M9 8h6M9 12h4"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a5 5 0 0 1 0 10h-2"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="9" cy="6" rx="6" ry="2.6"/><path d="M3 6v5c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V6"/><path d="M15 11.4c2.6.2 6 1.3 6 2.6 0 1.4-2.7 2.6-6 2.6-1 0-2-.1-2.8-.3"/><path d="M3 11c0 1.4 2.7 2.6 6 2.6M9 13.6V19c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-5"/></symbol>
+  <symbol id="i-signal" viewBox="0 0 20 14"><rect x="0" y="9" width="3.2" height="5" rx="1" fill="currentColor"/><rect x="5.6" y="6" width="3.2" height="8" rx="1" fill="currentColor"/><rect x="11.2" y="3" width="3.2" height="11" rx="1" fill="currentColor"/><rect x="16.8" y="0" width="3.2" height="14" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 20 15" fill="currentColor"><path d="M10 3C6.3 3 2.9 4.4.3 6.9l1.7 1.8C4.1 6.6 6.9 5.4 10 5.4s5.9 1.2 8 3.3l1.7-1.8C17.1 4.4 13.7 3 10 3Z"/><path d="M10 8.2c-1.9 0-3.6.7-4.9 1.9l1.8 1.8c.8-.8 1.9-1.3 3.1-1.3s2.3.5 3.1 1.3l1.8-1.8C13.6 8.9 11.9 8.2 10 8.2Z"/><circle cx="10" cy="13.2" r="1.6"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.03-2.6 2.13-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.81 0-1.72-.92-2.83-.9-1.46.02-2.8.85-3.55 2.16-1.51 2.62-.39 6.5 1.08 8.63.72 1.04 1.58 2.21 2.7 2.17 1.08-.04 1.49-.7 2.8-.7 1.31 0 1.68.7 2.83.68 1.17-.02 1.91-1.06 2.62-2.11.83-1.21 1.17-2.38 1.19-2.44-.03-.01-2.29-.88-2.31-3.49Z"/><path d="M14.62 4.7c.6-.73 1-1.74.89-2.75-.86.03-1.9.57-2.52 1.3-.55.64-1.04 1.67-.91 2.65.96.07 1.94-.49 2.54-1.2Z"/></symbol>
+</svg>
+
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div class="brandmark">
+      <svg class="logo" viewBox="0 0 48 48"><use href="#logo"/></svg>
+      <span class="wordmark">SpendWise</span>
+    </div>
+    <h1>Mobile — every screen</h1>
+    <p>The personal finance OS in your pocket. A calm ledger of truth where only spending counts — now as native iPhone screens.</p>
+    <div class="meta">
+      <span class="chip">12 screens</span>
+      <span class="chip">iOS · 390pt</span>
+      <span class="chip">Mint design tokens</span>
+      <span class="chip">₹ INR</span>
+    </div>
+  </div>
+
+  <div class="gallery">
+
+  <!-- ===================================================== 01 · SIGN IN ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">01</span><div><div class="title">Sign in</div><div class="desc">One account, synced across web &amp; mobile</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Sign in">
+        <div class="statusbar on-dark"><span>9:41</span><div class="sb-r"><svg style="color:#fff"><use href="#i-signal"/></svg><svg style="color:#fff"><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="login-m">
+          <div class="login-top">
+            <svg class="lg" viewBox="0 0 48 48"><use href="#logo"/></svg>
+            <div class="wm">SpendWise</div>
+            <p class="tg" data-comment-anchor="991aa47f95-h2">Your ledger of truth — where every rupee lives.</p>
+          </div>
+          <div class="login-sheet">
+            <div class="authseg"><span class="active">Sign in</span><span>Create account</span></div>
+            <button class="oauth-btn apple"><svg><use href="#i-apple"/></svg> Continue with Apple</button>
+            <button class="oauth-btn"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M21.6 12.2c0-.6-.1-1.2-.2-1.8H12v3.5h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.2Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 .9-3.4.9-2.6 0-4.8-1.7-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 13.9a6 6 0 0 1 0-3.8V7.5H3.1a10 10 0 0 0 0 9l3.3-2.6Z"/><path fill="#EA4335" d="M12 6.5c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 8.2 9.4 6.5 12 6.5Z"/></svg> Continue with Google</button>
+            <div class="auth-divider"><span>or use email</span></div>
+            <label class="field"><span>Email</span><div class="input"><svg class="lead"><use href="#i-globe"/></svg>developer.farukh@gmail.com</div></label>
+            <label class="field"><div class="flab" style="margin-bottom:7px">Password <span class="forgot">Forgot?</span></div><div class="input"><svg class="lead"><use href="#i-lock"/></svg>••••••••••••<svg class="eye"><use href="#i-lock"/></svg></div></label>
+            <button class="mbtn mbtn-primary mbtn-block" style="margin-top:4px">Sign in <svg><use href="#i-chev-r"/></svg></button>
+            <p class="login-foot">By continuing you agree to our <b>Terms</b> &amp; <b>Privacy Policy</b>.</p>
+          </div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 02 · SETUP WIZARD ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">02</span><div><div class="title">Setup — Day zero</div><div class="desc">Declare what exists today: accounts &amp; opening balances</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Setup wizard">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head">
+          <div class="m-head-row"><div class="auth-brand" style="display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;font-size:18px"><svg class="logo" viewBox="0 0 48 48" style="width:28px;height:28px"><use href="#logo"/></svg> SpendWise</div><div class="m-grow"></div><span class="muted" style="font-size:var(--fs-sm);font-weight:700">Step 2 / 4</span></div>
+          <div class="setup-steps" style="margin-top:14px"><span class="sstep done"></span><span class="sstep active"></span><span class="sstep"></span><span class="sstep"></span></div>
+        </div>
+        <div class="m-body"><div class="m-scroll">
+          <span class="kicker">Accounts</span>
+          <div class="m-title" style="font-size:22px;margin-bottom:6px">Add the accounts you actually use</div>
+          <p class="muted" style="font-size:var(--fs-sm);margin-bottom:14px">Anywhere money sits — bank, wallet, cash, or a card you owe on. We'll capture today's balance next.</p>
+          <div class="setup-note" style="margin-bottom:16px"><svg><use href="#i-shield"/></svg><div><b>Why opening balances?</b> Each becomes an <code>OPENING</code> entry — your ledger's day zero.</div></div>
+          <div class="stack gap-2">
+            <div class="acct-row"><span class="ic" style="background:var(--mint-100);color:var(--mint-700)"><svg><use href="#i-bank"/></svg></span><div class="nm"><b>HDFC Savings</b><small>Asset · Bank</small></div><span class="amt tnum">₹ 4,20,000</span></div>
+            <div class="acct-row"><span class="ic" style="background:var(--invest-bg);color:var(--invest)"><svg><use href="#i-cash"/></svg></span><div class="nm"><b>Cash wallet</b><small>Asset · Cash</small></div><span class="amt tnum">₹ 6,500</span></div>
+            <div class="acct-row"><span class="ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-card"/></svg></span><div class="nm"><b>ICICI Credit Card</b><small>Liability · Card</small></div><span class="amt tnum neg">−₹ 18,400</span></div>
+            <div class="acct-row"><span class="ic" style="background:var(--transfer-bg);color:var(--transfer)"><svg><use href="#i-pig"/></svg></span><div class="nm"><b>Zerodha · MF</b><small>Tracking · Investment</small></div><span class="amt tnum">₹ 3,15,000</span></div>
+          </div>
+          <button class="mbtn mbtn-soft mbtn-block mt-3"><svg><use href="#i-plus"/></svg> Add another account</button>
+        </div></div>
+        <div class="sheet-foot" style="display:flex;gap:10px"><button class="mbtn mbtn-ghost" style="flex:none;padding:0 18px">Back</button><button class="mbtn mbtn-primary mbtn-block">Continue <svg><use href="#i-chev-r"/></svg></button></div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 03 · DASHBOARD ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">03</span><div><div class="title">Home dashboard</div><div class="desc">Net worth, balances &amp; what you actually spent</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Dashboard">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row">
+          <div class="m-greet"><b>Good evening, Mohammad</b><small>Tuesday, 9 June 2026</small></div>
+          <div class="m-grow"></div>
+          <span class="icon-btn"><svg><use href="#i-bell"/></svg><span class="dot-badge">3</span></span>
+          <span class="m-avatar">M</span>
+        </div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="networth-m">
+            <span class="nw-label">Total net worth</span>
+            <div class="nw-num tnum">₹ 12,33,100</div>
+            <span class="tag tag-income tag-dot">▲ ₹ 41,200 this month</span>
+            <div class="nw-seg" style="margin-top:14px"><i></i></div>
+            <div class="nw-legend">
+              <div><span class="dotk asset"></span> Assets <b class="tnum">₹ 13,67,500</b></div>
+              <div><span class="dotk track"></span> Tracking <b class="tnum">₹ 3,15,000</b></div>
+              <div><span class="dotk liab"></span> Liabilities <b class="tnum">−₹ 1,34,400</b></div>
+            </div>
+          </div>
+          <div class="stat-grid mt-3">
+            <div class="stat"><span class="ic-sm" style="background:var(--income-bg);color:var(--income)"><svg><use href="#i-down"/></svg></span><small>Income</small><b class="tnum">₹ 1,28,000</b></div>
+            <div class="stat"><span class="ic-sm" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-up"/></svg></span><small>Spent</small><b class="tnum">₹ 47,820</b></div>
+            <div class="stat"><span class="ic-sm" style="background:var(--invest-bg);color:var(--invest)"><svg><use href="#i-trend"/></svg></span><small>Invested</small><b class="tnum">₹ 25,000</b></div>
+            <div class="stat"><span class="ic-sm" style="background:var(--mint-100);color:var(--mint-700)"><svg><use href="#i-pig"/></svg></span><small>Saved</small><b class="tnum pos">₹ 55,180</b></div>
+          </div>
+          <div class="m-card mt-3">
+            <div class="m-card-head"><h3>Accounts</h3><span class="link">Manage</span></div>
+            <div class="acct-mini primary"><span class="ic" style="background:var(--mint-100);color:var(--mint-700)"><svg><use href="#i-bank"/></svg></span><div class="amn"><b>HDFC Savings <span class="tag tag-income" style="padding:1px 7px"><svg style="width:11px;height:11px"><use href="#i-star"/></svg></span></b><small>Primary · Bank</small></div><span class="amt tnum">₹ 6,42,300</span></div>
+            <div class="acct-mini"><span class="ic" style="background:var(--invest-bg);color:var(--invest)"><svg><use href="#i-cash"/></svg></span><div class="amn"><b>Cash wallet</b><small>Physical cash</small></div><span class="amt tnum">₹ 3,200</span></div>
+            <div class="acct-mini"><span class="ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-card"/></svg></span><div class="amn"><b>ICICI Credit Card</b><small>Due 18 Jun</small></div><span class="amt tnum neg">−₹ 18,400</span></div>
+          </div>
+          <div class="m-card mt-3">
+            <div class="m-card-head"><h3>Recent activity</h3><span class="link">View all</span></div>
+            <div class="txn"><span class="ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-food"/></svg></span><div class="tx-main"><b>Swiggy — dinner</b><small>Food &amp; dining · Card</small></div><div class="tx-right"><span class="tnum neg">−₹ 480</span><small>Today</small></div></div>
+            <div class="txn"><span class="ic" style="background:var(--income-bg);color:var(--income)"><svg><use href="#i-briefcase"/></svg></span><div class="tx-main"><b>Salary — Acme Corp</b><small>Income · Savings</small></div><div class="tx-right"><span class="tnum pos">+₹ 1,28,000</span><small>1 Jun</small></div></div>
+            <div class="txn"><span class="ic" style="background:var(--transfer-bg);color:var(--transfer)"><svg><use href="#i-swap"/></svg></span><div class="tx-main"><b>SIP — Nifty 50</b><small>Investment · auto</small></div><div class="tx-right"><span class="tnum">₹ 25,000</span><small>1 Jun</small></div></div>
+          </div>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab active"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 04 · ADD TRANSACTION ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">04</span><div><div class="title">Add transaction</div><div class="desc">Types grouped so the one rule is obvious · live amount</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Add transaction">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="sheet-head"><span class="sheet-cancel">Cancel</span><span class="h" style="text-align:center">New transaction</span><span class="sheet-cancel" style="visibility:hidden">Cancel</span></div>
+        <div class="m-body"><div class="m-scroll" style="padding-bottom:8px">
+          <div class="fsec">
+            <div class="fsec-label"><span class="n">1</span> What kind?</div>
+            <div class="stack gap-3">
+              <div>
+                <div class="tg-head"><span class="tg-name">Spending</span><span class="pillnote out">Counts as spent</span></div>
+                <div class="tchips c2">
+                  <div class="tchip active out"><span class="tci"><svg><use href="#i-up"/></svg></span> Expense</div>
+                  <div class="tchip out"><span class="tci"><svg><use href="#i-receipt"/></svg></span> Bill payment</div>
+                </div>
+              </div>
+              <div>
+                <div class="tg-head"><span class="tg-name">Money in</span><span class="pillnote in">Adds balance</span></div>
+                <div class="tchips c3">
+                  <div class="tchip"><span class="tci"><svg><use href="#i-down"/></svg></span> Income</div>
+                  <div class="tchip"><span class="tci"><svg><use href="#i-undo"/></svg></span> Refund</div>
+                  <div class="tchip"><span class="tci"><svg><use href="#i-coins"/></svg></span> Redeem</div>
+                </div>
+              </div>
+              <div>
+                <div class="tg-head"><span class="tg-name">Moving your own money</span><span class="pillnote neutral">Never spent</span></div>
+                <div class="tchips c3">
+                  <div class="tchip"><span class="tci"><svg><use href="#i-swap"/></svg></span> Transfer</div>
+                  <div class="tchip"><span class="tci"><svg><use href="#i-trend"/></svg></span> Invest</div>
+                  <div class="tchip"><span class="tci"><svg><use href="#i-cash"/></svg></span> Cash out</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="fsec">
+            <div class="fsec-label"><span class="n">2</span> How much?</div>
+            <div class="amount-card">
+              <div class="amount-left"><small>Expense amount</small><div class="amount-figure"><span class="cur">₹</span><span class="val tnum">480</span><span class="caret2"></span></div></div>
+              <span class="spend-flag"><svg><use href="#i-up"/></svg> Spending</span>
+            </div>
+          </div>
+          <div class="fsec">
+            <div class="fsec-label"><span class="n">3</span> Details</div>
+            <div class="stack gap-3">
+              <div><div class="flab">Category <span class="req">Required</span></div><div class="ipt"><span class="pick-ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-food"/></svg></span> Food &amp; dining <svg class="chev"><use href="#i-chev-d"/></svg></div></div>
+              <div><div class="flab">Paid from</div><div class="ipt"><span class="pick-ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-card"/></svg></span> ICICI Credit Card <svg class="chev"><use href="#i-chev-d"/></svg></div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><div class="flab">Date</div><div class="ipt"><svg class="lead"><use href="#i-cal"/></svg> 10 Jun</div></div><div><div class="flab">Payee</div><div class="ipt">Swiggy</div></div></div>
+            </div>
+          </div>
+        </div></div>
+        <div class="sheet-foot"><button class="mbtn mbtn-primary mbtn-block"><svg><use href="#i-check"/></svg> Save transaction</button></div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 05 · TRANSACTIONS + DETAIL ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">05</span><div><div class="title">Transactions</div><div class="desc">Filterable ledger · tap a row for the detail sheet</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Transactions">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><div class="m-title">Transactions<small>328 entries · June 2026</small></div><div class="m-grow"></div><span class="icon-btn"><svg><use href="#i-search"/></svg></span></div></div>
+        <div class="m-body">
+          <div class="m-scroll has-tab">
+            <div class="filter-row"><span class="filter active">All</span><span class="filter">Expense</span><span class="filter">Income</span><span class="filter">Transfer</span><span class="filter">Invest</span></div>
+            <div class="day-label">Today · 9 June</div>
+            <div class="tx-row"><span class="ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-food"/></svg></span><div class="tm"><b>Swiggy — dinner</b><small>Food &amp; dining · Card</small></div><span class="ta neg tnum">−₹ 480</span></div>
+            <div class="tx-row"><span class="ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-bag"/></svg></span><div class="tm"><b>BigBasket groceries</b><small>Groceries · Savings</small></div><span class="ta neg tnum">−₹ 2,140</span></div>
+            <div class="day-label">Yesterday · 8 June</div>
+            <div class="tx-row"><span class="ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-car"/></svg></span><div class="tm"><b>Uber — airport</b><small>Transport · Card</small></div><span class="ta neg tnum">−₹ 640</span></div>
+            <div class="tx-row"><span class="ic" style="background:var(--transfer-bg);color:var(--transfer)"><svg><use href="#i-swap"/></svg></span><div class="tm"><b>Savings → Cash</b><small>ATM transfer</small></div><span class="ta tnum">₹ 5,000</span></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="detail-sheet">
+            <div class="sheet-grip"></div>
+            <div style="display:flex;justify-content:center;margin-bottom:8px"><span class="ic ic-lg" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-food"/></svg></span></div>
+            <div class="td-amt tnum neg">−₹ 480</div>
+            <div class="td-title">Swiggy — dinner</div>
+            <div style="display:flex;justify-content:center"><span class="tag tag-expense tag-dot">Expense · counts as spending</span></div>
+            <div class="mt-3">
+              <div class="td-r"><span>Category</span><b>Food &amp; dining</b></div>
+              <div class="td-r"><span>Account</span><b>ICICI Credit Card</b></div>
+              <div class="td-r"><span>Date</span><b>9 Jun 2026 · 8:42 PM</b></div>
+              <div class="td-r"><span>Status</span><b class="pos">Verified</b></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px"><button class="mbtn mbtn-ghost mbtn-block"><svg><use href="#i-edit"/></svg> Edit</button><button class="mbtn mbtn-ghost mbtn-block" style="color:var(--expense)"><svg><use href="#i-trash"/></svg> Delete</button></div>
+          </div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 06 · PENDING REVIEW ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">06</span><div><div class="title">Pending review</div><div class="desc">Captured from SMS &amp; recurring — nothing counts until you confirm</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Pending review">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><span class="back-btn"><svg><use href="#i-chev-l"/></svg></span><div class="m-title" style="font-size:20px">Pending review<small>3 need your attention</small></div></div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="pending-banner"><svg><use href="#i-shield"/></svg><div><b>Captured automatically — not yet in your numbers.</b> Entries stay <code>PENDING</code> until you confirm.</div></div>
+          <div class="review-card">
+            <div class="rv-top"><span class="ic" style="background:var(--pending-bg);color:var(--pending)"><svg><use href="#i-bolt"/></svg></span><div class="rm"><b>TNEB — Electricity</b><small><span class="src-pill">SMS</span> HDFC Savings · 2:14 PM</small></div><span class="ramt tnum neg">−₹ 1,860</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><div class="suggest-chip"><span class="ic-sm" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-home2"/></svg></span> Housing &amp; bills <svg class="chev"><use href="#i-chev-d"/></svg></div></div>
+            <div class="rv-actions"><button class="mbtn mbtn-ghost mbtn-sm" style="flex:none;width:44px;padding:0"><svg><use href="#i-edit"/></svg></button><button class="mbtn mbtn-primary mbtn-sm mbtn-block"><svg><use href="#i-check"/></svg> Confirm</button></div>
+          </div>
+          <div class="review-card">
+            <div class="rv-top"><span class="ic" style="background:var(--income-bg);color:var(--income)"><svg><use href="#i-briefcase"/></svg></span><div class="rm"><b>Salary — Acme Corp</b><small><span class="src-pill recur">Recurring</span> verify amount</small></div><span class="ramt tnum pos">+₹ 1,28,000</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><div class="suggest-chip locked"><span class="ic-sm" style="background:var(--income-bg);color:var(--income)"><svg><use href="#i-down"/></svg></span> Income · category locked</div></div>
+            <div class="rv-actions"><button class="mbtn mbtn-ghost mbtn-sm" style="flex:none;width:44px;padding:0"><svg><use href="#i-edit"/></svg></button><button class="mbtn mbtn-primary mbtn-sm mbtn-block"><svg><use href="#i-check"/></svg> Confirm</button></div>
+          </div>
+          <div class="review-card">
+            <div class="rv-top"><span class="ic" style="background:#FBEFE3;color:#E89A5E"><svg><use href="#i-food"/></svg></span><div class="rm"><b>Domino's Pizza</b><small><span class="src-pill">SMS</span> Card · 8 Jun</small></div><span class="ramt tnum neg">−₹ 640</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><div class="suggest-chip"><span class="ic-sm" style="background:#FBEFE3;color:#E89A5E"><svg><use href="#i-food"/></svg></span> Food &amp; dining <svg class="chev"><use href="#i-chev-d"/></svg></div></div>
+            <div class="rv-actions"><button class="mbtn mbtn-ghost mbtn-sm" style="flex:none;width:44px;padding:0"><svg><use href="#i-edit"/></svg></button><button class="mbtn mbtn-primary mbtn-sm mbtn-block"><svg><use href="#i-check"/></svg> Confirm</button></div>
+          </div>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab active"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 07 · ACCOUNTS ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">07</span><div><div class="title">Accounts</div><div class="desc">Everywhere money sits — balances derived from the ledger</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Accounts">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><div class="m-title">Accounts<small>6 accounts · reconciled 7 Jun</small></div><div class="m-grow"></div><span class="icon-btn"><svg><use href="#i-plus"/></svg></span></div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="nw-highlight"><span class="l">Net worth</span><div class="v tnum">₹ 12,33,100</div>
+            <div class="al-row">
+              <div class="al-cell" style="background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.22)"><span style="color:rgba(255,255,255,0.82)">Assets</span><b style="color:#fff" class="tnum">₹ 13.6L</b></div>
+              <div class="al-cell" style="background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.22)"><span style="color:rgba(255,255,255,0.82)">Liabilities</span><b style="color:#fff" class="tnum">−₹ 1.3L</b></div>
+            </div>
+          </div>
+          <div class="section-label">Assets</div>
+          <div class="acct-card primary">
+            <div class="ac-top"><span class="ic ic-lg" style="background:var(--mint-100);color:var(--mint-700)"><svg><use href="#i-bank"/></svg></span><div class="nm"><b>HDFC Savings</b><small>Bank · auto-reconcile monthly</small></div><span class="tag tag-income"><svg style="width:11px;height:11px"><use href="#i-star"/></svg></span></div>
+            <div class="ac-bal tnum">₹ 6,42,300</div>
+            <div class="ac-foot"><span class="tag tag-income tag-dot">Reconciled</span><small class="muted">Updated today</small></div>
+          </div>
+          <div class="acct-card">
+            <div class="ac-top"><span class="ic ic-lg" style="background:#E4F3FB;color:#3F88B0"><svg><use href="#i-bank"/></svg></span><div class="nm"><b>ICICI Salary</b><small>Bank · auto-reconcile monthly</small></div></div>
+            <div class="ac-bal tnum">₹ 7,22,000</div>
+            <div class="ac-foot"><span class="tag tag-income tag-dot">Reconciled</span><small class="muted">Updated 7 Jun</small></div>
+          </div>
+          <div class="acct-card">
+            <div class="ac-top"><span class="ic ic-lg" style="background:var(--invest-bg);color:var(--invest)"><svg><use href="#i-cash"/></svg></span><div class="nm"><b>Cash wallet</b><small>Cash · reconcile weekly</small></div></div>
+            <div class="ac-bal tnum">₹ 3,200</div>
+            <div class="ac-foot"><span class="tag tag-pending tag-dot">Due to reconcile</span><small class="muted">5 days ago</small></div>
+          </div>
+          <div class="section-label">Liabilities &amp; tracking</div>
+          <div class="acct-card">
+            <div class="ac-top"><span class="ic ic-lg" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-card"/></svg></span><div class="nm"><b>ICICI Credit Card</b><small>Liability · due 18 Jun</small></div></div>
+            <div class="ac-bal tnum neg">−₹ 18,400</div>
+            <div class="ac-foot"><span class="tag tag-income tag-dot">Reconciled</span><small class="muted">Updated today</small></div>
+          </div>
+          <div class="acct-card">
+            <div class="ac-top"><span class="ic ic-lg" style="background:var(--transfer-bg);color:var(--transfer)"><svg><use href="#i-pig"/></svg></span><div class="nm"><b>Zerodha · Mutual funds</b><small>Tracking · not spending</small></div></div>
+            <div class="ac-bal tnum">₹ 3,15,000</div>
+            <div class="ac-foot"><span class="tag tag-invest tag-dot">Investment</span><small class="muted">Updated today</small></div>
+          </div>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab active"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 08 · RECONCILE ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">08</span><div><div class="title">Reconcile account</div><div class="desc">Match the ledger to the real world — any gap posts as an adjustment</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Reconcile account">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><span class="back-btn"><svg><use href="#i-chev-l"/></svg></span><div class="m-title" style="font-size:20px">Reconcile<small>Your bank is the source of truth</small></div></div></div>
+        <div class="m-body"><div class="m-scroll">
+          <div class="recon-head"><span class="ic ic-lg" style="background:var(--mint-100);color:var(--mint-700)"><svg><use href="#i-bank"/></svg></span><div><b>HDFC Savings</b><small class="muted">Reconciles monthly · last 7 May</small></div></div>
+          <div class="rc-cell"><small>PFOS LEDGER SAYS</small><div class="rc-val tnum">₹ 6,42,300</div></div>
+          <div class="rc-cell actual"><small>ACTUAL BALANCE IN YOUR BANK</small><div class="rc-input"><span class="cur">₹</span><span class="tnum">6,41,900</span><span class="caret2"></span></div></div>
+          <div class="recon-gap"><div class="l"><span>Difference to account for</span><b class="tnum neg">−₹ 400</b></div><div style="text-align:right"><code>RECON_ADJUST</code><div style="margin-top:6px"><span class="tag tag-pending tag-dot">Misc</span></div></div></div>
+          <p class="recon-note">A small gap usually means a cash spend or fee you didn't log. We record it so balances always match — without guessing what it was.</p>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div class="flab" style="margin:0">Reconcile cadence</div><div class="set-select">Monthly <svg><use href="#i-chev-d"/></svg></div></div>
+          <button class="mbtn mbtn-primary mbtn-block"><svg><use href="#i-check"/></svg> Post adjustment &amp; mark reconciled</button>
+        </div></div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 09 · CATEGORIES ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">09</span><div><div class="title">Categories</div><div class="desc">Where spending lands this month — net of refunds</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Categories">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><span class="back-btn"><svg><use href="#i-chev-l"/></svg></span><div class="m-title" style="font-size:20px">Categories<small>Spending · June 2026</small></div><div class="m-grow"></div><span class="set-select">June <svg><use href="#i-chev-d"/></svg></span></div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="cat-total">
+            <span class="muted" style="font-size:var(--fs-sm)">Total spent this month</span>
+            <div class="ct-num tnum">₹ 47,820</div>
+            <small class="muted">7 categories · net of ₹ 1,200 refunds</small>
+            <div class="ct-bar"><i style="width:41%;background:var(--expense)"></i><i style="width:22%;background:#E89A5E"></i><i style="width:14%;background:#5B86E5"></i><i style="width:23%;background:#8A7FE0"></i></div>
+            <div class="ct-legend">
+              <div class="ctl"><span class="ck" style="background:var(--expense)"></span> Housing <b>41%</b></div>
+              <div class="ctl"><span class="ck" style="background:#E89A5E"></span> Food <b>22%</b></div>
+              <div class="ctl"><span class="ck" style="background:#5B86E5"></span> Transport <b>14%</b></div>
+              <div class="ctl"><span class="ck" style="background:#8A7FE0"></span> Other <b>23%</b></div>
+            </div>
+          </div>
+          <div class="cat-grid">
+            <div class="cat-tile"><span class="ic ic-lg" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-home2"/></svg></span><b>Housing &amp; bills</b><small class="muted">14 txns</small><div class="cat-amt tnum">₹ 19,460</div><div class="ct-mini"><i style="width:100%;background:var(--expense)"></i></div></div>
+            <div class="cat-tile"><span class="ic ic-lg" style="background:#FBEFE3;color:#E89A5E"><svg><use href="#i-food"/></svg></span><b>Food &amp; dining</b><small class="muted">28 txns</small><div class="cat-amt tnum">₹ 10,520</div><div class="ct-mini"><i style="width:54%;background:#E89A5E"></i></div></div>
+            <div class="cat-tile"><span class="ic ic-lg" style="background:var(--invest-bg);color:#5B86E5"><svg><use href="#i-car"/></svg></span><b>Transport</b><small class="muted">19 txns</small><div class="cat-amt tnum">₹ 6,690</div><div class="ct-mini"><i style="width:34%;background:#5B86E5"></i></div></div>
+            <div class="cat-tile"><span class="ic ic-lg" style="background:var(--transfer-bg);color:var(--transfer)"><svg><use href="#i-bag"/></svg></span><b>Shopping</b><small class="muted">9 txns</small><div class="cat-amt tnum">₹ 5,240</div><div class="ct-mini"><i style="width:27%;background:var(--transfer)"></i></div></div>
+            <div class="cat-tile"><span class="ic ic-lg" style="background:#FCE9EC;color:#D86B86"><svg><use href="#i-heart"/></svg></span><b>Health</b><small class="muted">4 txns</small><div class="cat-amt tnum">₹ 3,100</div><div class="ct-mini"><i style="width:16%;background:#D86B86"></i></div></div>
+            <div class="cat-tile add"><span class="ic ic-lg" style="background:var(--mint-100);color:var(--mint-700)"><svg><use href="#i-plus"/></svg></span><b>New category</b><small class="muted">Add a bucket</small></div>
+          </div>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab active"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 10 · RECURRING ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">10</span><div><div class="title">Recurring</div><div class="desc">Predictable money on autopilot — salary, rent &amp; SIP</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Recurring">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><span class="back-btn"><svg><use href="#i-chev-l"/></svg></span><div class="m-title" style="font-size:20px">Recurring<small>4 active templates</small></div><div class="m-grow"></div><span class="icon-btn"><svg><use href="#i-plus"/></svg></span></div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="rs-row">
+            <div class="rs-cell"><span class="muted">Next 30 days</span><b class="tnum">₹ 1.28L in</b></div>
+            <div class="rs-cell"><span class="muted">Going out</span><b class="tnum">₹ 57,649</b></div>
+            <div class="rs-cell"><span class="muted">Needs review</span><b class="pos">1</b></div>
+          </div>
+          <div class="recur-card">
+            <div class="recur-top"><span class="ic ic-lg" style="background:var(--income-bg);color:var(--income)"><svg><use href="#i-briefcase"/></svg></span><div class="rn"><b>Salary — Acme Corp</b><small>Monthly · 1st · into ICICI</small></div><span class="ramt tnum pos">+₹ 1,28,000</span></div>
+            <div class="recur-foot"><span class="tag tag-income tag-dot">Income</span><span class="nxt">Next 1 Jul</span><span class="grow"></span><span class="tag tag-pending tag-dot">Review</span><span class="toggle on"></span></div>
+          </div>
+          <div class="recur-card">
+            <div class="recur-top"><span class="ic ic-lg" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-home2"/></svg></span><div class="rn"><b>House rent</b><small>Monthly · 5th · from HDFC</small></div><span class="ramt tnum neg">−₹ 32,000</span></div>
+            <div class="recur-foot"><span class="tag tag-expense tag-dot">Expense</span><span class="nxt">Next 5 Jul</span><span class="grow"></span><span class="tag tag-income tag-dot">Auto</span><span class="toggle on"></span></div>
+          </div>
+          <div class="recur-card">
+            <div class="recur-top"><span class="ic ic-lg" style="background:var(--transfer-bg);color:var(--transfer)"><svg><use href="#i-trend"/></svg></span><div class="rn"><b>SIP — Nifty 50 Index</b><small>Monthly · 1st · into Zerodha</small></div><span class="ramt tnum">₹ 25,000</span></div>
+            <div class="recur-foot"><span class="tag tag-invest tag-dot">Invest</span><span class="nxt">Next 1 Jul</span><span class="grow"></span><span class="tag tag-income tag-dot">Auto</span><span class="toggle on"></span></div>
+          </div>
+          <div class="recur-card">
+            <div class="recur-top"><span class="ic ic-lg" style="background:#EFEAFB;color:#7A5BC4"><svg><use href="#i-film"/></svg></span><div class="rn"><b>Netflix Premium</b><small>Monthly · 15th · from Card</small></div><span class="ramt tnum neg">−₹ 649</span></div>
+            <div class="recur-foot"><span class="tag tag-expense tag-dot">Expense</span><span class="nxt">Next 15 Jun</span><span class="grow"></span><span class="tag tag-income tag-dot">Auto</span><span class="toggle on"></span></div>
+          </div>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab active"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 11 · REPORTS ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">11</span><div><div class="title">Reports</div><div class="desc">Trends, category breakdown &amp; export</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Reports">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><div class="m-title">Reports<small>Financial year 2026–27</small></div><div class="m-grow"></div><span class="icon-btn"><svg><use href="#i-download"/></svg></span></div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="seg"><span>Daily</span><span>Weekly</span><span class="active">Monthly</span><span>Yearly</span></div>
+          <div class="rep-stat-row">
+            <div class="rep-stat"><span>Avg income</span><b class="tnum">₹ 1.26L</b><small class="pos">▲ 4.2%</small></div>
+            <div class="rep-stat"><span>Avg spend</span><b class="tnum">₹ 48,250</b><small class="neg">▲ 2.1%</small></div>
+            <div class="rep-stat"><span>Savings rate</span><b class="tnum">61.8%</b><small class="pos">healthy</small></div>
+          </div>
+          <div class="m-card">
+            <div class="m-card-head"><h3 style="font-size:var(--fs-body)">Spending trend</h3><div class="chart-key"><span><i class="k-spend"></i> Spend</span><span><i class="k-income"></i> In</span></div></div>
+            <div class="bar-chart">
+              <div class="bc-col"><div class="bc-pair"><span class="bar income" style="height:80%"></span><span class="bar spend" style="height:30%"></span></div><small>Jan</small></div>
+              <div class="bc-col"><div class="bc-pair"><span class="bar income" style="height:79%"></span><span class="bar spend" style="height:33%"></span></div><small>Feb</small></div>
+              <div class="bc-col"><div class="bc-pair"><span class="bar income" style="height:82%"></span><span class="bar spend" style="height:38%"></span></div><small>Mar</small></div>
+              <div class="bc-col"><div class="bc-pair"><span class="bar income" style="height:80%"></span><span class="bar spend" style="height:31%"></span></div><small>Apr</small></div>
+              <div class="bc-col"><div class="bc-pair"><span class="bar income" style="height:81%"></span><span class="bar spend" style="height:35%"></span></div><small>May</small></div>
+              <div class="bc-col current"><div class="bc-pair"><span class="bar income" style="height:80%"></span><span class="bar spend" style="height:33%"></span></div><small>Jun</small></div>
+            </div>
+          </div>
+          <div class="m-card mt-3">
+            <div class="m-card-head"><h3 style="font-size:var(--fs-body)">By category</h3></div>
+            <div class="donut-wrap">
+              <svg viewBox="0 0 180 180" class="donut">
+                <circle cx="90" cy="90" r="70" fill="none" stroke="var(--line-soft)" stroke-width="26"/>
+                <g transform="rotate(-90 90 90)" fill="none" stroke-width="26">
+                  <circle cx="90" cy="90" r="70" stroke="var(--expense)" stroke-dasharray="180.3 259.5" stroke-dashoffset="0"/>
+                  <circle cx="90" cy="90" r="70" stroke="#E89A5E" stroke-dasharray="96.8 343" stroke-dashoffset="-180.3"/>
+                  <circle cx="90" cy="90" r="70" stroke="#5B86E5" stroke-dasharray="61.6 378.2" stroke-dashoffset="-277.1"/>
+                  <circle cx="90" cy="90" r="70" stroke="#8A7FE0" stroke-dasharray="101.2 338.6" stroke-dashoffset="-338.6"/>
+                </g>
+                <text x="90" y="84" text-anchor="middle" class="donut-num">₹47.8k</text>
+                <text x="90" y="104" text-anchor="middle" class="donut-sub">spent</text>
+              </svg>
+              <div class="donut-legend">
+                <div><span class="ck" style="background:var(--expense)"></span> Housing &amp; bills <b>41%</b></div>
+                <div><span class="ck" style="background:#E89A5E"></span> Food &amp; dining <b>22%</b></div>
+                <div><span class="ck" style="background:#5B86E5"></span> Transport <b>14%</b></div>
+                <div><span class="ck" style="background:#8A7FE0"></span> Other <b>23%</b></div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab active"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 12 · SETTINGS ===================================================== -->
+  <div class="screen-block-m">
+    <div class="m-label"><span class="num">12</span><div><div class="title">Settings</div><div class="desc">Currency, timezone, primary account &amp; data export</div></div></div>
+    <div class="phone">
+      <div class="island"></div>
+      <div class="screen-m" data-screen-label="Settings">
+        <div class="statusbar"><span>9:41</span><div class="sb-r"><svg><use href="#i-signal"/></svg><svg><use href="#i-wifi"/></svg><span class="batt"><i></i></span></div></div>
+        <div class="m-head"><div class="m-head-row"><span class="back-btn"><svg><use href="#i-chev-l"/></svg></span><div class="m-title" style="font-size:20px">Settings</div></div></div>
+        <div class="m-body"><div class="m-scroll has-tab">
+          <div class="m-card profile-card">
+            <span class="avatar-lg">M</span>
+            <b>Mohammad Farukh</b>
+            <small class="muted">developer.farukh@gmail.com</small>
+            <span class="tag tag-income tag-dot mt-3">Synced · web &amp; mobile</span>
+            <div class="pc-stats"><div><b class="tnum">328</b><small>entries</small></div><div><b class="tnum">6</b><small>accounts</small></div><div><b class="tnum">7</b><small>categories</small></div></div>
+          </div>
+          <div class="m-card mt-3">
+            <div class="set-sec-title"><svg><use href="#i-globe"/></svg> Preferences</div>
+            <div class="set-row"><div class="sr-text"><b>Base currency</b><small>Shown everywhere</small></div><div class="set-select">₹ INR <svg><use href="#i-chev-d"/></svg></div></div>
+            <div class="set-row"><div class="sr-text"><b>Timezone</b><small>Report boundaries</small></div><div class="set-select">Kolkata <svg><use href="#i-chev-d"/></svg></div></div>
+            <div class="set-row"><div class="sr-text"><b>Primary account</b><small>Quick-add default</small></div><div class="set-select"><span class="ic-sm" style="width:20px;height:20px;background:var(--mint-100);color:var(--mint-700)"><svg style="width:12px;height:12px"><use href="#i-bank"/></svg></span> HDFC <svg><use href="#i-chev-d"/></svg></div></div>
+            <div class="set-row"><div class="sr-text"><b>Investments in net worth</b><small>Counts toward total</small></div><span class="toggle on"></span></div>
+            <div class="set-row"><div class="sr-text"><b>Round to nearest rupee</b><small>Hide paise</small></div><span class="toggle on"></span></div>
+          </div>
+          <div class="m-card mt-3">
+            <div class="set-sec-title"><svg><use href="#i-shield"/></svg> Security</div>
+            <div class="set-mini">Two-factor authentication <span class="tag tag-income tag-dot">On</span></div>
+            <div class="set-mini">Biometric unlock (Face ID) <span class="tag tag-income tag-dot">On</span></div>
+            <div class="set-mini">Active sessions <span class="muted">2 devices</span></div>
+          </div>
+          <button class="mbtn mbtn-ghost mbtn-block mt-3" style="color:var(--expense)"><svg><use href="#i-logout"/></svg> Sign out</button>
+        </div></div>
+        <div class="m-tabbar">
+          <span class="m-tab"><svg><use href="#i-home"/></svg> Home</span>
+          <span class="m-tab"><svg><use href="#i-list"/></svg> Activity</span>
+          <span class="m-tab spacer"></span>
+          <span class="m-tab"><svg><use href="#i-wallet"/></svg> Accounts</span>
+          <span class="m-tab"><svg><use href="#i-chart"/></svg> Reports</span>
+          <span class="m-fab"><svg><use href="#i-plus"/></svg></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</body>
+</html>

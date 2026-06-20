@@ -1,4 +1,4 @@
-import {type ReactNode} from 'react';
+import {type ReactNode, useEffect} from 'react';
 import {type StyleProp, type ViewStyle} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import Animated, {
@@ -38,6 +38,11 @@ export function PressableScale({
 }: PressableScaleProps) {
   const scale = useSharedValue(1);
   const reduceMotion = useReducedMotion();
+  const skipScale = useSharedValue(reduceMotion ? 1 : 0);
+
+  useEffect(() => {
+    skipScale.value = reduceMotion ? 1 : 0;
+  }, [reduceMotion, skipScale]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{scale: scale.value}],
@@ -45,7 +50,7 @@ export function PressableScale({
 
   const press = (target: number) => {
     'worklet';
-    scale.value = reduceMotion ? 1 : withSpring(target, SPRINGS.snappy);
+    scale.value = skipScale.value ? 1 : withSpring(target, SPRINGS.snappy);
   };
 
   const tap = Gesture.Tap()

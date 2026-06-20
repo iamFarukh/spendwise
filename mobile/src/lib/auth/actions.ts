@@ -2,6 +2,7 @@ import {
   GoogleAuthProvider,
   UserCredential,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
@@ -54,6 +55,11 @@ export async function signUpWithEmail(
 ): Promise<UserCredential> {
   const auth = requireAuth();
   return createUserWithEmailAndPassword(auth, email.trim(), password);
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  const auth = requireAuth();
+  await sendPasswordResetEmail(auth, email.trim());
 }
 
 export async function signOutAll(): Promise<void> {

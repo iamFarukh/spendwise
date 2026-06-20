@@ -159,6 +159,15 @@ export function formatRelativeTransactionDate(
       timeZone: timezone,
     }).format(new Date(`${date}T12:00:00`));
   } catch {
-    return date;
+    // Runtimes whose Intl rejects IANA zones: format "D Mon" manually.
+    const monthsShort = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    const [, month, day] = date.split("-").map(Number);
+    if (!month || !day) {
+      return date;
+    }
+    return `${day} ${monthsShort[(month - 1) % 12]}`;
   }
 }

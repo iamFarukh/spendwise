@@ -4,15 +4,25 @@
 
 See [docs/techStack.md](../docs/techStack.md) §5 and [docs/implementationPlan.md](../docs/implementationPlan.md) §7 for the full plan.
 
-## What’s in this scaffold (Phase 1 start)
+## What’s implemented
 
 - [x] Bare RN 0.79 + TypeScript monorepo workspace
-- [x] Firebase Auth (email + Google Sign-In wiring)
-- [x] Firestore real-time listeners (transactions, categories, accounts, settings)
-- [x] Bottom tabs: Home, Transactions, Pending, More
-- [x] Home dashboard (net worth, monthly summary, recent activity)
-- [ ] Setup wizard on mobile (use web for now — redirects if incomplete)
-- [ ] Quick-add expense, full transaction CRUD, reconcile (next screens per plan)
+- [x] Firebase Auth (email + Google Sign-In; password reset)
+- [x] Firestore real-time listeners (transactions, categories, accounts, settings, recurring)
+- [x] Bottom tabs: Home, Activity, Accounts, Reports + FAB quick-add
+- [x] Setup wizard (atomic batch: accounts, categories, settings, opening entries)
+- [x] Quick-add expense / income / transfer
+- [x] Accounts list, add account, reconcile
+- [x] Categories spend chart, recurring list, pending inbox, settings
+- [x] Branded app icon + native splash
+
+## Known gaps (see [docs/mobile-audit.md](../docs/mobile-audit.md))
+
+- Full transaction form (investment, loans, refunds, …) — quick-add covers the basics
+- Create category / create recurring on mobile
+- Account edit & archive
+- Apple Sign-In, legal link URLs
+- Android `google-services.json` not committed (add locally per Firebase setup below)
 
 ---
 
@@ -185,15 +195,15 @@ For a signed release, generate a keystore and update `android/app/build.gradle` 
 | Google Sign-In fails on Android | Add SHA-1 to Firebase, set `GOOGLE_WEB_CLIENT_ID`, add `google-services.json` |
 | Gradle / SDK errors | Open `mobile/android` in Android Studio and sync Gradle |
 | iOS pod errors | `cd mobile/ios && pod install --repo-update` |
-| Blank screen after login | Complete setup on web first (`/setup`) — mobile redirects until `setupComplete` |
+| Blank screen after login | Complete setup on mobile or web — both seed categories atomically |
 
 ---
 
-## Next build steps (from implementation plan)
+## Next build steps
 
-1. Setup wizard on mobile (steps 1–4)
-2. Quick-add expense FAB on Home
-3. Add / edit transaction forms (all 8 types)
-4. Account list + reconcile flow
-5. Recurring confirm/dismiss
-6. Phase 3: Android SMS capture (`READ_SMS` in `AndroidManifest.xml`)
+1. Full transaction screen (all ledger types)
+2. Category & recurring create flows
+3. Account edit / archive
+4. Phase 3: Android SMS capture (`READ_SMS` in `AndroidManifest.xml`)
+
+Full issue list and status: [docs/mobile-audit.md](../docs/mobile-audit.md)

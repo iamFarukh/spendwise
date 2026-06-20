@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { DEFAULT_USER_SETTINGS, type UserSettings } from "@pfos/shared";
@@ -10,6 +11,7 @@ import {
   IconCheck,
   IconDownload,
   IconGlobe,
+  IconTrend,
 } from "@/components/icons";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
@@ -235,7 +237,7 @@ function SettingsContent() {
         </Button>
       }
     >
-      <div className="grid grid-cols-1 items-start gap-5 overflow-y-auto xl:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_300px]">
         <div className="flex flex-col gap-5">
           {saveError ? (
             <div
@@ -245,6 +247,22 @@ function SettingsContent() {
               {saveError}
             </div>
           ) : null}
+
+          <section className="rounded-lg border border-line bg-paper p-5">
+            <h2 className="mb-4 flex items-center gap-2.5 font-display text-lg font-bold text-ink-900">
+              <IconTrend className="text-invest" />
+              SIP Management
+            </h2>
+            <SettingsRow
+              title="Investment plans"
+              description="Mutual funds, stocks, gold, RDs and recurring deposits"
+              last
+            >
+              <Link href="/sip">
+                <Button variant="ghost">Manage SIPs</Button>
+              </Link>
+            </SettingsRow>
+          </section>
 
           <section className="rounded-lg border border-line bg-paper p-5">
             <h2 className="mb-4 flex items-center gap-2.5 font-display text-lg font-bold text-ink-900">
@@ -414,7 +432,7 @@ function SettingsContent() {
           <SettingsDangerZone />
         </div>
 
-        <aside className="flex flex-col gap-5">
+        <aside className="flex flex-col gap-5 xl:sticky xl:top-0 xl:self-start">
           <SettingsProfileCard
             displayName={displayName}
             email={email}

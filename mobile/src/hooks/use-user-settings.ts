@@ -13,7 +13,7 @@ import {getFirestoreErrorMessage} from '@/lib/firebase/errors';
 export function useUserSettings() {
   const {user, configured} = useAuth();
   const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function useUserSettings() {
       },
       err => {
         setError(getFirestoreErrorMessage(err));
-        setSettings({...DEFAULT_USER_SETTINGS});
+        setSettings(prev => prev ?? {...DEFAULT_USER_SETTINGS});
         setLoading(false);
       },
     );

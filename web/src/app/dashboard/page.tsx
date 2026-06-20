@@ -27,6 +27,7 @@ import { QuickAddExpense } from "@/components/dashboard/quick-add-expense";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
+import { PendingSipNudge } from "@/components/sip/pending-sip-nudge";
 import { useAuth } from "@/components/providers/auth-provider";
 import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { IconChip } from "@/components/ui/icon-chip";
@@ -104,6 +105,10 @@ function DashboardContent() {
       primaryAction={{ label: "Full entry", href: "/transactions/new" }}
     >
       {user ? <QuickAddExpense userId={user.uid} /> : null}
+
+      <div className="mt-6">
+        <PendingSipNudge />
+      </div>
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.35fr_1fr] xl:grid-rows-[auto_auto]">
         <div className="xl:col-start-1 xl:row-start-1">
@@ -382,7 +387,7 @@ function AccountsCard({
 
   return (
     <CardShell title="Accounts" link="Manage" linkHref="/accounts">
-      <div className="flex flex-col gap-1">
+      <div className="flex max-h-[min(360px,48vh)] flex-col gap-1 overflow-y-auto overscroll-contain">
         {balances.map(({ account, balance }) => {
           const style = accountChipStyle(account.class, account.kind);
           const isLiability = account.class === "LIABILITY";
@@ -457,8 +462,8 @@ function RecentActivityCard({
 
   return (
     <CardShell title="Recent activity" link="View all" linkHref="/transactions">
-      <div className="flex flex-col">
-        {transactions.map((txn, index) => (
+      <div className="flex max-h-[min(420px,52vh)] flex-col overflow-y-auto overscroll-contain">
+        {transactions.slice(0, 10).map((txn, index) => (
           <StaggerItem key={txn.id} index={index}>
             <ActivityRow
               txn={txn}

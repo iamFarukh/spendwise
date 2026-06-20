@@ -21,6 +21,7 @@ import { PageEnter } from "@/components/motion/page-enter";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { usePendingCount } from "@/hooks/use-transaction";
+import { formatPendingBadge } from "@pfos/shared";
 import { cn } from "@/lib/cn";
 
 type NavItem = {
@@ -63,10 +64,11 @@ export function AppShell({
   const pathname = usePathname();
   const { user } = useAuth();
   const { count: pendingCount } = usePendingCount();
+  const pendingBadge = formatPendingBadge(pendingCount);
 
   const manageNav: NavItem[] = manageNavBase.map((item) =>
-    item.href === "/pending" && pendingCount > 0
-      ? { ...item, badge: String(pendingCount) }
+    item.href === "/pending" && pendingBadge
+      ? { ...item, badge: pendingBadge }
       : item,
   );
 
@@ -76,8 +78,8 @@ export function AppShell({
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex min-h-screen bg-canvas">
-      <aside className="flex w-[248px] shrink-0 flex-col border-r border-line bg-paper px-4 py-6">
+    <div className="flex h-dvh overflow-hidden bg-canvas">
+      <aside className="flex h-full w-[248px] shrink-0 flex-col overflow-y-auto border-r border-line bg-paper px-4 py-6">
         <div className="mb-6 px-2">
           <SpendWiseBrand showTagline />
         </div>
@@ -111,8 +113,8 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-[var(--z-sticky)] flex h-[72px] shrink-0 items-center gap-4 border-b border-line bg-paper/95 px-8 backdrop-blur-sm">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-[var(--z-sticky)] flex h-[72px] shrink-0 items-center gap-4 border-b border-line bg-paper/95 px-8 backdrop-blur-sm">
           <div>
             <div className="font-display text-[22px] font-bold text-ink-900">
               {title}
@@ -144,7 +146,7 @@ export function AppShell({
           ) : null}
         </header>
 
-        <main className="flex-1 overflow-auto p-8">
+        <main className="min-h-0 flex-1 overflow-y-auto p-8">
           <PageEnter>{children}</PageEnter>
         </main>
       </div>

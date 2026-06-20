@@ -42,7 +42,7 @@ export function useAccounts() {
       },
       err => {
         setError(getFirestoreErrorMessage(err));
-        setAccounts([]);
+        setAccounts(prev => prev);
         setLoading(false);
       },
     );

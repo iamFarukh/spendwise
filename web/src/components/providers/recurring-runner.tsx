@@ -24,6 +24,8 @@ export function RecurringRunner() {
 
   useEffect(() => {
     run();
+    const interval = window.setInterval(run, 60 * 60 * 1000);
+    return () => window.clearInterval(interval);
   }, [run]);
 
   useEffect(() => {

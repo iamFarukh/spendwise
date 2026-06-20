@@ -15,7 +15,6 @@ import { IconPlus, IconSearch } from "@/components/icons";
 import { TransactionDetailPanel } from "@/components/transactions/transaction-detail-panel";
 import { TransactionTypeIcon } from "@/components/transactions/transaction-type-icon";
 import { useToast } from "@/components/providers/toast-provider";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
@@ -92,7 +91,6 @@ function TransactionsContent() {
   const [deleting, setDeleting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
 
   // Seed the search box from the global header search (/transactions?q=…).
   useEffect(() => {
@@ -175,29 +173,24 @@ function TransactionsContent() {
     }
   }
 
-  function requestDelete(txn: Transaction) {
+  async function handleDelete(txn: Transaction) {
+    if (!user) {
+      return;
+    }
     if (!isEditableTransaction(txn)) {
       const message = "Opening balance entries cannot be deleted.";
       setError(message);
       toast.error(message);
       return;
     }
-    setPendingDelete(txn);
-  }
-
-  async function confirmDelete() {
-    if (!user || !pendingDelete) {
-      return;
-    }
     setDeleting(true);
     setError(null);
     try {
-      await deleteTransaction(user.uid, pendingDelete.id);
-      if (selected?.id === pendingDelete.id) {
+      await deleteTransaction(user.uid, txn.id);
+      if (selected?.id === txn.id) {
         setSelectedId(null);
       }
       toast.success("Transaction deleted.");
-      setPendingDelete(null);
     } catch (err) {
       const message = getFirestoreErrorMessage(
         err,
@@ -230,138 +223,126 @@ function TransactionsContent() {
         </Link>
       }
     >
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1fr_320px]">
-        <div className="min-w-0">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {TYPE_FILTERS.map((filter) => (
-              <FilterChip
-                key={filter.id}
-                label={filter.label}
-                active={typeFilter === filter.id}
-                onClick={() => setTypeFilter(filter.id)}
-              />
-            ))}
+      <div className="flex flex-col gap-5 xl:-m-8 xl:h-[calc(100dvh-72px-4rem)] xl:overflow-hidden xl:p-8">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="flex min-h-0 min-w-0 flex-col gap-4">
+            <div className="shrink-0">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {TYPE_FILTERS.map((filter) => (
+                  <FilterChip
+                    key={filter.id}
+                    label={filter.label}
+                    active={typeFilter === filter.id}
+                    onClick={() => setTypeFilter(filter.id)}
+                  />
+                ))}
 
-            <span className="flex-1" />
+                <span className="flex-1" />
 
-            <button
-              type="button"
-              onClick={() => shiftMonth(-1)}
-              className="rounded-pill border border-line bg-paper px-3 py-1.5 text-[13px] font-bold text-ink-600 hover:bg-tint"
-            >
-              ←
-            </button>
-            <span className="rounded-pill border border-line bg-paper px-3.5 py-1.5 text-[13px] font-bold text-ink-600">
-              {monthWindow.label}
-            </span>
-            <button
-              type="button"
-              onClick={() => shiftMonth(1)}
-              className="rounded-pill border border-line bg-paper px-3 py-1.5 text-[13px] font-bold text-ink-600 hover:bg-tint"
-            >
-              →
-            </button>
+                <button
+                  type="button"
+                  onClick={() => shiftMonth(-1)}
+                  className="rounded-pill border border-line bg-paper px-3 py-1.5 text-[13px] font-bold text-ink-600 hover:bg-tint"
+                >
+                  ←
+                </button>
+                <span className="rounded-pill border border-line bg-paper px-3.5 py-1.5 text-[13px] font-bold text-ink-600">
+                  {monthWindow.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => shiftMonth(1)}
+                  className="rounded-pill border border-line bg-paper px-3 py-1.5 text-[13px] font-bold text-ink-600 hover:bg-tint"
+                >
+                  →
+                </button>
+              </div>
+
+              <div className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-pill border border-line bg-canvas px-3.5 text-[13px] font-semibold text-ink-400">
+                <IconSearch />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search merchant or note"
+                  className="w-full border-none bg-transparent text-ink-900 outline-none placeholder:font-medium placeholder:text-ink-400"
+                />
+              </div>
+
+              {error ? (
+                <p
+                  className="rounded-md border border-expense/30 bg-expense-bg px-4 py-3 text-sm font-semibold text-expense"
+                  role="alert"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="min-h-0 flex-1 xl:overflow-y-auto">
+              <TabCrossfade
+                panelKey={`${monthWindow.start}-${typeFilter}-${search}`}
+              >
+                <div className="overflow-hidden rounded-lg border border-line bg-paper">
+                  {filtered.length === 0 ? (
+                    <EmptyState
+                      animation="receipt-search"
+                      title="No transactions found"
+                      description="Nothing matches these filters. Try a different month or type — or add one now."
+                      action={
+                        <EmptyStateAction href="/transactions/new">
+                          Add a transaction
+                        </EmptyStateAction>
+                      }
+                    />
+                  ) : (
+                    (() => {
+                      let rowIndex = 0;
+                      return groups.map((group) => (
+                        <div key={group.date}>
+                          <div className="sticky top-0 z-[1] bg-tint px-4 py-2 text-[11.5px] font-extrabold tracking-[0.6px] text-ink-400 uppercase">
+                            {formatDayGroupLabel(group.date, timezone)}
+                          </div>
+                          {group.items.map((txn) => {
+                            const index = rowIndex;
+                            rowIndex += 1;
+                            return (
+                              <StaggerItem key={txn.id} index={index}>
+                                <TransactionRow
+                                  txn={txn}
+                                  selected={selected?.id === txn.id}
+                                  currency={currency}
+                                  accountsById={accountsById}
+                                  categoriesById={categoriesById}
+                                  onSelect={() => setSelectedId(txn.id)}
+                                />
+                              </StaggerItem>
+                            );
+                          })}
+                        </div>
+                      ));
+                    })()
+                  )}
+                </div>
+              </TabCrossfade>
+            </div>
           </div>
 
-          <div className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-pill border border-line bg-canvas px-3.5 text-[13px] font-semibold text-ink-400">
-            <IconSearch />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search merchant or note"
-              className="w-full border-none bg-transparent text-ink-900 outline-none placeholder:font-medium placeholder:text-ink-400"
+          <div className="min-h-0 shrink-0 xl:overflow-y-auto">
+            <TransactionDetailPanel
+              txn={selected}
+              currency={currency}
+              timezone={timezone}
+              accountsById={accountsById}
+              categoriesById={categoriesById}
+              onDelete={handleDelete}
+              onVerify={handleVerify}
+              deleting={deleting}
+              verifying={verifying}
             />
           </div>
-
-          {error ? (
-            <p
-              className="mb-4 rounded-md border border-expense/30 bg-expense-bg px-4 py-3 text-sm font-semibold text-expense"
-              role="alert"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          <TabCrossfade
-            panelKey={`${monthWindow.start}-${typeFilter}-${search}`}
-          >
-            <div className="overflow-hidden rounded-lg border border-line bg-paper">
-              {filtered.length === 0 ? (
-                <EmptyState
-                  animation="receipt-search"
-                  title="No transactions found"
-                  description="Nothing matches these filters. Try a different month or type — or add one now."
-                  action={
-                    <EmptyStateAction href="/transactions/new">
-                      Add a transaction
-                    </EmptyStateAction>
-                  }
-                />
-              ) : (
-                (() => {
-                  let rowIndex = 0;
-                  return groups.map((group) => (
-                    <div key={group.date}>
-                      <div className="bg-tint px-4 py-2 text-[11.5px] font-extrabold tracking-[0.6px] text-ink-400 uppercase">
-                        {formatDayGroupLabel(group.date, timezone)}
-                      </div>
-                      {group.items.map((txn) => {
-                        const index = rowIndex;
-                        rowIndex += 1;
-                        return (
-                          <StaggerItem key={txn.id} index={index}>
-                            <TransactionRow
-                              txn={txn}
-                              selected={selected?.id === txn.id}
-                              currency={currency}
-                              accountsById={accountsById}
-                              categoriesById={categoriesById}
-                              onSelect={() => setSelectedId(txn.id)}
-                            />
-                          </StaggerItem>
-                        );
-                      })}
-                    </div>
-                  ));
-                })()
-              )}
-            </div>
-          </TabCrossfade>
         </div>
-
-        <TransactionDetailPanel
-          txn={selected}
-          currency={currency}
-          timezone={timezone}
-          accountsById={accountsById}
-          categoriesById={categoriesById}
-          onDelete={requestDelete}
-          onVerify={handleVerify}
-          deleting={deleting}
-          verifying={verifying}
-        />
       </div>
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete transaction?"
-        description={
-          pendingDelete ? (
-            <>
-              This permanently removes{" "}
-              <b className="text-ink-900">
-                {getTransactionTitle(pendingDelete)}
-              </b>{" "}
-              from your ledger. This cannot be undone.
-            </>
-          ) : null
-        }
-        confirmLabel="Delete"
-        destructive
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={confirmDelete}
-      />
     </AppShell>
   );
 }

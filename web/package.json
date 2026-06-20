@@ -10,12 +10,17 @@
     "generate:setup-lottie": "node scripts/generate-setup-lottie.mjs"
   },
   "dependencies": {
+    "@next/env": "^16.2.7",
+    "@next/swc-darwin-arm64": "^16.2.7",
     "@pfos/shared": "*",
+    "@swc/helpers": "^0.5.15",
     "firebase": "^11.10.0",
     "lottie-react": "^2.4.1",
+    "lottie-web": "^5.13.0",
     "next": "16.2.7",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "styled-jsx": "^5.1.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

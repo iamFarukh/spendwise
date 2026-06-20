@@ -352,21 +352,28 @@ function SetupWizard() {
     }
 
     if (step === "accounts") {
-      if (draft.accounts.length === 0) {
-        // They typed a name but never pressed Add — add it for them.
-        const pending = buildAccountFromForm();
-        if (pending) {
-          setDraft((current) => ({
-            ...current,
-            accounts: [...current.accounts, pending],
-          }));
-          setNewAccount(createDraftAccount());
-          goToStep("balances");
-        } else if (!newAccount.name.trim()) {
-          setNameError(null);
-          setSubmitError("Add at least one account to continue.");
-        }
+      const pending = newAccount.name.trim() ? buildAccountFromForm() : null;
+      // buildAccountFromForm returns null for validation errors (e.g. duplicate name).
+      if (newAccount.name.trim() && !pending) {
         return;
+      }
+
+      const nextAccounts = pending
+        ? [...draft.accounts, pending]
+        : draft.accounts;
+
+      if (nextAccounts.length === 0) {
+        setNameError(null);
+        setSubmitError("Add at least one account to continue.");
+        return;
+      }
+
+      if (pending) {
+        setDraft((current) => ({
+          ...current,
+          accounts: [...current.accounts, pending],
+        }));
+        setNewAccount(createDraftAccount());
       }
       goToStep("balances");
       return;
@@ -393,7 +400,7 @@ function SetupWizard() {
     }
     setFinishing(true);
     try {
-      await completeDayZeroSetup(uid, draft);
+      await completeDayZeroSetup(uid, draftRef.current);
       clearLocalSetupDraft(uid);
       setPhase("success");
     } catch (err) {

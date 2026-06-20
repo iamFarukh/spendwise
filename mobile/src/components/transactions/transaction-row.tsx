@@ -4,11 +4,13 @@ import type {Transaction} from '@pfos/shared';
 import {AppText} from '@/components/ui/app-text';
 import {colors, radius, spacing} from '@/constants/theme';
 import {
+  getTransactionAccountLabel,
   getTransactionListAmount,
+  getTransactionSubtitle,
   getTransactionTitle,
   getTransactionTone,
-  getTransactionTypeLabel,
 } from '@/lib/ledger/display';
+import type {AccountLookup} from '@/lib/ledger/display';
 import type {LedgerMoneySettings} from '@/lib/format/currency';
 
 const TONE_BG: Record<string, string> = {
@@ -26,15 +28,28 @@ type TransactionRowProps = {
   txn: Transaction;
   settings: LedgerMoneySettings;
   categoryName?: string;
+  accountsById?: AccountLookup;
 };
 
 export function TransactionRow({
   txn,
   settings,
   categoryName,
+  accountsById,
 }: TransactionRowProps) {
   const tone = getTransactionTone(txn);
-  const initial = getTransactionTitle(txn).charAt(0).toUpperCase();
+  const title = getTransactionTitle(txn, categoryName);
+  const accountLabel = accountsById
+    ? getTransactionAccountLabel(txn, accountsById)
+    : '';
+  const subtitle = getTransactionSubtitle(txn, categoryName, accountLabel);
+  const initial = title.charAt(0).toUpperCase();
+  const meta = [
+    subtitle,
+    txn.status === 'PENDING' ? 'needs review' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={styles.row}>
@@ -45,12 +60,13 @@ export function TransactionRow({
       </View>
       <View style={styles.body}>
         <AppText variant="body" style={styles.title} numberOfLines={1}>
-          {getTransactionTitle(txn)}
+          {title}
         </AppText>
-        <AppText variant="xs">
-          {categoryName ?? getTransactionTypeLabel(txn.type)}
-          {txn.status === 'PENDING' ? ' · needs review' : ''}
-        </AppText>
+        {meta ? (
+          <AppText variant="xs" numberOfLines={1}>
+            {meta}
+          </AppText>
+        ) : null}
       </View>
       <AppText
         style={[

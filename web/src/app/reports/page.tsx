@@ -21,11 +21,13 @@ import { FilterChip } from "@/components/ui/filter-chip";
 import { CategoryDonutChart } from "@/components/reports/category-donut-chart";
 import { ReportsStats } from "@/components/reports/reports-stats";
 import { SpendingTrendChart } from "@/components/reports/spending-trend-chart";
+import { SipReportsSection } from "@/components/sip/sip-reports-section";
 import { Button } from "@/components/ui/button";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useAllCategories } from "@/hooks/use-all-categories";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useUserSettings } from "@/hooks/use-user-settings";
+import { useSipAnalytics } from "@/hooks/use-sip";
 import {
   downloadLedgerJson,
   downloadTransactionsCsv,
@@ -53,6 +55,7 @@ function ReportsContent() {
   const { accounts, loading: accountsLoading } = useAccounts();
   const { categories, loading: categoriesLoading } = useAllCategories();
   const { transactions, loading: transactionsLoading } = useTransactions();
+  const { analytics: sipAnalytics } = useSipAnalytics();
   const [granularity, setGranularity] = useState<ReportGranularity>("MONTHLY");
 
   const timezone = settings?.timezone ?? "Asia/Kolkata";
@@ -124,7 +127,7 @@ function ReportsContent() {
         </>
       }
     >
-      <div className="min-h-0 overflow-y-auto">
+      <div>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {GRANULARITIES.map((option) => (
             <FilterChip
@@ -160,6 +163,10 @@ function ReportsContent() {
             />
           </div>
         </TabCrossfade>
+
+        {sipAnalytics && sipAnalytics.totalInvested > 0 ? (
+          <SipReportsSection analytics={sipAnalytics} settings={settings} />
+        ) : null}
       </div>
     </AppShell>
   );

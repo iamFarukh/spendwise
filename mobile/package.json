@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "test": "jest",
     "sync-env": "node scripts/sync-env-from-web.mjs",
+    "generate:icons": "node scripts/generate-app-icons.mjs",
+    "generate:splash": "node scripts/generate-splash-assets.mjs",
+    "generate:brand": "npm run generate:icons && npm run generate:splash",
+    "generate:toast-lottie": "node scripts/generate-toast-lottie.mjs",
     "postinstall:ios": "ruby ios/scripts/fix-xcode-path-spaces.rb"
   },
   "dependencies": {
@@ -25,6 +29,7 @@
     "react-native-config": "^1.5.5",
     "react-native-gesture-handler": "^2.24.0",
     "react-native-get-random-values": "^1.11.0",
+    "react-native-haptic-feedback": "^2.3.3",
     "react-native-reanimated": "^3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "4.10.0",
@@ -50,6 +55,7 @@
     "jest": "^29.6.3",
     "prettier": "2.8.8",
     "react-test-renderer": "19.0.0",
+    "sharp": "^0.35.1",
     "typescript": "5.0.4"
   },
   "engines": {

@@ -1,6 +1,7 @@
 import {StyleSheet, View} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -14,6 +15,7 @@ import {PressableScale} from '@/components/motion/pressable-scale';
 import {SPRINGS} from '@/constants/motion';
 import {colors, radius, spacing} from '@/constants/theme';
 import type {LedgerMoneySettings} from '@/lib/format/currency';
+import type {AccountLookup} from '@/lib/ledger/display';
 
 const ACTION_W = 76;
 
@@ -21,8 +23,10 @@ type Props = {
   txn: Transaction;
   settings: LedgerMoneySettings;
   categoryName?: string;
+  accountsById?: AccountLookup;
   onDelete: () => void;
   onVerify?: () => void;
+  onPress?: () => void;
 };
 
 /**
@@ -33,14 +37,16 @@ export function SwipeableTransactionRow({
   txn,
   settings,
   categoryName,
+  accountsById,
   onDelete,
   onVerify,
+  onPress,
 }: Props) {
   const translateX = useSharedValue(0);
   const canVerify = txn.status === 'PENDING' && Boolean(onVerify);
   const revealWidth = (canVerify ? ACTION_W * 2 : ACTION_W) + spacing.sm;
 
-  const close = () => {
+  const snapClosed = () => {
     'worklet';
     translateX.value = withSpring(0, SPRINGS.default);
   };
@@ -55,9 +61,25 @@ export function SwipeableTransactionRow({
       if (translateX.value < -revealWidth / 2) {
         translateX.value = withSpring(-revealWidth, SPRINGS.default);
       } else {
-        close();
+        snapClosed();
       }
     });
+
+  const tap = Gesture.Tap()
+    .maxDistance(10)
+    .onEnd((_event, success) => {
+      if (!success || !onPress) {
+        return;
+      }
+      // Tapping an open row closes it; otherwise open the detail.
+      if (translateX.value < -4) {
+        snapClosed();
+      } else {
+        runOnJS(onPress)();
+      }
+    });
+
+  const gesture = onPress ? Gesture.Exclusive(pan, tap) : pan;
 
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{translateX: translateX.value}],
@@ -69,7 +91,7 @@ export function SwipeableTransactionRow({
         {canVerify ? (
           <PressableScale
             onPress={() => {
-              close();
+              translateX.value = withSpring(0, SPRINGS.default);
               onVerify?.();
             }}
             style={[styles.action, {backgroundColor: colors.income}]}>
@@ -89,12 +111,13 @@ export function SwipeableTransactionRow({
         </PressableScale>
       </View>
 
-      <GestureDetector gesture={pan}>
+      <GestureDetector gesture={gesture}>
         <Animated.View style={rowStyle}>
           <TransactionRow
             txn={txn}
             settings={settings}
             categoryName={categoryName}
+            accountsById={accountsById}
           />
         </Animated.View>
       </GestureDetector>

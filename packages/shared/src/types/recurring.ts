@@ -1,5 +1,15 @@
 import type { ManualTransactionType } from "../transactions/form";
 
+/** Investment vehicle for SIP / recurring investment plans. */
+export type SipInvestmentType =
+  | "MUTUAL_FUND"
+  | "STOCK"
+  | "ETF"
+  | "GOLD"
+  | "RECURRING_DEPOSIT"
+  | "FIXED_DEPOSIT"
+  | "OTHER";
+
 export type RecurringFrequency = "WEEKLY" | "MONTHLY";
 
 export type RecurringTransactionType = Extract<
@@ -26,6 +36,16 @@ export interface RecurringTemplate {
   lastGeneratedDate?: string | null;
   autoConfirm: boolean;
   active: boolean;
+  /** SIP-only: mutual fund, stock, ETF, gold, RD, FD, etc. */
+  investmentType?: SipInvestmentType;
+  /** SIP-only: auto-post ledger entry at end of day when not recorded manually. */
+  autoCreateTransaction?: boolean;
+  /** SIP-only: morning / evening reminder toggles. */
+  notificationsEnabled?: boolean;
+  /** ISO date until which due reminders are hidden (snooze). */
+  snoozedUntil?: string | null;
+  /** Run dates skipped without posting (YYYY-MM-DD). */
+  skippedOccurrences?: string[];
   createdAt: string;
   updatedAt: string;
 }

@@ -6,6 +6,8 @@ import {
   type LedgerMoneySettings,
 } from '@/lib/format/currency';
 
+export type AccountLookup = Map<string, {name: string}>;
+
 export const TXN_TYPE_LABELS: Record<TransactionType, string> = {
   OPENING: 'Opening balance',
   INCOME: 'Income',
@@ -38,8 +40,72 @@ export function getTransactionTone(txn: Transaction): TransactionTone {
   return 'neutral';
 }
 
-export function getTransactionTitle(txn: Transaction): string {
-  return txn.merchant || txn.notes || getTransactionTypeLabel(txn.type);
+export function getTransactionTitle(
+  txn: Transaction,
+  categoryName?: string,
+): string {
+  const merchant = txn.merchant?.trim();
+  if (merchant) {
+    return merchant;
+  }
+  const category = categoryName?.trim();
+  if (category) {
+    return category;
+  }
+  const notes = txn.notes?.trim();
+  if (notes) {
+    return notes;
+  }
+  return getTransactionTypeLabel(txn.type);
+}
+
+/** Account line for list rows — from, to, or both for transfers. */
+export function getTransactionAccountLabel(
+  txn: Transaction,
+  accountsById: AccountLookup,
+): string {
+  const from = txn.fromAccountId
+    ? accountsById.get(txn.fromAccountId)?.name
+    : undefined;
+  const to = txn.toAccountId
+    ? accountsById.get(txn.toAccountId)?.name
+    : undefined;
+
+  if (from && to) {
+    return `${from} → ${to}`;
+  }
+  return from ?? to ?? '';
+}
+
+/** Secondary line for list rows — category/type plus account when known. */
+export function getTransactionSubtitle(
+  txn: Transaction,
+  categoryName?: string,
+  accountLabel?: string,
+): string {
+  const typeLabel = getTransactionTypeLabel(txn.type);
+  const title = getTransactionTitle(txn, categoryName);
+  const parts: string[] = [];
+
+  if (title !== typeLabel) {
+    const merchant = txn.merchant?.trim();
+    const category = categoryName?.trim();
+    if (merchant && category) {
+      parts.push(category);
+    } else if (category) {
+      parts.push(category);
+    } else {
+      parts.push(typeLabel);
+    }
+  } else {
+    parts.push(typeLabel);
+  }
+
+  if (accountLabel) {
+    parts.push(accountLabel);
+  }
+
+  return parts.join(' · ');
 }
 
 /** Signed, tone-aware amount string for list rows. */

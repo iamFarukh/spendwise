@@ -1,16 +1,15 @@
-import {useEffect} from 'react';
-import {StyleSheet, TextInput, type TextStyle} from 'react-native';
-import Animated, {
-  useAnimatedProps,
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {StyleSheet, Text, type TextStyle} from 'react-native';
+import {
+  cancelAnimation,
+  runOnJS,
+  useAnimatedReaction,
   useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 
 import {TIMINGS} from '@/constants/motion';
-
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
-Animated.addWhitelistedNativeProps({text: true});
 
 type AnimatedNumberProps = {
   /** Target numeric value to count toward. */
@@ -21,39 +20,58 @@ type AnimatedNumberProps = {
 };
 
 /**
- * Counts up to `value` on the UI thread by driving an uneditable TextInput's
- * `text` prop — the standard Reanimated pattern for animating displayed text
- * without per-frame React state. Honors reduced motion.
+ * Counts up to `value` over ~650ms — from 0 on first mount (a satisfying
+ * dashboard reveal), then from the previous value on later changes. The
+ * interpolated number lives on the UI thread (a shared value), but `format`
+ * runs on the JS thread via runOnJS — `Intl`-based formatters are NOT worklets
+ * and crash if called inside one. We only re-render when the formatted string
+ * actually changes.
  */
 export function AnimatedNumber({value, format, style}: AnimatedNumberProps) {
-  const progress = useSharedValue(value);
   const reduceMotion = useReducedMotion();
+  // Start at 0 so the first reveal counts up; reduced motion shows the value.
+  const progress = useSharedValue(reduceMotion ? value : 0);
+  const [display, setDisplay] = useState(() =>
+    format(reduceMotion ? value : 0),
+  );
+
+  // Keep the latest formatter without destabilizing the JS-thread callback.
+  const formatRef = useRef(format);
+  formatRef.current = format;
+
+  const update = useCallback((next: number) => {
+    const text = formatRef.current(next);
+    setDisplay(prev => (prev === text ? prev : text));
+  }, []);
 
   useEffect(() => {
-    progress.value = reduceMotion
-      ? value
-      : withTiming(value, {duration: 650, easing: TIMINGS.slow.easing});
-  }, [value, reduceMotion, progress]);
+    if (reduceMotion) {
+      progress.value = value;
+      update(value);
+      return;
+    }
+    progress.value = withTiming(value, {
+      duration: 650,
+      easing: TIMINGS.slow.easing,
+    });
+    return () => cancelAnimation(progress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, reduceMotion]);
 
-  const animatedProps = useAnimatedProps(() => {
-    return {text: format(progress.value), defaultValue: format(progress.value)};
-  });
+  useAnimatedReaction(
+    () => progress.value,
+    current => {
+      runOnJS(update)(current);
+    },
+  );
 
   return (
-    <AnimatedTextInput
-      editable={false}
-      underlineColorAndroid="transparent"
-      style={[styles.input, style]}
-      // value is driven via animatedProps.text on the UI thread
-      animatedProps={animatedProps}
-    />
+    <Text style={[styles.text, style]} numberOfLines={1}>
+      {display}
+    </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  input: {
-    padding: 0,
-    margin: 0,
-    fontVariant: ['tabular-nums'],
-  },
+  text: {fontVariant: ['tabular-nums']},
 });

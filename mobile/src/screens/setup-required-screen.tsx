@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {AppText} from '@/components/ui/app-text';
 import {Button} from '@/components/ui/button';
 import {Card} from '@/components/ui/card';
+import {FadeInView} from '@/components/motion/fade-in-view';
 import {colors, spacing} from '@/constants/theme';
 import {useAuth} from '@/providers/auth-provider';
 
@@ -13,6 +14,7 @@ export function SetupRequiredScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.wrap}>
+        <FadeInView>
         <Card style={styles.card}>
           <AppText variant="h2">Finish setup on web</AppText>
           <AppText variant="body" style={styles.body}>
@@ -29,6 +31,7 @@ export function SetupRequiredScreen() {
           />
           <Button variant="ghost" label="Sign out" onPress={() => signOut()} />
         </Card>
+        </FadeInView>
       </View>
     </SafeAreaView>
   );

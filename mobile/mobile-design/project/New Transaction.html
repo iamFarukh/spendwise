@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpendWise — New transaction (redesign)</title>
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/app.css">
+<style>
+/* ============================================================
+   NEW TRANSACTION — REDESIGN
+   Fixes: cramped 8-type row, empty amount hero, blank ledger
+   preview, and the two competing Save buttons.
+   ============================================================ */
+.page.solo { width: 1280px; padding-top: var(--s6); }
+
+/* let the form breathe instead of clipping */
+.screen.tall { height: auto; min-height: 860px; overflow: visible; }
+.content.addtx2 { overflow: visible; display: grid; grid-template-columns: 1fr 360px; gap: var(--s6); align-items: start; }
+.addtx2 .form-col { display: flex; flex-direction: column; }
+
+/* ---- section heading inside the form ---- */
+.fsec { margin-bottom: var(--s5); }
+.fsec-label { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--ink-400); margin-bottom: var(--s3); }
+.fsec-label .n { width: 19px; height: 19px; border-radius: 6px; background: var(--mint-100); color: var(--mint-700); display: grid; place-items: center; font-size: 11px; font-family: var(--font-display); }
+
+/* ---- TYPE PICKER v2: grouped, full labels ---- */
+.type-stack { display: flex; flex-direction: column; gap: var(--s4); }
+.type-group .tg-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.tg-head .tg-name { font-size: var(--fs-sm); font-weight: 800; color: var(--ink-700); white-space: nowrap; }
+.tg-head .tg-note { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-400); white-space: nowrap; }
+.tg-head .counts { background: var(--expense-bg); color: var(--expense); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+.tg-head .neutral { background: var(--canvas-2); color: var(--ink-500); font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+.tchips { display: grid; gap: 10px; }
+.tchips.c2 { grid-template-columns: repeat(2, 1fr); }
+.tchips.c3 { grid-template-columns: repeat(3, 1fr); }
+.tchip { display: flex; align-items: center; gap: 11px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: var(--r-md); background: var(--paper); font-weight: 700; font-size: var(--fs-sm); color: var(--ink-700); cursor: default; transition: border-color .15s, background .15s; }
+.tchip .tci { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none; background: var(--canvas); color: var(--ink-500); }
+.tchip .tci svg { width: 17px; height: 17px; }
+.tchip:hover { border-color: var(--ink-300); }
+/* active states keyed to money direction */
+.tchip.active { box-shadow: var(--shadow-xs); }
+.tchip.active.out { border-color: var(--expense); background: var(--expense-bg); color: var(--expense); }
+.tchip.active.out .tci { background: var(--expense); color: #fff; }
+.tchip.active.in { border-color: var(--income); background: var(--income-bg); color: var(--income); }
+.tchip.active.in .tci { background: var(--income); color: #fff; }
+.tchip.active.mv { border-color: var(--transfer); background: var(--transfer-bg); color: var(--transfer); }
+.tchip.active.mv .tci { background: var(--transfer); color: #fff; }
+
+/* ---- AMOUNT card, tinted by type ---- */
+.amount-card { display: flex; align-items: center; justify-content: space-between; gap: var(--s5); border-radius: var(--r-lg); padding: var(--s5) var(--s5); margin-bottom: var(--s5); border: 1.5px solid var(--expense); background: linear-gradient(180deg, var(--expense-bg), #fff 120%); }
+.amount-left small { display: block; font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--expense); margin-bottom: 4px; }
+.amount-figure { display: flex; align-items: baseline; gap: 6px; }
+.amount-figure .cur { font-family: var(--font-display); font-size: 30px; font-weight: 700; color: var(--ink-400); }
+.amount-figure .val { font-family: var(--font-display); font-size: 52px; font-weight: 700; letter-spacing: -1.5px; line-height: 1; color: var(--ink-900); }
+.amount-figure .caret2 { width: 2.5px; height: 40px; background: var(--expense); border-radius: 2px; animation: blink 1.1s step-end infinite; align-self: center; }
+.amount-right { text-align: right; }
+.spend-flag { display: inline-flex; align-items: center; gap: 7px; background: #fff; border: 1px solid var(--expense); color: var(--expense); font-weight: 800; font-size: var(--fs-sm); padding: 7px 13px; border-radius: var(--r-pill); white-space: nowrap; }
+.spend-flag svg { width: 15px; height: 15px; }
+.amount-right .sub { display: block; font-size: var(--fs-xs); font-weight: 700; color: var(--ink-500); margin-top: 8px; max-width: 150px; }
+
+/* ---- fields ---- */
+.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) var(--s5); }
+.field2 { display: block; }
+.field2 > span.lab { display: flex; align-items: center; justify-content: space-between; font-size: var(--fs-sm); font-weight: 700; color: var(--ink-700); margin-bottom: 7px; }
+.field2 > span.lab em { font-style: normal; font-weight: 700; color: var(--ink-400); font-size: var(--fs-xs); }
+.req { color: var(--expense); }
+.ipt { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r-md); font-weight: 600; font-size: var(--fs-body); color: var(--ink-900); }
+.ipt.placeholder { color: var(--ink-400); }
+.ipt.focus { border-color: var(--mint-400); box-shadow: 0 0 0 3px var(--mint-100); }
+.ipt .pick-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.ipt .pick-ic svg { width: 15px; height: 15px; }
+.ipt .chev { width: 18px; height: 18px; color: var(--ink-400); margin-left: auto; flex: none; }
+.ipt .lead { width: 17px; height: 17px; color: var(--ink-400); flex: none; }
+.field-hint { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-400); margin-top: 6px; }
+.field-full { grid-column: 1 / -1; }
+
+/* ---- options: pending toggle ---- */
+.opt-card { display: flex; align-items: flex-start; gap: 13px; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--r-md); margin-top: var(--s5); background: var(--paper); }
+.cbox { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--ink-300); flex: none; display: grid; place-items: center; margin-top: 1px; background: #fff; }
+.cbox.on { background: var(--mint-500); border-color: var(--mint-500); }
+.cbox svg { width: 14px; height: 14px; color: #fff; display: none; }
+.cbox.on svg { display: block; }
+.opt-card .ot b { font-size: var(--fs-body); font-weight: 700; display: block; }
+.opt-card .ot small { color: var(--ink-500); font-size: var(--fs-sm); font-weight: 600; }
+.opt-card .ot small code { background: var(--pending-bg); color: var(--pending); padding: 1px 6px; border-radius: 5px; font-size: 11.5px; font-weight: 700; }
+
+/* ---- footer actions: one Save + clear modifier ---- */
+.tx-footer { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s5); padding-top: var(--s5); border-top: 1px solid var(--line); }
+.tx-footer .cancel { font-weight: 700; color: var(--ink-500); font-size: var(--fs-body); }
+.tx-footer .grow { flex: 1; }
+.addchk { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: var(--fs-sm); color: var(--ink-700); padding: 0 4px; }
+.addchk .cbox { width: 20px; height: 20px; }
+.btn-save { height: 50px; padding: 0 26px; font-size: 16px; border-radius: var(--r-lg); }
+.btn-save svg { width: 18px; height: 18px; }
+
+/* ============ RIGHT RAIL ============ */
+.rail { display: flex; flex-direction: column; gap: var(--s4); position: sticky; top: var(--s5); }
+.rail .card { padding: var(--s5); }
+
+/* live ledger preview — now filled with real data */
+.lp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s4); }
+.lp-head h3 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-h3); }
+.lp-live { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 800; color: var(--mint-600); }
+.lp-live .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--mint-500); box-shadow: 0 0 0 0 var(--mint-300); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(18,184,134,.45);} 70%{ box-shadow: 0 0 0 7px rgba(18,184,134,0);} 100%{ box-shadow:0 0 0 0 rgba(18,184,134,0);} }
+
+.post-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
+.post-row .pic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+.post-row .pic svg { width: 19px; height: 19px; }
+.post-row .pm { flex: 1; line-height: 1.3; min-width: 0; }
+.post-row .pm b { font-size: var(--fs-sm); font-weight: 700; display: block; }
+.post-row .pm small { color: var(--ink-400); font-size: var(--fs-xs); font-weight: 700; }
+.post-row .pamt { font-family: var(--font-display); font-weight: 700; font-size: 17px; white-space: nowrap; }
+
+.lp-result { background: var(--tint); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s4); margin-top: var(--s4); display: flex; flex-direction: column; gap: 10px; }
+.lp-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: var(--fs-sm); font-weight: 700; color: var(--ink-600); white-space: nowrap; }
+.lp-line .v { color: var(--ink-900); font-weight: 800; }
+.lp-line .v.tnum { font-family: var(--font-display); }
+
+/* one-rule card (kept, refined) */
+.rail .card-tint { background: var(--tint); border-color: var(--mint-200); }
+.rule-badge svg { width: 18px; height: 18px; }
+.rail .card-tint p { font-size: var(--fs-sm); color: var(--ink-700); line-height: 1.55; }
+.rail .card-tint p b { color: var(--ink-900); }
+</style>
+</head>
+<body>
+
+<!-- ============ ICON SPRITE ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="mintGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#25E6A6"/>
+      <stop offset="1" stop-color="#0A7D5C"/>
+    </linearGradient>
+  </defs>
+  <symbol id="logo" viewBox="0 0 48 48">
+    <rect width="48" height="48" rx="13" fill="url(#mintGrad)"/>
+    <path d="M24 35c0-7 0-11 5-15 0 8-2 12-5 15Z" fill="#fff" opacity="0.95"/>
+    <path d="M24 35c0-6-1-9-6-12 0 7 2 9 6 12Z" fill="#fff" opacity="0.8"/>
+    <rect x="22.5" y="30" width="3" height="9" rx="1.5" fill="#fff"/>
+  </symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-5h5v5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="3.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18v3"/><rect x="3" y="7.5" width="18" height="12" rx="2.5"/><path d="M16 13.5h2.5"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M8 14l3-4 3 2 4-6"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a6 6 0 0 1 6-6h6"/><path d="m14 -1 3 3-3 3" transform="translate(0,3)"/><path d="M20 16a6 6 0 0 1-6 6H8"/><path d="m10 19-3 3 3 3" transform="translate(0,-3)"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 2.6 14H2.5a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4 7.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.5 4V3.9a2 2 0 1 1 4 0V4a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 21.4 10h.1a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4"/><path d="M3 8h13"/><path d="m17 20 4-4-4-4"/><path d="M21 16H8"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M16 7h5v5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2.5"/><path d="M4 9h16M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5H3l9-5Z"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8"/><path d="M3 21h18"/></symbol>
+  <symbol id="i-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></symbol>
+  <symbol id="i-pig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a6 6 0 0 1 6-6h3a6 6 0 0 1 6 6 4 4 0 0 1-2 3.5V20h-3v-2h-3v2H8v-2.5A4 4 0 0 1 4 13Z"/><path d="M14 7l1-3M4 12H2.5"/><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-food" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v8a2 2 0 0 0 4 0V3M7 11v10"/><path d="M16 3c-1.5 0-3 1.8-3 5s1.5 4 3 4m0-9c1.5 0 3 1.8 3 5s-1.5 4-3 4m0 0v9"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 4 14h6l-1 7 9-11h-6l1-7Z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 12H5L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></symbol>
+  <symbol id="i-home2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 5l8 6"/><path d="M6 10v9h12v-9"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11"/><path d="M12 9S10 4 7.5 5 9.5 9 12 9Zm0 0s2-5 4.5-4-1.5 4-4.5 4Z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.7-1.6L13.6 21 11 19.4 8.3 21 5.5 19.4 5 21V3Z"/><path d="M9 8h6M9 12h4"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a5 5 0 0 1 0 10h-2"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="9" cy="6" rx="6" ry="2.6"/><path d="M3 6v5c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V6"/><path d="M15 11.4c2.6.2 6 1.3 6 2.6 0 1.4-2.7 2.6-6 2.6-1 0-2-.1-2.8-.3"/><path d="M3 11c0 1.4 2.7 2.6 6 2.6M9 13.6V19c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-5"/></symbol>
+</svg>
+
+<div class="page solo">
+
+  <div class="screen-label">
+    <span class="num">↻</span>
+    <div>
+      <div class="title">New transaction — redesigned</div>
+      <div class="desc">Types grouped so the one rule is obvious · live ledger preview · one Save action</div>
+    </div>
+  </div>
+
+  <div class="window">
+    <div class="window-bar">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="urlbar"><svg><use href="#i-lock"/></svg>spendwise.app/transactions/new</div>
+    </div>
+    <div class="screen tall" data-screen-label="New transaction">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="brand"><svg class="logo" viewBox="0 0 48 48"><use href="#logo"/></svg><span class="name">SpendWise<small>Your personal finance OS</small></span></div>
+        <div class="nav-group-label">Overview</div>
+        <div class="nav-item"><svg><use href="#i-home"/></svg> Dashboard</div>
+        <div class="nav-item active"><svg><use href="#i-list"/></svg> Transactions</div>
+        <div class="nav-item"><svg><use href="#i-wallet"/></svg> Accounts</div>
+        <div class="nav-item"><svg><use href="#i-grid"/></svg> Categories</div>
+        <div class="nav-group-label">Manage</div>
+        <div class="nav-item"><svg><use href="#i-repeat"/></svg> Recurring</div>
+        <div class="nav-item"><svg><use href="#i-chart"/></svg> Reports</div>
+        <div class="nav-item"><svg><use href="#i-clock"/></svg> Pending <span class="badge">3</span></div>
+        <div class="spacer"></div>
+        <div class="nav-item"><svg><use href="#i-gear"/></svg> Settings</div>
+        <div class="user-pill" style="margin-top:10px"><span class="avatar">M</span><div class="who"><b>Mohammad Farukh</b><span>developer.farukh@gmail.com</span></div></div>
+      </aside>
+
+      <!-- MAIN -->
+      <div class="main">
+        <div class="topbar">
+          <div class="pagetitle">New transaction<small>Record money in, out, or moving between your accounts</small></div>
+          <div class="grow"></div>
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-primary"><svg><use href="#i-check"/></svg> Save transaction</button>
+        </div>
+
+        <div class="content addtx2">
+          <!-- ============ FORM COLUMN ============ -->
+          <div class="form-col">
+
+            <!-- 1 · TYPE (grouped) -->
+            <div class="fsec">
+              <div class="fsec-label"><span class="n">1</span> What kind of transaction?</div>
+              <div class="type-stack">
+
+                <div class="type-group">
+                  <div class="tg-head">
+                    <span class="tg-name">Spending</span>
+                    <span class="counts">Counts as spent</span>
+                  </div>
+                  <div class="tchips c2">
+                    <div class="tchip active out"><span class="tci"><svg><use href="#i-up"/></svg></span> Expense</div>
+                    <div class="tchip out"><span class="tci"><svg><use href="#i-receipt"/></svg></span> Bill payment</div>
+                  </div>
+                </div>
+
+                <div class="type-group">
+                  <div class="tg-head">
+                    <span class="tg-name">Money in</span>
+                    <span class="tg-note">Increases a balance</span>
+                  </div>
+                  <div class="tchips c3">
+                    <div class="tchip in"><span class="tci"><svg><use href="#i-down"/></svg></span> Income</div>
+                    <div class="tchip in"><span class="tci"><svg><use href="#i-undo"/></svg></span> Refund</div>
+                    <div class="tchip in"><span class="tci"><svg><use href="#i-coins"/></svg></span> Redemption</div>
+                  </div>
+                </div>
+
+                <div class="type-group">
+                  <div class="tg-head">
+                    <span class="tg-name">Moving your own money</span>
+                    <span class="neutral">Never counts as spent</span>
+                  </div>
+                  <div class="tchips c3">
+                    <div class="tchip mv"><span class="tci"><svg><use href="#i-swap"/></svg></span> Transfer</div>
+                    <div class="tchip mv"><span class="tci"><svg><use href="#i-trend"/></svg></span> Investment</div>
+                    <div class="tchip mv"><span class="tci"><svg><use href="#i-cash"/></svg></span> Cash out</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 2 · AMOUNT -->
+            <div class="fsec">
+              <div class="fsec-label"><span class="n">2</span> How much?</div>
+              <div class="amount-card">
+                <div class="amount-left">
+                  <small>Expense amount</small>
+                  <div class="amount-figure"><span class="cur">₹</span><span class="val tnum">480</span><span class="caret2"></span></div>
+                </div>
+                <div class="amount-right">
+                  <span class="spend-flag"><svg><use href="#i-up"/></svg> Counts as spending</span>
+                  <span class="sub">Adds to your “spent this month” total</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3 · DETAILS -->
+            <div class="fsec">
+              <div class="fsec-label"><span class="n">3</span> Details</div>
+              <div class="form-grid2">
+                <label class="field2">
+                  <span class="lab">Category <span class="req">Required</span></span>
+                  <div class="ipt"><span class="pick-ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-food"/></svg></span> Food &amp; dining <svg class="chev"><use href="#i-chev-d"/></svg></div>
+                  <div class="field-hint">Only spending &amp; refunds need a category.</div>
+                </label>
+
+                <label class="field2">
+                  <span class="lab">Paid from</span>
+                  <div class="ipt"><span class="pick-ic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-card"/></svg></span> ICICI Credit Card <svg class="chev"><use href="#i-chev-d"/></svg></div>
+                  <div class="field-hint">Balance after: <b style="color:var(--ink-700)">−₹ 18,880</b></div>
+                </label>
+
+                <label class="field2">
+                  <span class="lab">Date</span>
+                  <div class="ipt"><svg class="lead"><use href="#i-cal"/></svg> 10 Jun 2026 <svg class="chev"><use href="#i-chev-d"/></svg></div>
+                </label>
+
+                <label class="field2">
+                  <span class="lab">Merchant / payee</span>
+                  <div class="ipt">Swiggy</div>
+                </label>
+
+                <label class="field2 field-full">
+                  <span class="lab">Note <em>Optional</em></span>
+                  <div class="ipt placeholder">Add a detail — e.g. “Team dinner, split with Aman”</div>
+                </label>
+              </div>
+            </div>
+
+            <!-- pending toggle -->
+            <div class="opt-card">
+              <span class="cbox"><svg><use href="#i-check"/></svg></span>
+              <div class="ot">
+                <b>Save as pending</b>
+                <small>Hold for review before it touches your dashboard. Pending entries stay <code>PENDING</code> on the Pending screen until you confirm.</small>
+              </div>
+            </div>
+
+            <!-- FOOTER: one save + clear modifier -->
+            <div class="tx-footer">
+              <span class="cancel">Cancel</span>
+              <span class="grow"></span>
+              <label class="addchk"><span class="cbox on"><svg><use href="#i-check"/></svg></span> Add another after saving</label>
+              <button class="btn btn-primary btn-save"><svg><use href="#i-check"/></svg> Save transaction</button>
+            </div>
+
+          </div>
+
+          <!-- ============ RIGHT RAIL ============ -->
+          <aside class="rail">
+
+            <div class="card">
+              <div class="lp-head">
+                <h3>Ledger preview</h3>
+                <span class="lp-live"><span class="pulse"></span> Live</span>
+              </div>
+
+              <div class="post-row">
+                <span class="pic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-card"/></svg></span>
+                <div class="pm"><b>ICICI Credit Card</b><small>Money out</small></div>
+                <span class="pamt neg">−₹ 480</span>
+              </div>
+              <div class="post-row">
+                <span class="pic" style="background:var(--expense-bg);color:var(--expense)"><svg><use href="#i-food"/></svg></span>
+                <div class="pm"><b>Food &amp; dining</b><small>Recorded against this category</small></div>
+                <span class="pamt">₹ 480</span>
+              </div>
+
+              <div class="lp-result">
+                <div class="lp-line"><span>Counts as spending</span><span class="tag tag-expense tag-dot" style="font-size:11.5px">Yes</span></div>
+                <div class="lp-line"><span>New card balance</span><span class="v tnum neg">−₹ 18,880</span></div>
+                <div class="lp-line"><span>Posts on</span><span class="v">10 Jun 2026</span></div>
+                <div class="lp-line"><span>Status</span><span class="tag tag-income tag-dot" style="font-size:11.5px">Verified</span></div>
+              </div>
+            </div>
+
+            <div class="card card-tint">
+              <div class="rule-badge"><svg><use href="#i-shield"/></svg> The one rule</div>
+              <p>Only <b>Spending</b> — expenses &amp; bills — adds to your spent total. <b>Refunds</b> reduce it. Moving money between <em>your own</em> accounts (transfers, investments, cash out) never counts as spent.</p>
+            </div>
+
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

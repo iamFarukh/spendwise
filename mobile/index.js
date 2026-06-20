@@ -4,6 +4,7 @@
 
 // Must be the first import so gesture-handler installs its native handlers.
 import 'react-native-gesture-handler';
+import 'react-native-reanimated';
 import 'react-native-get-random-values';
 import {AppRegistry} from 'react-native';
 import App from './src/App';

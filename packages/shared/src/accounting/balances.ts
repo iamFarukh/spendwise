@@ -67,7 +67,9 @@ export function getTransactionAccountDeltas(
     case "WITHDRAWAL":
     case "INVESTMENT":
       applyDelta(deltas, txn.fromAccountId, -txn.amount);
-      applyDelta(deltas, txn.toAccountId, txn.amount);
+      if (txn.toAccountId) {
+        applyDelta(deltas, txn.toAccountId, txn.amount);
+      }
       break;
     case "LIABILITY_PAYMENT":
       applyDelta(deltas, txn.fromAccountId, -txn.amount);

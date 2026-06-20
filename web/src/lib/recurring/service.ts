@@ -3,17 +3,21 @@ import {
   buildTransactionFromRecurringTemplate,
   computeInitialRunDate,
   firestorePaths,
+  isSipTemplate,
   toDateStringInTimezone,
+  validateSipTemplateInput,
   validateTransactionForm,
   type Account,
   type RecurringFrequency,
   type RecurringTemplate,
   type RecurringTransactionType,
+  type SipInvestmentType,
 } from "@pfos/shared";
 import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   setDoc,
@@ -22,6 +26,7 @@ import {
 } from "firebase/firestore";
 
 import { getFirebaseDb } from "@/lib/firebase/client";
+import { createSipPendingIfNeeded } from "@/lib/sip/service";
 
 export type RecurringTemplateInput = {
   name: string;
@@ -38,6 +43,9 @@ export type RecurringTemplateInput = {
   nextRunDate?: string;
   autoConfirm: boolean;
   active: boolean;
+  investmentType?: SipInvestmentType;
+  autoCreateTransaction?: boolean;
+  notificationsEnabled?: boolean;
 };
 
 export async function createRecurringTemplate(
@@ -81,6 +89,11 @@ export async function createRecurringTemplate(
     lastGeneratedDate: null,
     autoConfirm: input.autoConfirm,
     active: input.active,
+    investmentType: input.investmentType,
+    autoCreateTransaction: input.autoCreateTransaction ?? input.type === "INVESTMENT",
+    notificationsEnabled: input.notificationsEnabled ?? input.type === "INVESTMENT",
+    snoozedUntil: null,
+    skippedOccurrences: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -117,6 +130,9 @@ export async function updateRecurringTemplate(
     nextRunDate: input.nextRunDate,
     autoConfirm: input.autoConfirm,
     active: input.active,
+    investmentType: input.investmentType ?? null,
+    autoCreateTransaction: input.autoCreateTransaction,
+    notificationsEnabled: input.notificationsEnabled,
     updatedAt: new Date().toISOString(),
   });
 }
@@ -168,14 +184,30 @@ export async function runDueRecurringTemplates(
     if (!template.active || template.nextRunDate > today) {
       continue;
     }
+
+    if (isSipTemplate(template)) {
+      if (template.skippedOccurrences?.includes(template.nextRunDate)) {
+        continue;
+      }
+      if (template.autoCreateTransaction === false) {
+        continue;
+      }
+      const created = await createSipPendingIfNeeded(
+        uid,
+        template,
+        template.nextRunDate,
+      );
+      if (created) {
+        generated += 1;
+      }
+      continue;
+    }
+
     if (template.lastGeneratedDate === template.nextRunDate) {
       continue;
     }
 
     const batch = writeBatch(db);
-    // Deterministic id keyed on (template, run date): if two runs race (e.g. a
-    // refocus and a second tab firing the runner simultaneously) the second
-    // write overwrites the same document instead of creating a duplicate.
     const transactionId = `${template.id}_${template.nextRunDate}`;
     const transaction = {
       ...buildTransactionFromRecurringTemplate(
@@ -210,6 +242,23 @@ function validateRecurringInput(
   input: RecurringTemplateInput,
   accounts: Account[],
 ): void {
+  if (input.type === "INVESTMENT" && input.investmentType) {
+    const sipError = validateSipTemplateInput(
+      {
+        name: input.name,
+        amount: input.amount,
+        fromAccountId: input.fromAccountId,
+        notes: input.notes,
+        dayOfMonth: input.dayOfMonth,
+      },
+      accounts,
+    );
+    if (sipError) {
+      throw new Error(sipError);
+    }
+    return;
+  }
+
   const name = input.name.trim();
   if (!name) {
     throw new Error("Enter a template name.");

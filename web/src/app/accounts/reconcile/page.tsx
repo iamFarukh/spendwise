@@ -132,13 +132,15 @@ function ReconcileContent() {
         />
       ) : (
         <div className="recon-page grid grid-cols-1 items-start gap-5 xl:grid-cols-[280px_1fr]">
-          <ReconcileAccountPicker
-            accounts={reconcileable}
-            selectedId={selected?.account.id ?? null}
-            lastByAccount={lastByAccount}
-            timezone={timezone}
-            onSelect={setSelectedId}
-          />
+          <div className="xl:sticky xl:top-0 xl:self-start">
+            <ReconcileAccountPicker
+              accounts={reconcileable}
+              selectedId={selected?.account.id ?? null}
+              lastByAccount={lastByAccount}
+              timezone={timezone}
+              onSelect={setSelectedId}
+            />
+          </div>
 
           {selected && user ? (
             <ReconcilePanel

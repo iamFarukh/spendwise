@@ -60,7 +60,7 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
       },
       err => {
         setTransactionsError(getFirestoreErrorMessage(err));
-        setTransactions([]);
+        setTransactions(prev => prev);
         setTransactionsLoading(false);
       },
     );
@@ -100,7 +100,7 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
       },
       err => {
         setCategoriesError(getFirestoreErrorMessage(err));
-        setCategories([]);
+        setCategories(prev => prev);
         setCategoriesLoading(false);
       },
     );

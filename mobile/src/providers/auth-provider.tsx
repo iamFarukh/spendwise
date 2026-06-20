@@ -1,4 +1,4 @@
-import {User, onAuthStateChanged, signOut as firebaseSignOut} from 'firebase/auth';
+import {User, onAuthStateChanged} from 'firebase/auth';
 import {
   ReactNode,
   createContext,
@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import {configureGoogleSignIn} from '@/lib/auth/actions';
+import {configureGoogleSignIn, signOutAll} from '@/lib/auth/actions';
 import {getFirebaseAuth} from '@/lib/firebase/client';
 import {isFirebaseConfigured} from '@/lib/firebase/config';
 
@@ -48,12 +48,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
       user,
       loading,
       configured,
-      signOut: async () => {
-        const auth = getFirebaseAuth();
-        if (auth) {
-          await firebaseSignOut(auth);
-        }
-      },
+      signOut: signOutAll,
     }),
     [configured, loading, user],
   );

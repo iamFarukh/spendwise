@@ -2,19 +2,14 @@ import {
   createBottomTabNavigator,
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
+
 import {useTransactions} from '@/providers/ledger-data-provider';
 import {AnimatedTabBar} from '@/navigation/animated-tab-bar';
 import {HomeScreen} from '@/screens/home-screen';
 import {TransactionsScreen} from '@/screens/transactions-screen';
-import {PendingScreen} from '@/screens/pending-screen';
-import {MoreScreen} from '@/screens/more-screen';
-
-export type MainTabParamList = {
-  Home: undefined;
-  Transactions: undefined;
-  Pending: undefined;
-  More: undefined;
-};
+import {AccountsScreen} from '@/screens/accounts-screen';
+import {ReportsScreen} from '@/screens/reports-screen';
+import type {MainTabParamList} from '@/navigation/types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -28,17 +23,20 @@ export function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={renderTabBar}
-      screenOptions={{headerShown: false}}>
+      screenOptions={{
+        headerShown: false,
+        // Subtle cross-fade + shift between tabs — tabs are parallel, so no
+        // full slide. Feels instant but alive.
+        animation: 'shift',
+      }}>
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Transactions" component={TransactionsScreen} />
       <Tab.Screen
-        name="Pending"
-        component={PendingScreen}
-        options={{
-          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-        }}
+        name="Activity"
+        component={TransactionsScreen}
+        options={{tabBarBadge: pendingCount > 0 ? pendingCount : undefined}}
       />
-      <Tab.Screen name="More" component={MoreScreen} />
+      <Tab.Screen name="Accounts" component={AccountsScreen} />
+      <Tab.Screen name="Reports" component={ReportsScreen} />
     </Tab.Navigator>
   );
 }
