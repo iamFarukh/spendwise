@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +16,7 @@ import {AppText} from '@/components/ui/app-text';
 import {IconBadge} from '@/components/ui/icon-badge';
 import {Toggle} from '@/components/ui/toggle';
 import {ScreenHeader} from '@/components/ui/screen-header';
+import {useKeyboardAwareScroll} from '@/components/ui/keyboard-aware-scroll-view';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {IconCheck} from '@/components/icons';
@@ -43,6 +44,9 @@ export function AddAccountScreen() {
   const [balance, setBalance] = useState('');
   const [makePrimary, setMakePrimary] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const keyboardAware = useKeyboardAwareScroll(scrollRef);
 
   const preset = getPreset(presetKey);
   const timezone = settings?.timezone ?? 'Asia/Kolkata';
@@ -116,8 +120,10 @@ export function AddAccountScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.body}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+          {...keyboardAware}>
           <FadeInView style={styles.bodyInner}>
           <View style={styles.preview}>
             <IconBadge icon={preset.glyph} tone={preset.tone} size="lg" />

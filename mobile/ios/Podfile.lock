@@ -1821,6 +1821,30 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNCClipboard (1.16.3):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNGestureHandler (2.32.0):
     - DoubleConversion
     - glog
@@ -1870,6 +1894,11 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNNotifee (9.1.8):
+    - React-Core
+    - RNNotifee/NotifeeCore (= 9.1.8)
+  - RNNotifee/NotifeeCore (9.1.8):
+    - React-Core
   - RNReactNativeHapticFeedback (2.3.3):
     - DoubleConversion
     - glog
@@ -2198,8 +2227,10 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCClipboard (from `../../node_modules/@react-native-clipboard/clipboard`)"
   - RNGestureHandler (from `../../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../../node_modules/@react-native-google-signin/google-signin`)"
+  - "RNNotifee (from `../../node_modules/@notifee/react-native`)"
   - RNReactNativeHapticFeedback (from `../../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../../node_modules/react-native-reanimated`)
   - RNScreens (from `../../node_modules/react-native-screens`)
@@ -2365,10 +2396,14 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../../node_modules/@react-native-async-storage/async-storage"
+  RNCClipboard:
+    :path: "../../node_modules/@react-native-clipboard/clipboard"
   RNGestureHandler:
     :path: "../../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
     :path: "../../node_modules/@react-native-google-signin/google-signin"
+  RNNotifee:
+    :path: "../../node_modules/@notifee/react-native"
   RNReactNativeHapticFeedback:
     :path: "../../node_modules/react-native-haptic-feedback"
   RNReanimated:
@@ -2460,8 +2495,10 @@ SPEC CHECKSUMS:
   ReactCodegen: 5bfd096912d526917ea0cfcba809bc6f33b1069a
   ReactCommon: 4d0da92a5eb8da86c08e3ec34bd23ab439fb2461
   RNCAsyncStorage: 2cf7d05f5b1bc38680b6c83971e535a6ae9c5bc7
+  RNCClipboard: b202bc12352f3e213f94f6d9bf2e8c5a2739192e
   RNGestureHandler: fa3199406d7966e740a1903a74470374461f906d
   RNGoogleSignin: f3a6a0b8809f570f6f23c1c2e2dc34ca55de4a19
+  RNNotifee: 4a6ee5c7deaf00e005050052d73ee6315dff7ec9
   RNReactNativeHapticFeedback: 7dfb10cca09eb7a4ed6b63ae6415a195beec8cf2
   RNReanimated: 7faff2e430cf8a4c03a40f91c76d9bb077cf9941
   RNScreens: c5c07a86e4088ce92f0d3854082250dfa9c61f75

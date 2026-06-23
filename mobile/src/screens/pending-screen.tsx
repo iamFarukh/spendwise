@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {memo, useCallback, useMemo, useState} from 'react';
 import {ScrollView, StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -10,6 +10,7 @@ import {IconBadge} from '@/components/ui/icon-badge';
 import {ScreenHeader} from '@/components/ui/screen-header';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {Lottie} from '@/components/motion/lottie';
+import {PendingSkeleton} from '@/components/motion/screen-skeletons';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {IconCheck, IconChevronDown, IconEdit, IconShield} from '@/components/icons';
 import {
@@ -65,31 +66,43 @@ export function PendingScreen() {
     () => new Map(accounts.map(a => [a.id, a])),
     [accounts],
   );
+  // SIP (INVESTMENT) pending entries are approved/skipped via the Action
+  // Center — keep Pending focused on non-SIP review so they never double up.
   const pending = useMemo(
-    () => transactions.filter(tx => tx.status === 'PENDING'),
+    () => transactions.filter(tx => tx.status === 'PENDING' && tx.type !== 'INVESTMENT'),
     [transactions],
   );
 
-  async function confirm(id: string) {
-    if (!user) return;
-    setBusyId(id);
-    try {
-      await verifyTransaction(user.uid, id);
-      toast.success('Confirmed — it’s in your ledger now.');
-    } catch (err) {
-      toast.error(getFirestoreErrorMessage(err, 'Could not confirm.'));
-    } finally {
-      setBusyId(null);
-    }
-  }
+  // Stable handlers so the memoized ReviewCard only re-renders the row whose
+  // `busy` flips, not every pending card, while one is confirming.
+  const confirm = useCallback(
+    async (id: string) => {
+      if (!user) {
+        return;
+      }
+      setBusyId(id);
+      try {
+        await verifyTransaction(user.uid, id);
+        toast.success('Confirmed — it’s in your ledger now.');
+      } catch (err) {
+        toast.error(getFirestoreErrorMessage(err, 'Could not confirm.'));
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [toast, user],
+  );
 
-  function openEdit(txn: Transaction) {
-    if (!isPendingEditable(txn)) {
-      toast.notify('This entry cannot be edited here.');
-      return;
-    }
-    setEditTxn(txn);
-  }
+  const openEdit = useCallback(
+    (txn: Transaction) => {
+      if (!isPendingEditable(txn)) {
+        toast.notify('This entry cannot be edited here.');
+        return;
+      }
+      setEditTxn(txn);
+    },
+    [toast],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -108,12 +121,14 @@ export function PendingScreen() {
       <ScrollView
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}>
-        {pending.length === 0 ? (
+        {loading && pending.length === 0 ? (
+          <PendingSkeleton />
+        ) : pending.length === 0 ? (
           <View style={styles.empty}>
             <Lottie name="caught-up" size={170} />
             <AppText variant="h3">All caught up</AppText>
             <AppText variant="body" muted>
-              {loading ? 'Loading…' : 'Nothing is waiting on you.'}
+              Nothing is waiting on you.
             </AppText>
           </View>
         ) : (
@@ -139,9 +154,8 @@ export function PendingScreen() {
                   accountsById={accountsById}
                   settings={settings}
                   busy={busyId === txn.id}
-                  onEdit={() => openEdit(txn)}
-                  onActionRowPress={() => openEdit(txn)}
-                  onConfirm={() => confirm(txn.id)}
+                  onEdit={openEdit}
+                  onConfirm={confirm}
                 />
               </FadeInView>
             ))}
@@ -160,7 +174,7 @@ export function PendingScreen() {
   );
 }
 
-function ReviewCard({
+const ReviewCard = memo(function ReviewCard({
   txn,
   category,
   categoriesById,
@@ -168,7 +182,6 @@ function ReviewCard({
   settings,
   busy,
   onEdit,
-  onActionRowPress,
   onConfirm,
 }: {
   txn: Transaction;
@@ -177,9 +190,8 @@ function ReviewCard({
   accountsById: Map<string, {name: string}>;
   settings: LedgerMoneySettings;
   busy: boolean;
-  onEdit: () => void;
-  onActionRowPress: () => void;
-  onConfirm: () => void;
+  onEdit: (txn: Transaction) => void;
+  onConfirm: (id: string) => void;
 }) {
   const {icon, tone} = getTransactionVisual(txn, categoriesById);
   const txnTone = getTransactionTone(txn);
@@ -228,7 +240,7 @@ function ReviewCard({
       </View>
 
       <PressableScale
-        onPress={categoryLocked ? undefined : onActionRowPress}
+        onPress={categoryLocked ? undefined : () => onEdit(txn)}
         disabled={categoryLocked}
         style={[styles.suggest, categoryLocked && styles.suggestLocked]}
         scaleTo={0.98}>
@@ -242,11 +254,11 @@ function ReviewCard({
       </PressableScale>
 
       <View style={styles.actions}>
-        <PressableScale onPress={onEdit} style={styles.editBtn} scaleTo={0.92}>
+        <PressableScale onPress={() => onEdit(txn)} style={styles.editBtn} scaleTo={0.92}>
           <IconEdit size={18} color={colors.ink700} />
         </PressableScale>
         <PressableScale
-          onPress={onConfirm}
+          onPress={() => onConfirm(txn.id)}
           disabled={busy}
           style={styles.confirmBtn}
           scaleTo={0.97}>
@@ -258,7 +270,7 @@ function ReviewCard({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   safe: {flex: 1, backgroundColor: colors.canvas},

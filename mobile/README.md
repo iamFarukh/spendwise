@@ -110,6 +110,23 @@ GOOGLE_WEB_CLIENT_ID=123456789-xxxx.apps.googleusercontent.com
    ```
    Copy the `SHA1` under `Variant: debug`.
 
+### 4b. OAuth consent screen — show “SpendWise” (not `project-…`)
+
+Google’s “Choose an account → continue to **project-966953659387**” text **cannot** be changed from React Native code. It comes from your Google Cloud OAuth consent screen.
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) → select the same Firebase project (`expense-bb20b` / project number `966953659387`)
+2. **APIs & Services** → **OAuth consent screen**
+3. Click **Edit app** (or configure if first time)
+4. Set **App name** to `SpendWise`
+5. Set **User support email** and **Developer contact email**
+6. (Recommended) Upload your app logo under **App logo** — same icon as `web/public/brand/spendwise-icon.png`
+7. **Save and continue** through Scopes and Test users
+8. If status is **Testing**, add your Google account under **Test users** (or publish to **Production** when ready for store)
+
+Also in **Firebase Console** → **Project settings** → **General** → set **Public-facing name** to `SpendWise`.
+
+After saving, sign out of Google on the device and try again — it should say “continue to **SpendWise**”.
+
 ### 5. Enable Google services in Gradle (Android)
 
 After adding `google-services.json`, uncomment/add in `mobile/android/build.gradle`:

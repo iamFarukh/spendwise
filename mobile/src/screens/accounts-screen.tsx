@@ -5,7 +5,7 @@ import {useNavigation} from '@react-navigation/native';
 import type {CompositeNavigationProp} from '@react-navigation/native';
 import type {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {type Account, canReconcileAccount} from '@pfos/shared';
+import {type Account} from '@pfos/shared';
 
 import {AppText} from '@/components/ui/app-text';
 import {Gradient} from '@/components/ui/gradient';
@@ -16,6 +16,7 @@ import {
   ScreenHeader,
   SectionLabel,
 } from '@/components/ui/screen-header';
+import {ErrorBanner} from '@/components/ui/error-banner';
 import {AnimatedNumber} from '@/components/motion/animated-number';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {Lottie} from '@/components/motion/lottie';
@@ -24,6 +25,7 @@ import {RowSkeleton} from '@/components/motion/skeleton';
 import {IconPlus, IconStar} from '@/components/icons';
 import {colors, radius, shadow, spacing} from '@/constants/theme';
 import {useLedgerSummary} from '@/hooks/use-ledger-summary';
+import {useAccountRowMenu} from '@/hooks/use-account-row-menu';
 import {
   formatCompactMoney,
   formatLedgerMoney,
@@ -36,7 +38,6 @@ import {
   getDisplayBalance,
   resolvePrimaryAccountId,
 } from '@/lib/ledger/account-display';
-import {useToast} from '@/providers/toast-provider';
 import type {MainStackParamList, MainTabParamList} from '@/navigation/types';
 
 type AccountsNavigation = CompositeNavigationProp<
@@ -46,8 +47,8 @@ type AccountsNavigation = CompositeNavigationProp<
 
 export function AccountsScreen() {
   const navigation = useNavigation<AccountsNavigation>();
-  const toast = useToast();
-  const {summary, settings, loading} = useLedgerSummary();
+  const {summary, settings, loading, error} = useLedgerSummary();
+  const {showMenu: showAccountMenu} = useAccountRowMenu();
 
   const grouped = useMemo(() => {
     const balances = summary?.accountBalances ?? [];
@@ -78,12 +79,8 @@ export function AccountsScreen() {
     settings.primaryAccountId,
   );
 
-  function openReconcile(account: Account) {
-    if (canReconcileAccount(account)) {
-      navigation.navigate('Reconcile', {accountId: account.id});
-    } else {
-      toast.notify(`${account.name} doesn’t need reconciling.`);
-    }
+  function openAccount(account: Account) {
+    navigation.navigate('AccountEdit', {accountId: account.id});
   }
 
   return (
@@ -103,6 +100,7 @@ export function AccountsScreen() {
       <ScrollView
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}>
+        <ErrorBanner message={error} />
         <FadeInView index={0}>
           <Gradient
             colors={[colors.mint500, colors.mint700]}
@@ -148,7 +146,10 @@ export function AccountsScreen() {
               balance={item.balance}
               isPrimary={item.account.id === primaryId}
               settings={settings}
-              onPress={() => openReconcile(item.account)}
+              onPress={() => openAccount(item.account)}
+              onLongPress={() =>
+                showAccountMenu(item.account, item.account.id === primaryId)
+              }
             />
           </FadeInView>
         ))}
@@ -163,7 +164,10 @@ export function AccountsScreen() {
               balance={item.balance}
               isPrimary={item.account.id === primaryId}
               settings={settings}
-              onPress={() => openReconcile(item.account)}
+              onPress={() => openAccount(item.account)}
+              onLongPress={() =>
+                showAccountMenu(item.account, item.account.id === primaryId)
+              }
             />
           </FadeInView>
         ))}
@@ -178,19 +182,21 @@ function AccountCard({
   isPrimary,
   settings,
   onPress,
+  onLongPress,
 }: {
   account: Account;
   balance: number;
   isPrimary: boolean;
   settings: LedgerMoneySettings;
   onPress: () => void;
+  onLongPress?: () => void;
 }) {
   const {icon, tone} = getAccountVisual(account);
   const display = getDisplayBalance(account, balance);
   const negative = display < 0;
 
   return (
-    <PressableScale onPress={onPress} scaleTo={0.98}>
+    <PressableScale onPress={onPress} onLongPress={onLongPress} scaleTo={0.98}>
       <View style={[styles.card, isPrimary && styles.cardPrimary]}>
         <View style={styles.cardTop}>
           <IconBadge icon={icon} tone={tone} size="lg" />

@@ -40,6 +40,7 @@ export const colors = {
   transferBg: '#EFEDFB',
   pending: '#D99A2B',
   pendingBg: '#FBF1DD',
+  love: '#F4A6C1',
 
   white: '#FFFFFF',
 } as const;

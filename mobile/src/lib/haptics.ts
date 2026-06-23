@@ -32,6 +32,11 @@ export function hapticInfo() {
   trigger(HapticFeedbackTypes.impactLight);
 }
 
+/** A light tap for advancing a step / confirming a small action. */
+export function hapticLight() {
+  trigger(HapticFeedbackTypes.impactLight);
+}
+
 /** A single soft medium tap — used once when the cold-start splash completes. */
 export function hapticMedium() {
   trigger(HapticFeedbackTypes.impactMedium);

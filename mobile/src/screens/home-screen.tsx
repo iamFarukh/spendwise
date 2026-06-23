@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {memo, useCallback, useMemo} from 'react';
 import {ScrollView, StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -8,26 +8,35 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {
   formatRelativeTransactionDate,
   toDateStringInTimezone,
+  type Account,
+  type Category,
   type Transaction,
 } from '@pfos/shared';
 
 import {AppText} from '@/components/ui/app-text';
 import {Card} from '@/components/ui/card';
+import {ErrorBanner} from '@/components/ui/error-banner';
 import {Gradient} from '@/components/ui/gradient';
 import {IconBadge} from '@/components/ui/icon-badge';
 import {Tag} from '@/components/ui/tag';
 import {IconButton} from '@/components/ui/screen-header';
-import {AnimatedBar} from '@/components/motion/animated-bar';
-import {AnimatedNumber} from '@/components/motion/animated-number';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {Lottie} from '@/components/motion/lottie';
-import {RowSkeleton} from '@/components/motion/skeleton';
-import {PendingNudge} from '@/components/sip/pending-nudge';
-import {IconBell, IconDown, IconPig, IconStar, IconTrend, IconUp} from '@/components/icons';
+import {ActionCenter} from '@/components/home/action-center';
+import {HomeSkeleton} from '@/components/home/home-skeleton';
+import {InsightsCarousel} from '@/components/home/insights-carousel';
+import {NetWorthCard} from '@/components/home/net-worth-card';
+import {StatGrid} from '@/components/home/stat-grid';
+import {WelcomeCard} from '@/components/home/welcome-card';
+import {IconBell, IconStar} from '@/components/icons';
 import {colors, radius, spacing} from '@/constants/theme';
 import {useLedgerSummary} from '@/hooks/use-ledger-summary';
+import {useSipDashboard} from '@/hooks/use-sip';
 import {useCategories} from '@/providers/ledger-data-provider';
+import {useUnreadCount} from '@/providers/notification-provider';
+import {buildHomeInsights} from '@/lib/home/insights';
+import {buildNetWorthSeries} from '@/lib/home/net-worth-series';
 import {
   formatLedgerMoney,
   formatLedgerSignedMoney,
@@ -38,8 +47,17 @@ import {
   getDisplayBalance,
   resolvePrimaryAccountId,
 } from '@/lib/ledger/account-display';
-import {getTransactionAccountLabel, getTransactionSubtitle, getTransactionTitle, getTransactionTone} from '@/lib/ledger/display';
+import {
+  getTransactionAccountLabel,
+  getTransactionSubtitle,
+  getTransactionTitle,
+  getTransactionTone,
+} from '@/lib/ledger/display';
 import {getTransactionVisual} from '@/lib/ledger/transaction-visual';
+import {useAccountRowMenu} from '@/hooks/use-account-row-menu';
+import {useNotificationPrefsMenu} from '@/hooks/use-notification-prefs-menu';
+import {useTransactionRowMenu} from '@/hooks/use-transaction-row-menu';
+import {useAddSheet} from '@/providers/add-sheet-provider';
 import {useAuth} from '@/providers/auth-provider';
 import type {MainStackParamList, MainTabParamList} from '@/navigation/types';
 
@@ -51,16 +69,35 @@ type HomeNavigation = CompositeNavigationProp<
 export function HomeScreen() {
   const navigation = useNavigation<HomeNavigation>();
   const {user} = useAuth();
-  const {summary, settings, transactions, accounts, loading, error} = useLedgerSummary();
+  const {summary, settings, transactions, accounts, loading, error} =
+    useLedgerSummary();
   const {categories} = useCategories();
+  const {dashboard: sipDashboard} = useSipDashboard();
+  const unreadCount = useUnreadCount();
+  const addSheet = useAddSheet();
+  const {showMenu: showTransactionMenu} = useTransactionRowMenu();
+  const {showMenu: showAccountMenu} = useAccountRowMenu();
+  const {showMenu: showNotificationPrefs} = useNotificationPrefsMenu();
 
   const firstName =
     user?.displayName?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'there';
   const initial = firstName.charAt(0).toUpperCase();
-  const pendingCount = useMemo(
-    () => transactions.filter(t => t.status === 'PENDING').length,
-    [transactions],
+
+  // Stable nav/add handlers so the memoized hero + stat grid don't re-render
+  // when Home re-renders for an unrelated reason (e.g. an unread-count tick).
+  const goReports = useCallback(() => navigation.navigate('Reports'), [navigation]);
+  const goActivity = useCallback(() => navigation.navigate('Activity'), [navigation]);
+  const goSip = useCallback(() => navigation.navigate('Sip'), [navigation]);
+  const goSipForm = useCallback(
+    () => navigation.navigate('SipForm', {}),
+    [navigation],
   );
+  const goActionCenter = useCallback(
+    () => navigation.navigate('ActionCenter'),
+    [navigation],
+  );
+  const goAccounts = useCallback(() => navigation.navigate('Accounts'), [navigation]);
+  const openAdd = useCallback(() => addSheet.open(), [addSheet]);
   const categoriesById = useMemo(
     () => new Map(categories.map(c => [c.id, c])),
     [categories],
@@ -68,6 +105,54 @@ export function HomeScreen() {
   const accountsById = useMemo(
     () => new Map(accounts.map(a => [a.id, a])),
     [accounts],
+  );
+  const isFirstTime = useMemo(
+    () => transactions.every(t => t.type === 'OPENING'),
+    [transactions],
+  );
+  const netWorthSeries = useMemo(
+    () =>
+      buildNetWorthSeries(
+        accounts,
+        transactions,
+        settings?.timezone ?? 'Asia/Kolkata',
+        settings?.includeTrackingInNetWorth !== false,
+      ),
+    [accounts, settings?.includeTrackingInNetWorth, settings?.timezone, transactions],
+  );
+  const insights = useMemo(() => {
+    if (!summary || !settings || isFirstTime) {
+      return [];
+    }
+    return buildHomeInsights({
+      summary,
+      transactions,
+      categories,
+      sip: sipDashboard,
+      timezone: settings.timezone,
+      money: v => formatLedgerMoney(v, settings),
+    });
+  }, [categories, isFirstTime, settings, sipDashboard, summary, transactions]);
+
+  // Stable slices/derived values so the memoized rows below don't rebuild when
+  // Home re-renders for an unrelated reason (e.g. an unread-count tick).
+  const accountsTop = useMemo(
+    () => summary?.accountBalances.slice(0, 3) ?? [],
+    [summary],
+  );
+  const recent = useMemo(
+    () => summary?.recentTransactions.slice(0, 3) ?? [],
+    [summary],
+  );
+  const primaryId = useMemo(
+    () =>
+      summary
+        ? resolvePrimaryAccountId(
+            summary.accountBalances.map(b => b.account),
+            settings?.primaryAccountId,
+          )
+        : null,
+    [summary, settings?.primaryAccountId],
   );
 
   if (loading || !summary || !settings) {
@@ -77,10 +162,7 @@ export function HomeScreen() {
           <AppText variant="sm">Good {getGreeting()}</AppText>
           <AppText variant="h1">{firstName}</AppText>
         </View>
-        <View style={styles.skeletonHero} />
-        {[0, 1, 2].map(i => (
-          <RowSkeleton key={i} />
-        ))}
+        <HomeSkeleton />
         {error ? (
           <AppText variant="sm" style={styles.error}>
             {error}
@@ -89,22 +171,6 @@ export function HomeScreen() {
       </SafeAreaView>
     );
   }
-
-  const assetsTotal = summary.classTotals.assets;
-  const trackingTotal = summary.classTotals.tracking;
-  const liabilitiesTotal = summary.classTotals.liabilities;
-  const change = summary.netWorthChangeThisMonth;
-  const totalPositive = assetsTotal + trackingTotal;
-  const assetRatio =
-    totalPositive + liabilitiesTotal > 0
-      ? totalPositive / (totalPositive + liabilitiesTotal)
-      : 1;
-  const accountsTop = summary.accountBalances.slice(0, 3);
-  const recent = summary.recentTransactions.slice(0, 3);
-  const primaryId = resolvePrimaryAccountId(
-    summary.accountBalances.map(b => b.account),
-    settings.primaryAccountId,
-  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -117,7 +183,12 @@ export function HomeScreen() {
             {formatToday(settings.timezone)}
           </AppText>
         </View>
-        <IconButton icon={IconBell} badge={pendingCount} onPress={() => navigation.navigate('Pending')} />
+        <IconButton
+          icon={IconBell}
+          badge={unreadCount}
+          onPress={() => navigation.navigate('Notifications')}
+          onLongPress={showNotificationPrefs}
+        />
         <PressableScale onPress={() => navigation.navigate('Settings')} scaleTo={0.9}>
           <Gradient
             colors={[colors.mintBright, colors.mint600]}
@@ -131,174 +202,170 @@ export function HomeScreen() {
       <ScrollView
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}>
-        <PendingNudge />
+        <ErrorBanner message={error} />
+        <ActionCenter
+          settings={settings}
+          timezone={settings.timezone}
+          onViewAll={goActionCenter}
+        />
 
-        <FadeInView index={0}>
-          <Gradient
-            colors={['#0B6F52', '#0A7D5C', '#086346']}
-            start={{x: 0.2, y: 0}}
-            end={{x: 0.9, y: 1}}
-            borderRadius={radius.xxl}
-            style={styles.hero}>
-            <AppText style={styles.heroLabel}>Total net worth</AppText>
-            <AnimatedNumber
-              value={summary.netWorth}
-              format={v => formatLedgerMoney(v, settings)}
-              style={styles.heroNum}
-            />
-            <View style={styles.heroTagRow}>
-              <View
-                style={[
-                  styles.heroTag,
-                  {backgroundColor: 'rgba(255,255,255,0.16)'},
-                ]}>
-                <AppText style={styles.heroTagText}>
-                  {change >= 0 ? '▲' : '▼'} {formatLedgerSignedMoney(change, settings)} this month
-                </AppText>
-              </View>
-            </View>
-            <AnimatedBar
-              fraction={assetRatio}
-              color={colors.mintBright}
-              trackColor="rgba(255,255,255,0.16)"
-              height={10}
-              style={styles.heroBar}
-            />
-            <View style={styles.legend}>
-              <LegendRow color={colors.mintBright} label="Assets" value={formatLedgerMoney(assetsTotal, settings)} />
-              <LegendRow color="#9FE3FF" label="Tracking" value={formatLedgerMoney(trackingTotal, settings)} />
-              <LegendRow color="#F3A99B" label="Liabilities" value={formatLedgerMoney(-liabilitiesTotal, settings)} />
-            </View>
-          </Gradient>
+        <FadeInView index={0} reflow>
+          <NetWorthCard
+            summary={summary}
+            settings={settings}
+            series={netWorthSeries}
+            onPress={goReports}
+          />
         </FadeInView>
 
-        <FadeInView index={1} style={styles.statGrid}>
-          <StatTile icon={IconDown} tone="income" label="Income" value={formatLedgerMoney(summary.monthly.income, settings)} />
-          <StatTile icon={IconUp} tone="expense" label="Spent" value={formatLedgerMoney(summary.monthly.expenses, settings)} />
-          <StatTile icon={IconTrend} tone="invest" label="Invested" value={formatLedgerMoney(summary.monthly.investments, settings)} />
-          <StatTile icon={IconPig} tone="mint" label="Saved" value={formatLedgerMoney(summary.monthly.savings, settings)} valueColor={summary.monthly.savings >= 0 ? colors.income : colors.expense} />
-        </FadeInView>
+        {isFirstTime ? (
+          <WelcomeCard
+            onAddTransaction={openAdd}
+            onSetupSip={goSipForm}
+          />
+        ) : (
+          <>
+            <FadeInView index={1} reflow>
+              <StatGrid
+                summary={summary}
+                settings={settings}
+                onAdd={openAdd}
+                onActivity={goActivity}
+                onSip={goSip}
+                onSipForm={goSipForm}
+                onReports={goReports}
+              />
+            </FadeInView>
 
-        <FadeInView index={2}>
-          <Card style={styles.card}>
-            <View style={styles.cardHead}>
-              <AppText style={styles.cardTitle}>Accounts</AppText>
-              <PressableScale onPress={() => navigation.navigate('Accounts')} hitSlop={10}>
-                <AppText style={styles.link}>Manage</AppText>
-              </PressableScale>
-            </View>
-            {accountsTop.map(item => {
-              const {icon, tone} = getAccountVisual(item.account);
-              const display = getDisplayBalance(item.account, item.balance);
-              const isPrimary = item.account.id === primaryId;
-              return (
-                <View key={item.account.id} style={styles.accRow}>
-                  <IconBadge icon={icon} tone={tone} size="md" />
-                  <View style={styles.accName}>
-                    <View style={styles.accTitleRow}>
-                      <AppText style={styles.accTitle}>{item.account.name}</AppText>
-                      {isPrimary ? (
-                        <Tag tone="income">
-                          <IconStar size={10} color={colors.income} />
-                        </Tag>
-                      ) : null}
-                    </View>
-                    <AppText variant="xs" muted>
-                      {isPrimary ? 'Primary' : item.account.kind.toLowerCase()}
+            {insights.length > 0 ? (
+              <FadeInView index={2} reflow>
+                <InsightsCarousel insights={insights} />
+              </FadeInView>
+            ) : null}
+
+            <FadeInView index={3} reflow>
+              <Card style={styles.card}>
+                <View style={styles.cardHead}>
+                  <AppText style={styles.cardTitle}>Accounts</AppText>
+                  <PressableScale onPress={() => navigation.navigate('Accounts')} hitSlop={10}>
+                    <AppText style={styles.link}>Manage</AppText>
+                  </PressableScale>
+                </View>
+                {accountsTop.map(item => (
+                  <AccountRow
+                    key={item.account.id}
+                    account={item.account}
+                    balance={item.balance}
+                    settings={settings}
+                    isPrimary={item.account.id === primaryId}
+                    onPress={goAccounts}
+                    onLongPress={showAccountMenu}
+                  />
+                ))}
+              </Card>
+            </FadeInView>
+
+            <FadeInView index={4} reflow>
+              <Card style={styles.card}>
+                <View style={styles.cardHead}>
+                  <AppText style={styles.cardTitle}>Recent activity</AppText>
+                  <PressableScale onPress={() => navigation.navigate('Activity')} hitSlop={10}>
+                    <AppText style={styles.link}>View all</AppText>
+                  </PressableScale>
+                </View>
+                {recent.length === 0 ? (
+                  <View style={styles.empty}>
+                    <Lottie name="receipt-search" size={130} />
+                    <AppText variant="body" muted>
+                      No transactions yet. Tap + to add your first.
                     </AppText>
                   </View>
-                  <AppText style={[styles.accAmt, display < 0 && {color: colors.expense}]}>
-                    {formatLedgerMoney(display, settings)}
-                  </AppText>
-                </View>
-              );
-            })}
-          </Card>
-        </FadeInView>
-
-        <FadeInView index={3}>
-          <Card style={styles.card}>
-            <View style={styles.cardHead}>
-              <AppText style={styles.cardTitle}>Recent activity</AppText>
-              <PressableScale onPress={() => navigation.navigate('Activity')} hitSlop={10}>
-                <AppText style={styles.link}>View all</AppText>
-              </PressableScale>
-            </View>
-            {recent.length === 0 ? (
-              <View style={styles.empty}>
-                <Lottie name="receipt-search" size={130} />
-                <AppText variant="body" muted>
-                  No transactions yet. Tap + to add your first.
-                </AppText>
-              </View>
-            ) : (
-              recent.map(txn => (
-                <TxnRow
-                  key={txn.id}
-                  txn={txn}
-                  settings={settings}
-                  categoriesById={categoriesById}
-                  accountsById={accountsById}
-                  timezone={settings.timezone}
-                />
-              ))
-            )}
-          </Card>
-        </FadeInView>
-        <View style={{height: 24}} />
+                ) : (
+                  recent.map(txn => (
+                    <TxnRow
+                      key={txn.id}
+                      txn={txn}
+                      settings={settings}
+                      categoriesById={categoriesById}
+                      accountsById={accountsById}
+                      timezone={settings.timezone}
+                      onPress={goActivity}
+                      onLongPress={showTransactionMenu}
+                    />
+                  ))
+                )}
+              </Card>
+            </FadeInView>
+          </>
+        )}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function LegendRow({color, label, value}: {color: string; label: string; value: string}) {
-  return (
-    <View style={styles.legendRow}>
-      <View style={[styles.legendDot, {backgroundColor: color}]} />
-      <AppText style={styles.legendLabel}>{label}</AppText>
-      <AppText style={styles.legendValue}>{value}</AppText>
-    </View>
-  );
-}
-
-function StatTile({
-  icon,
-  tone,
-  label,
-  value,
-  valueColor,
+/** Memoized so an unrelated Home re-render (e.g. unread-count tick) doesn't
+ *  rebuild every account row. All props are referentially stable. */
+const AccountRow = memo(function AccountRow({
+  account,
+  balance,
+  settings,
+  isPrimary,
+  onPress,
+  onLongPress,
 }: {
-  icon: Parameters<typeof IconBadge>[0]['icon'];
-  tone: Parameters<typeof IconBadge>[0]['tone'];
-  label: string;
-  value: string;
-  valueColor?: string;
+  account: Account;
+  balance: number;
+  settings: LedgerMoneySettings;
+  isPrimary: boolean;
+  onPress: () => void;
+  onLongPress: (account: Account, isPrimary: boolean) => void;
 }) {
+  const {icon, tone} = getAccountVisual(account);
+  const display = getDisplayBalance(account, balance);
   return (
-    <View style={styles.stat}>
-      <IconBadge icon={icon} tone={tone} size="sm" />
-      <AppText variant="xs" style={styles.statLabel}>
-        {label}
+    <PressableScale
+      onPress={onPress}
+      onLongPress={() => onLongPress(account, isPrimary)}
+      scaleTo={0.98}
+      style={styles.accRow}>
+      <IconBadge icon={icon} tone={tone} size="md" />
+      <View style={styles.accName}>
+        <View style={styles.accTitleRow}>
+          <AppText style={styles.accTitle}>{account.name}</AppText>
+          {isPrimary ? (
+            <Tag tone="income">
+              <IconStar size={10} color={colors.income} />
+            </Tag>
+          ) : null}
+        </View>
+        <AppText variant="xs" muted>
+          {isPrimary ? 'Primary' : account.kind.toLowerCase()}
+        </AppText>
+      </View>
+      <AppText style={[styles.accAmt, display < 0 && {color: colors.expense}]}>
+        {formatLedgerMoney(display, settings)}
       </AppText>
-      <AppText style={[styles.statValue, valueColor ? {color: valueColor} : null]}>
-        {value}
-      </AppText>
-    </View>
+    </PressableScale>
   );
-}
+});
 
-function TxnRow({
+const TxnRow = memo(function TxnRow({
   txn,
   settings,
   categoriesById,
   accountsById,
   timezone,
+  onPress,
+  onLongPress,
 }: {
   txn: Transaction;
   settings: LedgerMoneySettings;
-  categoriesById: Map<string, import('@pfos/shared').Category>;
-  accountsById: Map<string, import('@pfos/shared').Account>;
+  categoriesById: Map<string, Category>;
+  accountsById: Map<string, Account>;
   timezone: string;
+  onPress: () => void;
+  onLongPress: (txn: Transaction) => void;
 }) {
   const {icon, tone} = getTransactionVisual(txn, categoriesById);
   const txnTone = getTransactionTone(txn);
@@ -314,34 +381,39 @@ function TxnRow({
         : formatLedgerMoney(txn.amount, settings);
 
   return (
-    <View style={styles.txnRow}>
-      <IconBadge icon={icon} tone={tone} size="md" />
-      <View style={styles.txnMain}>
-        <AppText style={styles.txnTitle} numberOfLines={1}>
-          {title}
-        </AppText>
-        {subtitle ? (
-          <AppText variant="xs" muted numberOfLines={1}>
-            {subtitle}
+    <PressableScale
+      onPress={onPress}
+      onLongPress={() => onLongPress(txn)}
+      scaleTo={0.98}>
+      <View style={styles.txnRow}>
+        <IconBadge icon={icon} tone={tone} size="md" />
+        <View style={styles.txnMain}>
+          <AppText style={styles.txnTitle} numberOfLines={1}>
+            {title}
           </AppText>
-        ) : null}
+          {subtitle ? (
+            <AppText variant="xs" muted numberOfLines={1}>
+              {subtitle}
+            </AppText>
+          ) : null}
+        </View>
+        <View style={styles.txnRight}>
+          <AppText
+            style={[
+              styles.txnAmt,
+              txnTone === 'positive' && {color: colors.income},
+              txnTone === 'negative' && {color: colors.expense},
+            ]}>
+            {signed}
+          </AppText>
+          <AppText variant="xs" muted>
+            {formatRelativeTransactionDate(txn.date, timezone)}
+          </AppText>
+        </View>
       </View>
-      <View style={styles.txnRight}>
-        <AppText
-          style={[
-            styles.txnAmt,
-            txnTone === 'positive' && {color: colors.income},
-            txnTone === 'negative' && {color: colors.expense},
-          ]}>
-          {signed}
-        </AppText>
-        <AppText variant="xs" muted>
-          {formatRelativeTransactionDate(txn.date, timezone)}
-        </AppText>
-      </View>
-    </View>
+    </PressableScale>
   );
-}
+});
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -379,14 +451,8 @@ function formatToday(timezone: string): string {
 
 const styles = StyleSheet.create({
   safe: {flex: 1, backgroundColor: colors.canvas},
-  headerPad: {paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: 4},
-  skeletonHero: {
-    height: 170,
-    margin: spacing.lg,
-    borderRadius: radius.xxl,
-    backgroundColor: colors.canvas2,
-  },
-  error: {color: colors.expense, paddingHorizontal: spacing.lg},
+  headerPad: {paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: 4, marginBottom: spacing.md},
+  error: {color: colors.expense, paddingHorizontal: spacing.lg, marginTop: spacing.md},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,37 +466,6 @@ const styles = StyleSheet.create({
   avatar: {width: 42, height: 42, alignItems: 'center', justifyContent: 'center'},
   avatarText: {color: colors.white, fontWeight: '700', fontSize: 17},
   body: {paddingHorizontal: spacing.lg, paddingBottom: 110, gap: spacing.md},
-  hero: {padding: 22},
-  heroLabel: {color: 'rgba(255,255,255,0.78)', fontWeight: '600', fontSize: 13},
-  heroNum: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 40,
-    lineHeight: 50,
-    letterSpacing: -1.5,
-    marginTop: 2,
-  },
-  heroTagRow: {flexDirection: 'row', marginTop: 4},
-  heroTag: {borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: 10},
-  heroTagText: {color: '#BFF5DE', fontWeight: '700', fontSize: 11.5},
-  heroBar: {marginTop: 14, marginBottom: 14},
-  legend: {gap: 8},
-  legendRow: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  legendDot: {width: 9, height: 9, borderRadius: 999},
-  legendLabel: {color: 'rgba(255,255,255,0.86)', fontWeight: '600', fontSize: 13},
-  legendValue: {marginLeft: 'auto', color: colors.white, fontWeight: '700', fontSize: 13, fontVariant: ['tabular-nums']},
-  statGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm},
-  stat: {
-    width: '48%',
-    backgroundColor: colors.paper,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    padding: 13,
-    gap: 4,
-  },
-  statLabel: {color: colors.ink500, fontWeight: '700'},
-  statValue: {fontWeight: '700', fontSize: 18, color: colors.ink900},
   card: {borderRadius: radius.xl},
   cardHead: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14},
   cardTitle: {fontWeight: '700', fontSize: 18, color: colors.ink900},
@@ -460,4 +495,5 @@ const styles = StyleSheet.create({
   txnRight: {alignItems: 'flex-end'},
   txnAmt: {fontWeight: '700', fontSize: 15, color: colors.ink900, fontVariant: ['tabular-nums']},
   empty: {alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg},
+  bottomSpacer: {height: 24},
 });

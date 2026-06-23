@@ -1,5 +1,5 @@
-import {type ComponentType, useState} from 'react';
-import {ScrollView, StyleSheet, View} from 'react-native';
+import {type ComponentType, useEffect, useState} from 'react';
+import {Linking, Platform, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -10,25 +10,38 @@ import {Gradient} from '@/components/ui/gradient';
 import {Tag} from '@/components/ui/tag';
 import {Toggle} from '@/components/ui/toggle';
 import {ScreenHeader} from '@/components/ui/screen-header';
+import {AuthorWordmark} from '@/components/brand/spendwise-brand';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {
   IconBank,
+  IconBell,
   IconChevronDown,
   IconChevronRight,
   IconGlobe,
   IconGrid,
+  IconHeart,
   IconLogout,
   type IconProps,
 } from '@/components/icons';
+import {DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs} from '@pfos/shared';
+import {APP_AUTHOR_FIRST, APP_AUTHOR_LAST, APP_VERSION} from '@/constants/app';
 import {colors, radius, spacing} from '@/constants/theme';
 import {useAccounts} from '@/hooks/use-accounts';
 import {useUserSettings} from '@/hooks/use-user-settings';
 import {useCategories, useTransactions} from '@/providers/ledger-data-provider';
 import {getFirestoreErrorMessage} from '@/lib/firebase/errors';
+import {
+  displayTestOsNotification,
+  getPushPermissionStatus,
+  requestPushPermission,
+  TEST_NOTIFICATION_SAMPLES,
+} from '@/lib/notifications/push';
+import type {NotificationCategory} from '@/lib/notifications/types';
 import {resolvePrimaryAccountId} from '@/lib/ledger/account-display';
 import {patchUserSettings} from '@/lib/settings/service';
 import {useAuth} from '@/providers/auth-provider';
+import {useDialog} from '@/providers/dialog-provider';
 import {useToast} from '@/providers/toast-provider';
 import type {MainStackParamList} from '@/navigation/types';
 
@@ -54,11 +67,47 @@ export function SettingsScreen() {
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const {user, signOut} = useAuth();
   const toast = useToast();
+  const dialog = useDialog();
   const {settings} = useUserSettings();
   const {accounts} = useAccounts();
   const {transactions} = useTransactions();
   const {categories} = useCategories();
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState<'granted' | 'denied' | 'unknown'>('unknown');
+
+  useEffect(() => {
+    void getPushPermissionStatus().then(status =>
+      setPushStatus(status === 'granted' ? 'granted' : status === 'denied' ? 'denied' : 'unknown'),
+    );
+  }, []);
+
+  async function enablePushNotifications() {
+    const status = await requestPushPermission();
+    setPushStatus(status === 'granted' ? 'granted' : status === 'denied' ? 'denied' : 'unknown');
+    if (status === 'denied') {
+      toast.error('Notifications are off. Enable them in system settings.');
+      void Linking.openSettings();
+    }
+  }
+
+  async function sendTestNotification(category: NotificationCategory) {
+    setSavingKey(`test-${category}`);
+    try {
+      await displayTestOsNotification(TEST_NOTIFICATION_SAMPLES[category]);
+      setPushStatus('granted');
+      toast.success(
+        Platform.OS === 'android'
+          ? 'Test notification sent. Pull down the status bar if you do not see a banner.'
+          : 'Test notification sent.',
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Could not send test notification.';
+      toast.error(message);
+    } finally {
+      setSavingKey(null);
+    }
+  }
 
   const name =
     user?.displayName ?? user?.email?.split('@')[0] ?? 'SpendWise user';
@@ -88,6 +137,35 @@ export function SettingsScreen() {
       toast.error(getFirestoreErrorMessage(err, 'Could not save setting.'));
     } finally {
       setSavingKey(null);
+    }
+  }
+
+  const notifPrefs = settings?.notificationPrefs ?? DEFAULT_NOTIFICATION_PREFS;
+
+  function patchNotifPref(key: keyof NotificationPrefs, value: boolean) {
+    if (!user) {
+      return;
+    }
+    setSavingKey(`notif-${key}`);
+    patchUserSettings(user.uid, {
+      notificationPrefs: {...notifPrefs, [key]: value},
+    })
+      .catch(err =>
+        toast.error(getFirestoreErrorMessage(err, 'Could not save setting.')),
+      )
+      .finally(() => setSavingKey(null));
+  }
+
+  async function handleSignOut() {
+    const ok = await dialog.confirm({
+      title: 'Sign out?',
+      message: 'You will need to sign in again to access your SpendWise data.',
+      confirmLabel: 'Sign out',
+      cancelLabel: 'Stay signed in',
+      destructive: true,
+    });
+    if (ok) {
+      await signOut();
     }
   }
 
@@ -231,7 +309,122 @@ export function SettingsScreen() {
         </FadeInView>
 
         <FadeInView index={3}>
-          <PressableScale onPress={() => signOut()} style={styles.signOut}>
+          <Card style={styles.section}>
+            <SectionTitle icon={IconBell}>Notifications</SectionTitle>
+            <AppText variant="xs" muted style={styles.sectionHint}>
+              Calm by design — at most one daily reminder. Turn off anything you
+              don't want.
+            </AppText>
+            <View style={styles.row}>
+              <View style={styles.rowText}>
+                <AppText style={styles.rowTitle}>Phone notifications</AppText>
+                <AppText variant="xs" muted>
+                  {pushStatus === 'granted'
+                    ? 'Enabled on this device'
+                    : pushStatus === 'denied'
+                      ? 'Disabled in system settings'
+                      : 'Tap to allow alerts'}
+                </AppText>
+              </View>
+              {pushStatus === 'granted' ? (
+                <Tag tone="income" dot>
+                  On
+                </Tag>
+              ) : (
+                <PressableScale onPress={() => void enablePushNotifications()} scaleTo={0.96}>
+                  <View style={styles.enablePush}>
+                    <AppText style={styles.enablePushText}>Enable</AppText>
+                  </View>
+                </PressableScale>
+              )}
+            </View>
+            <ToggleRow
+              title="Transaction reminders"
+              subtitle="Evening nudge + missed-activity"
+              value={notifPrefs.transactionReminders}
+              disabled={savingKey === 'notif-transactionReminders'}
+              onValueChange={v => patchNotifPref('transactionReminders', v)}
+            />
+            <ToggleRow
+              title="SIP reminders"
+              subtitle="When a SIP is due today"
+              value={notifPrefs.sipReminders}
+              disabled={savingKey === 'notif-sipReminders'}
+              onValueChange={v => patchNotifPref('sipReminders', v)}
+            />
+            <ToggleRow
+              title="Account alerts"
+              subtitle="Balance discrepancies"
+              value={notifPrefs.accountAlerts}
+              disabled={savingKey === 'notif-accountAlerts'}
+              onValueChange={v => patchNotifPref('accountAlerts', v)}
+            />
+            <ToggleRow
+              title="Weekly insights"
+              subtitle="Spending & savings recap"
+              value={notifPrefs.weeklyInsights}
+              disabled={savingKey === 'notif-weeklyInsights'}
+              onValueChange={v => patchNotifPref('weeklyInsights', v)}
+            />
+            <ToggleRow
+              title="Product updates"
+              subtitle="News & new features"
+              value={notifPrefs.productUpdates}
+              disabled={savingKey === 'notif-productUpdates'}
+              onValueChange={v => patchNotifPref('productUpdates', v)}
+            />
+            <View style={styles.testBlock}>
+              <AppText variant="xs" muted style={styles.testHint}>
+                Send a sample push for each alert type. Useful to confirm banners,
+                sounds, and deep links.
+              </AppText>
+              {(
+                [
+                  ['sip', 'SIP reminder'],
+                  ['transaction', 'Transaction nudge'],
+                  ['account', 'Account alert'],
+                  ['insight', 'Weekly insight'],
+                  ['system', 'System update'],
+                ] as const
+              ).map(([category, label], index, list) => (
+                <TestNotifRow
+                  key={category}
+                  title={label}
+                  disabled={savingKey === `test-${category}`}
+                  last={index === list.length - 1}
+                  onPress={() => void sendTestNotification(category)}
+                />
+              ))}
+            </View>
+          </Card>
+        </FadeInView>
+
+        <FadeInView index={4}>
+          <Card style={styles.section}>
+            <SectionTitle icon={IconHeart}>About</SectionTitle>
+            <View style={styles.row}>
+              <View style={styles.rowText}>
+                <AppText style={styles.rowTitle}>Version</AppText>
+              </View>
+              <AppText style={styles.aboutValue}>{APP_VERSION}</AppText>
+            </View>
+            <View style={[styles.row, styles.rowLast]}>
+              <View style={styles.aboutCredit}>
+                <AppText variant="xs" muted style={styles.aboutCreditLead}>
+                  Made with <Text style={styles.aboutLove}>love</Text> by{' '}
+                </AppText>
+                <AuthorWordmark
+                  first={APP_AUTHOR_FIRST}
+                  last={APP_AUTHOR_LAST}
+                  size="sm"
+                />
+              </View>
+            </View>
+          </Card>
+        </FadeInView>
+
+        <FadeInView index={5}>
+          <PressableScale onPress={() => void handleSignOut()} style={styles.signOut}>
             <IconLogout size={19} color={colors.expense} />
             <AppText style={styles.signOutText}>Sign out</AppText>
           </PressableScale>
@@ -323,6 +516,27 @@ function SelectRow({
   );
 }
 
+function TestNotifRow({
+  title,
+  onPress,
+  disabled,
+  last,
+}: {
+  title: string;
+  onPress: () => void;
+  disabled?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <PressableScale onPress={onPress} disabled={disabled} scaleTo={0.98}>
+      <View style={[styles.testRow, last && styles.rowLast]}>
+        <AppText style={styles.testRowTitle}>{title}</AppText>
+        <AppText style={styles.testRowAction}>Send</AppText>
+      </View>
+    </PressableScale>
+  );
+}
+
 function ToggleRow({
   title,
   subtitle,
@@ -373,6 +587,7 @@ const styles = StyleSheet.create({
   section: {borderRadius: radius.xl, paddingVertical: spacing.xs},
   sectionTitle: {flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: spacing.sm},
   sectionTitleText: {fontWeight: '700', fontSize: 18, color: colors.ink900},
+  sectionHint: {paddingHorizontal: 2, paddingBottom: spacing.sm, lineHeight: 16},
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -406,6 +621,41 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   selectText: {fontWeight: '700', fontSize: 13, color: colors.ink900},
+  enablePush: {
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.mint600,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  enablePushText: {color: colors.white, fontWeight: '700', fontSize: 13},
+  testBlock: {
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+    paddingTop: spacing.sm,
+  },
+  testHint: {paddingHorizontal: 2, paddingBottom: spacing.sm, lineHeight: 16},
+  testRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lineSoft,
+  },
+  testRowTitle: {fontSize: 14, fontWeight: '600', color: colors.ink900},
+  testRowAction: {fontSize: 13, fontWeight: '700', color: colors.mint600},
+  aboutValue: {fontWeight: '700', fontSize: 15, color: colors.mint600},
+  aboutCredit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  aboutCreditLead: {lineHeight: 20},
+  aboutLove: {color: colors.love, fontWeight: '600'},
   signOut: {
     flexDirection: 'row',
     alignItems: 'center',

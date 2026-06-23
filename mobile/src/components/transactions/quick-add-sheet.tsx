@@ -1,4 +1,12 @@
-import {useEffect, useMemo, useRef, useState, type RefObject} from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import {
   Dimensions,
   Keyboard,
@@ -74,6 +82,8 @@ const TAB_EXIT = FadeOut.duration(170);
 
 type QuickTxnType = Extract<ManualTransactionType, 'EXPENSE' | 'INCOME' | 'TRANSFER'>;
 
+export type QuickAddInitialType = QuickTxnType;
+
 /** Whether a transaction's type can be represented/edited in this sheet. */
 export function isQuickEditable(type: string): type is QuickTxnType {
   return type === 'EXPENSE' || type === 'INCOME' || type === 'TRANSFER';
@@ -85,6 +95,10 @@ type QuickAddSheetProps = {
   onClose: () => void;
   /** When set, the sheet edits this transaction instead of creating one. */
   editTxn?: Transaction | null;
+  /** Preset type when creating (e.g. FAB long-press menu). */
+  initialType?: QuickAddInitialType;
+  /** Prefill fields for duplicate-without-edit mode. */
+  prefillFrom?: Transaction | null;
 };
 
 const TYPE_OPTIONS: Array<{value: QuickTxnType; label: string}> = [
@@ -125,6 +139,8 @@ export function QuickAddSheet({
   userId,
   onClose,
   editTxn,
+  initialType,
+  prefillFrom,
 }: QuickAddSheetProps) {
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -198,8 +214,15 @@ export function QuickAddSheet({
         setIncomeSource(editTxn.merchant ?? '');
         setFromAccountId(editTxn.fromAccountId ?? '');
         setToAccountId(editTxn.toAccountId ?? '');
+      } else if (prefillFrom && isQuickEditable(prefillFrom.type)) {
+        setTxnType(prefillFrom.type);
+        setAmount(prefillFrom.amount ? String(prefillFrom.amount) : '');
+        setCategoryId(prefillFrom.categoryId ?? '');
+        setIncomeSource(prefillFrom.merchant ?? '');
+        setFromAccountId(prefillFrom.fromAccountId ?? '');
+        setToAccountId(prefillFrom.toAccountId ?? '');
       } else {
-        setTxnType('EXPENSE');
+        setTxnType(initialType ?? 'EXPENSE');
         setAmount('');
         setCategoryId('');
         setIncomeSource('');
@@ -224,8 +247,8 @@ export function QuickAddSheet({
   }, [visible]);
 
   useEffect(() => {
-    // Don't clobber the edit prefill's accounts.
-    if (visible && primaryAccount && !editTxn) {
+    // Don't clobber the edit / duplicate prefill's accounts.
+    if (visible && primaryAccount && !editTxn && !prefillFrom) {
       resetAccountDefaults();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -374,7 +397,10 @@ export function QuickAddSheet({
     }
   }
 
-  function pressKey(key: string) {
+  // Stable so the memoized <Keypad> never re-renders while you type (setAmount
+  // is a stable updater) — typing only updates the amount text node, not the
+  // 12 keys + their gestures.
+  const pressKey = useCallback((key: string) => {
     setAmount(current => {
       if (key === 'del') {
         return current.slice(0, -1);
@@ -387,7 +413,7 @@ export function QuickAddSheet({
       }
       return current + key;
     });
-  }
+  }, []);
 
   async function handleSave() {
     if (!settings) {
@@ -893,23 +919,7 @@ export function QuickAddSheet({
                   keypadHeight.value = measured;
                 }
               }}>
-              <View style={styles.keypad}>
-                {KEYS.map(key => (
-                  <PressableScale
-                    key={key}
-                    onPress={() => pressKey(key)}
-                    scaleTo={0.88}
-                    style={styles.keyWrap}>
-                    <View style={styles.key}>
-                      {key === 'del' ? (
-                        <IconClose size={20} color={colors.ink600} />
-                      ) : (
-                        <AppText style={styles.keyText}>{key}</AppText>
-                      )}
-                    </View>
-                  </PressableScale>
-                ))}
-              </View>
+              <Keypad onKey={pressKey} />
             </Animated.View>
           </>
         )}
@@ -917,6 +927,30 @@ export function QuickAddSheet({
     </View>
   );
 }
+
+/** The numeric keypad — isolated + memoized so typing (which re-renders the
+ * sheet) never re-renders the 12 keys; only the amount text updates. */
+const Keypad = memo(function Keypad({onKey}: {onKey: (key: string) => void}) {
+  return (
+    <View style={styles.keypad}>
+      {KEYS.map(key => (
+        <PressableScale
+          key={key}
+          onPress={() => onKey(key)}
+          scaleTo={0.88}
+          style={styles.keyWrap}>
+          <View style={styles.key}>
+            {key === 'del' ? (
+              <IconClose size={20} color={colors.ink600} />
+            ) : (
+              <AppText style={styles.keyText}>{key}</AppText>
+            )}
+          </View>
+        </PressableScale>
+      ))}
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   backdrop: {...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,42,34,0.45)'},

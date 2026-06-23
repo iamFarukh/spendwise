@@ -59,5 +59,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<!-- Allow animations to run above 60fps on ProMotion (120Hz) displays.
+	     Without this iOS hard-caps the whole app to 60fps regardless of how
+	     the (UI-thread, Reanimated) animations are written. -->
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 </dict>
 </plist>

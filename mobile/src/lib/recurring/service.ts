@@ -17,7 +17,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
   getDocs,
   query,
   setDoc,
@@ -46,6 +45,7 @@ export type RecurringTemplateInput = {
   autoConfirm: boolean;
   active: boolean;
   investmentType?: SipInvestmentType;
+  investmentSchemeCode?: number | null;
   autoCreateTransaction?: boolean;
   notificationsEnabled?: boolean;
 };
@@ -92,6 +92,7 @@ export async function createRecurringTemplate(
     autoConfirm: input.autoConfirm,
     active: input.active,
     investmentType: input.investmentType,
+    investmentSchemeCode: input.investmentSchemeCode ?? null,
     autoCreateTransaction:
       input.autoCreateTransaction ?? input.type === 'INVESTMENT',
     notificationsEnabled:
@@ -140,6 +141,7 @@ export async function updateRecurringTemplate(
     autoConfirm: input.autoConfirm,
     active: input.active,
     investmentType: input.investmentType ?? null,
+    investmentSchemeCode: input.investmentSchemeCode ?? null,
     autoCreateTransaction: input.autoCreateTransaction,
     notificationsEnabled: input.notificationsEnabled,
     updatedAt: new Date().toISOString(),
@@ -175,6 +177,39 @@ export async function deleteRecurringTemplate(
 
   await touchUserDocument(uid);
   await deleteDoc(doc(db, firestorePaths.recurringTemplate(uid, templateId)));
+}
+
+/** Clone a recurring template as a new active plan. */
+export async function duplicateRecurringTemplate(
+  uid: string,
+  source: RecurringTemplate,
+  accounts: Account[],
+  timezone: string,
+): Promise<string> {
+  return createRecurringTemplate(
+    uid,
+    {
+      name: `${source.name} (copy)`,
+      type: source.type,
+      amount: source.amount,
+      fromAccountId: source.fromAccountId,
+      toAccountId: source.toAccountId,
+      categoryId: source.categoryId,
+      merchant: source.merchant,
+      notes: source.notes,
+      frequency: source.frequency,
+      dayOfMonth: source.dayOfMonth,
+      dayOfWeek: source.dayOfWeek,
+      autoConfirm: source.autoConfirm,
+      active: source.active,
+      investmentType: source.investmentType ?? undefined,
+      investmentSchemeCode: source.investmentSchemeCode ?? null,
+      autoCreateTransaction: source.autoCreateTransaction,
+      notificationsEnabled: source.notificationsEnabled,
+    },
+    accounts,
+    timezone,
+  );
 }
 
 export async function runDueRecurringTemplates(

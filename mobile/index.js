@@ -7,8 +7,17 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import 'react-native-get-random-values';
 import {AppRegistry} from 'react-native';
+import {enableScreens, enableFreeze} from 'react-native-screens';
+
+// Native screen optimizations: keep off-screen navigator screens out of the
+// native view hierarchy AND freeze their React tree so blurred tabs / pushed
+// screens stop re-rendering (and pause their animations) on every data tick.
+enableScreens(true);
+enableFreeze(true);
+import notifee from '@notifee/react-native';
 import App from './src/App';
 import {name as appName} from './app.json';
+import {handleBackgroundNotificationEvent} from './src/providers/push-notification-provider';
 
 // Hermes lacks crypto.randomUUID; get-random-values only polyfills
 // getRandomValues. @pfos/shared builders rely on randomUUID, so add it here.
@@ -34,5 +43,9 @@ if (typeof global.crypto !== 'undefined' && !global.crypto.randomUUID) {
     );
   };
 }
+
+notifee.onBackgroundEvent(async event => {
+  await handleBackgroundNotificationEvent(event);
+});
 
 AppRegistry.registerComponent(appName, () => App);

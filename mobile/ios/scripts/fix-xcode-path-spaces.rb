@@ -44,3 +44,38 @@ paths.each do |pbxproj_path|
     puts "No changes: #{pbxproj_path}"
   end
 end
+
+# Hermes replace_hermes_version.js shells out to tar without quoting paths.
+HERMES_SCRIPT_CANDIDATES = [
+  File.expand_path('../../../node_modules/react-native/sdks/hermes-engine/utils/replace_hermes_version.js', __dir__),
+  File.expand_path('../../node_modules/react-native/sdks/hermes-engine/utils/replace_hermes_version.js', __dir__),
+].freeze
+
+HERMES_REPLACEMENTS = [
+  [
+    "const {execSync} = require('child_process');",
+    "const {execFileSync} = require('child_process');",
+  ],
+  [
+    'execSync(`tar -xf ${tarballURLPath} -C ${finalLocation}`);',
+    "execFileSync('tar', ['-xf', tarballURLPath, '-C', finalLocation], {stdio: 'inherit'});",
+  ],
+].freeze
+
+HERMES_SCRIPT_CANDIDATES.each do |hermes_script_path|
+  next unless File.exist?(hermes_script_path)
+
+  contents = File.read(hermes_script_path)
+  patched = contents
+
+  HERMES_REPLACEMENTS.each do |old, new|
+    patched = patched.gsub(old, new)
+  end
+
+  if patched != contents
+    File.write(hermes_script_path, patched)
+    puts "Patched: #{hermes_script_path}"
+  else
+    puts "No changes: #{hermes_script_path}"
+  end
+end

@@ -17,4 +17,7 @@ export const firestorePaths = {
   reconciliations: (uid: string) => `users/${uid}/reconciliations`,
   reconciliation: (uid: string, reconciliationId: string) =>
     `users/${uid}/reconciliations/${reconciliationId}`,
+  notifications: (uid: string) => `users/${uid}/notifications`,
+  notification: (uid: string, notificationId: string) =>
+    `users/${uid}/notifications/${notificationId}`,
 } as const;

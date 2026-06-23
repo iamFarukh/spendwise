@@ -77,7 +77,10 @@ export async function verifyTransaction(
 
   const ref = doc(db, firestorePaths.transaction(uid, transactionId));
   const snap = await getDoc(ref);
-  const txn = snap.exists() ? (snap.data() as Transaction) : null;
+  if (!snap.exists()) {
+    throw new Error('This entry no longer exists — it may have been deleted.');
+  }
+  const txn = snap.data() as Transaction;
 
   await touchUserDocument(uid);
   await updateDoc(ref, {
@@ -85,7 +88,7 @@ export async function verifyTransaction(
     updatedAt: new Date().toISOString(),
   });
 
-  if (txn?.recurringId && txn.type === 'INVESTMENT') {
+  if (txn.recurringId && txn.type === 'INVESTMENT') {
     await advanceSipAfterConfirm(uid, txn.recurringId, txn.date);
   }
 }
@@ -100,4 +103,5 @@ export async function deleteTransaction(
   }
 
   await deleteDoc(doc(db, firestorePaths.transaction(uid, transactionId)));
+  await touchUserDocument(uid);
 }

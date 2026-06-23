@@ -1,12 +1,13 @@
 {
   "name": "@pfos/mobile",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
     "ios": "ENVFILE=.env.ios react-native run-ios",
     "start": "react-native start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "sync-env": "node scripts/sync-env-from-web.mjs",
     "generate:icons": "node scripts/generate-app-icons.mjs",
@@ -16,8 +17,10 @@
     "postinstall:ios": "ruby ios/scripts/fix-xcode-path-spaces.rb"
   },
   "dependencies": {
+    "@notifee/react-native": "^9.1.8",
     "@pfos/shared": "*",
     "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-google-signin/google-signin": "^14.0.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/native": "^7.1.6",

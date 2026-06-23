@@ -8,16 +8,48 @@ import {
 } from 'react';
 import type {Transaction} from '@pfos/shared';
 
-import {QuickAddSheet} from '@/components/transactions/quick-add-sheet';
+import {
+  QuickAddSheet,
+  type QuickAddInitialType,
+} from '@/components/transactions/quick-add-sheet';
 import {useAuth} from '@/providers/auth-provider';
 
+export type AddSheetOpenOptions = {
+  editTxn?: Transaction | null;
+  initialType?: QuickAddInitialType;
+  prefillFrom?: Transaction | null;
+};
+
 type AddSheetContextValue = {
-  /** Open create (no arg) or edit (pass the transaction) mode. */
-  open: (editTxn?: Transaction | null) => void;
+  /** Open create, edit, duplicate, or type-preset mode. */
+  open: (options?: Transaction | AddSheetOpenOptions | null) => void;
   close: () => void;
 };
 
 const AddSheetContext = createContext<AddSheetContextValue | null>(null);
+
+function isTransaction(value: unknown): value is Transaction {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'type' in value &&
+    'amount' in value &&
+    'status' in value
+  );
+}
+
+function normalizeOpenOptions(
+  arg?: Transaction | AddSheetOpenOptions | null,
+): AddSheetOpenOptions {
+  if (!arg) {
+    return {};
+  }
+  if (isTransaction(arg)) {
+    return {editTxn: arg};
+  }
+  return arg;
+}
 
 /**
  * Hosts the Quick-add sheet as an in-app overlay (NOT a native modal) so it
@@ -28,12 +60,22 @@ export function AddSheetProvider({children}: {children: ReactNode}) {
   const {user} = useAuth();
   const [visible, setVisible] = useState(false);
   const [editTxn, setEditTxn] = useState<Transaction | null>(null);
+  const [initialType, setInitialType] = useState<QuickAddInitialType | undefined>();
+  const [prefillFrom, setPrefillFrom] = useState<Transaction | null>(null);
 
-  const open = useCallback((txn?: Transaction | null) => {
-    setEditTxn(txn ?? null);
+  const open = useCallback((arg?: Transaction | AddSheetOpenOptions | null) => {
+    const options = normalizeOpenOptions(arg);
+    setEditTxn(options.editTxn ?? null);
+    setInitialType(options.initialType);
+    setPrefillFrom(options.prefillFrom ?? null);
     setVisible(true);
   }, []);
-  const close = useCallback(() => setVisible(false), []);
+  const close = useCallback(() => {
+    setVisible(false);
+    setEditTxn(null);
+    setInitialType(undefined);
+    setPrefillFrom(null);
+  }, []);
 
   const value = useMemo(() => ({open, close}), [open, close]);
 
@@ -46,6 +88,8 @@ export function AddSheetProvider({children}: {children: ReactNode}) {
           userId={user.uid}
           onClose={close}
           editTxn={editTxn}
+          initialType={initialType}
+          prefillFrom={prefillFrom}
         />
       ) : null}
     </AddSheetContext.Provider>

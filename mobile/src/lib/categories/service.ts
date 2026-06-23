@@ -2,6 +2,7 @@ import {firestorePaths, type Category} from '@pfos/shared';
 import {doc, setDoc} from 'firebase/firestore';
 
 import {getFirebaseDb} from '@/lib/firebase/client';
+import {touchUserDocument} from '@/lib/firebase/user-doc';
 
 export type CategoryInput = {
   name: string;
@@ -34,5 +35,6 @@ export async function createCategory(
   };
 
   await setDoc(doc(db, firestorePaths.category(uid, id)), category);
+  await touchUserDocument(uid);
   return id;
 }

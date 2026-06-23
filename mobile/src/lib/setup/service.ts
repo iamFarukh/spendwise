@@ -1,14 +1,19 @@
 import {
   DEFAULT_CATEGORIES,
+  computeInitialRunDate,
+  validateSipTemplateInput,
   type Account,
   type AccountClass,
   type AccountKind,
+  type RecurringTemplate,
+  type SipInvestmentType,
   firestorePaths,
 } from '@pfos/shared';
 import {toDateStringInTimezone} from '@pfos/shared';
 import {doc, writeBatch} from 'firebase/firestore';
 
 import {getFirebaseDb} from '@/lib/firebase/client';
+import {sanitizeForFirestore} from '@/lib/firebase/sanitize';
 import {touchUserDocument} from '@/lib/firebase/user-doc';
 
 export type MobileSetupAccountInput = {
@@ -21,12 +26,23 @@ export type MobileSetupAccountInput = {
   openingBalance: number;
 };
 
+/** Optional first SIP captured during onboarding — written in the same batch. */
+export type MobileSetupSipInput = {
+  name: string;
+  amount: number;
+  fromAccountId: string;
+  dayOfMonth: number;
+  investmentType: SipInvestmentType;
+  notes?: string;
+};
+
 export type MobileSetupInput = {
   accounts: MobileSetupAccountInput[];
   baseCurrency?: string;
   timezone?: string;
   asOfDate?: string;
   primaryAccountId?: string | null;
+  sip?: MobileSetupSipInput | null;
 };
 
 function parseOpeningAmount(value: number): number {
@@ -98,6 +114,8 @@ export async function completeMobileSetup(
     batch.set(doc(db, firestorePaths.category(uid, category.id)), category);
   }
 
+  const createdAccounts: Account[] = [];
+
   for (const [index, account] of input.accounts.entries()) {
     const isPrimary = account.id === primaryAccountId;
     const accountDoc: Account = {
@@ -113,6 +131,7 @@ export async function completeMobileSetup(
       sortOrder: index,
       archived: false,
     };
+    createdAccounts.push(accountDoc);
 
     batch.set(doc(db, firestorePaths.account(uid, account.id)), accountDoc);
 
@@ -141,6 +160,54 @@ export async function completeMobileSetup(
         updatedAt: now,
       });
     }
+  }
+
+  if (input.sip) {
+    const sipError = validateSipTemplateInput(
+      {
+        name: input.sip.name,
+        amount: input.sip.amount,
+        fromAccountId: input.sip.fromAccountId,
+        notes: input.sip.notes,
+        dayOfMonth: input.sip.dayOfMonth,
+      },
+      createdAccounts,
+    );
+    if (sipError) {
+      throw new Error(sipError);
+    }
+
+    const sipId = crypto.randomUUID();
+    const template: RecurringTemplate = {
+      id: sipId,
+      name: input.sip.name.trim(),
+      type: 'INVESTMENT',
+      amount: input.sip.amount,
+      fromAccountId: input.sip.fromAccountId,
+      toAccountId: null,
+      categoryId: null,
+      merchant: input.sip.name.trim(),
+      notes: input.sip.notes?.trim() ?? '',
+      frequency: 'MONTHLY',
+      dayOfMonth: input.sip.dayOfMonth,
+      dayOfWeek: 1,
+      nextRunDate: computeInitialRunDate('MONTHLY', input.sip.dayOfMonth, 1, timezone),
+      lastGeneratedDate: null,
+      autoConfirm: false,
+      active: true,
+      investmentType: input.sip.investmentType,
+      autoCreateTransaction: true,
+      notificationsEnabled: true,
+      snoozedUntil: null,
+      skippedOccurrences: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    batch.set(
+      doc(db, firestorePaths.recurringTemplate(uid, sipId)),
+      sanitizeForFirestore(template as unknown as Record<string, unknown>),
+    );
   }
 
   await batch.commit();

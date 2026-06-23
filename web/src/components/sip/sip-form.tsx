@@ -14,6 +14,7 @@ import {
 
 import { IconCheck, IconTrash } from "@/components/icons";
 import { AppShell } from "@/components/layout/app-shell";
+import { InvestmentNameField } from "@/components/sip/investment-name-field";
 import { AmountField, getCurrencySymbol } from "@/components/transactions/amount-field";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,8 @@ const MONTH_DAY_OPTIONS = SIP_DAY_OF_MONTH_OPTIONS.map((o) => ({
 
 type FormState = {
   name: string;
-  investmentType: SipInvestmentType;
+  investmentType: SipInvestmentType | "";
+  schemeCode: number | null;
   amount: string;
   fromAccountId: string;
   dayOfMonth: number;
@@ -89,6 +91,7 @@ export function SipFormScreen({
       setForm({
         name: existing.name,
         investmentType: existing.investmentType ?? "MUTUAL_FUND",
+        schemeCode: existing.investmentSchemeCode ?? null,
         amount: String(existing.amount),
         fromAccountId: existing.fromAccountId ?? "",
         dayOfMonth: existing.dayOfMonth,
@@ -108,7 +111,8 @@ export function SipFormScreen({
         }
         return {
           name: "",
-          investmentType: "MUTUAL_FUND",
+          investmentType: "",
+          schemeCode: null,
           amount: "",
           fromAccountId: defaultFromAccountId,
           dayOfMonth: 5,
@@ -131,6 +135,11 @@ export function SipFormScreen({
       return;
     }
 
+    const investmentType = form.investmentType;
+    if (!investmentType) {
+      setError("Choose an investment type first.");
+      return;
+    }
     if (!form.name.trim()) {
       setError("Enter a SIP name.");
       return;
@@ -166,7 +175,8 @@ export function SipFormScreen({
       nextRunDate,
       autoConfirm: false,
       active: form.active,
-      investmentType: form.investmentType,
+      investmentType,
+      investmentSchemeCode: form.schemeCode,
       autoCreateTransaction: true,
       notificationsEnabled: false,
     };
@@ -238,23 +248,32 @@ export function SipFormScreen({
       }
     >
       <div className="mx-auto max-w-lg space-y-4">
-        <Input
-          label="Name"
-          value={form.name}
-          onChange={(e) => updateForm({ name: e.target.value })}
-          placeholder="Tata Index Fund"
-        />
-
         <SelectField
           label="Type"
           value={form.investmentType}
-          onChange={(value) =>
-            updateForm({ investmentType: value as SipInvestmentType })
-          }
+          onChange={(value) => {
+            if (value === form.investmentType) return;
+            // Switching asset class invalidates the chosen name + scheme.
+            updateForm({
+              investmentType: value as SipInvestmentType,
+              name: "",
+              schemeCode: null,
+            });
+          }}
           options={SIP_INVESTMENT_TYPE_OPTIONS.map((o) => ({
             value: o.value,
             label: o.label,
           }))}
+        />
+
+        <InvestmentNameField
+          label="Name"
+          investmentType={form.investmentType}
+          value={form.name}
+          onChangeText={(name) => updateForm({ name, schemeCode: null })}
+          onSelectResult={(name, schemeCode) =>
+            updateForm({ name, schemeCode })
+          }
         />
 
         <AmountField

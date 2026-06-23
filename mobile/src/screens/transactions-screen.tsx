@@ -1,33 +1,28 @@
-import {useMemo, useState} from 'react';
-import {ScrollView, StyleSheet, View} from 'react-native';
+import {memo, useCallback, useMemo, useState} from 'react';
+import {SectionList, StyleSheet, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import Animated, {FadeInDown} from 'react-native-reanimated';
 import {
   formatRelativeTransactionDate,
-  isEditableTransaction,
   type Transaction,
   type TransactionType,
 } from '@pfos/shared';
-
-import {isQuickEditable} from '@/components/transactions/quick-add-sheet';
+import {useTransactionRowMenu} from '@/hooks/use-transaction-row-menu';
 import {SwipeableTransactionRow} from '@/components/transactions/swipeable-transaction-row';
 import {TransactionDetailSheet} from '@/components/transactions/transaction-detail-sheet';
-import {useAddSheet} from '@/providers/add-sheet-provider';
 import {AppText} from '@/components/ui/app-text';
+import {ErrorBanner} from '@/components/ui/error-banner';
 import {IconButton, ScreenHeader} from '@/components/ui/screen-header';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {Lottie} from '@/components/motion/lottie';
 import {RowSkeleton} from '@/components/motion/skeleton';
-import {STAGGER_STEP} from '@/constants/motion';
-import {IconSearch} from '@/components/icons';
+import {IconClose, IconSearch} from '@/components/icons';
 import {colors, radius, spacing} from '@/constants/theme';
 import {useAccounts} from '@/hooks/use-accounts';
 import {useCategories, useTransactions} from '@/providers/ledger-data-provider';
 import {useUserSettings} from '@/hooks/use-user-settings';
 import {getFirestoreErrorMessage} from '@/lib/firebase/errors';
-import {deleteTransaction, verifyTransaction} from '@/lib/transactions/service';
+import {verifyTransaction} from '@/lib/transactions/service';
 import {useAuth} from '@/providers/auth-provider';
-import {useDialog} from '@/providers/dialog-provider';
 import {useToast} from '@/providers/toast-provider';
 
 type FilterKey = 'all' | 'expense' | 'income' | 'transfer' | 'invest';
@@ -40,17 +35,21 @@ const FILTERS: {key: FilterKey; label: string; types?: TransactionType[]}[] = [
   {key: 'invest', label: 'Invest', types: ['INVESTMENT', 'REDEMPTION']},
 ];
 
+type Section = {title: string; data: Transaction[]};
+
 export function TransactionsScreen() {
   const {user} = useAuth();
   const toast = useToast();
-  const dialog = useDialog();
-  const {open: openSheet} = useAddSheet();
+  const {showMenu: showTransactionMenu, confirmDelete, editTransaction} =
+    useTransactionRowMenu();
   const {transactions, loading, error} = useTransactions();
   const {categories} = useCategories();
   const {accounts} = useAccounts();
   const {settings} = useUserSettings();
   const [filter, setFilter] = useState<FilterKey>('all');
   const [detail, setDetail] = useState<Transaction | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [search, setSearch] = useState('');
 
   const timezone = settings?.timezone ?? 'Asia/Kolkata';
   const categoriesById = useMemo(
@@ -62,69 +61,122 @@ export function TransactionsScreen() {
     [accounts],
   );
 
-  const sorted = useMemo(() => {
+  // Filter + sort + group into day sections in ONE memo (only re-runs when the
+  // inputs change — not on scroll). The day label is computed once per group,
+  // not once per row.
+  const {sections, count} = useMemo(() => {
     const activeFilter = FILTERS.find(f => f.key === filter);
-    return transactions
+    const q = search.trim().toLowerCase();
+    const filtered = transactions
       .filter(t => t.type !== 'OPENING')
       .filter(t =>
         activeFilter?.types ? activeFilter.types.includes(t.type) : true,
       )
+      .filter(t => {
+        if (!q) {
+          return true;
+        }
+        const cat = t.categoryId ? categoriesById.get(t.categoryId)?.name ?? '' : '';
+        const acctId = t.fromAccountId ?? t.toAccountId ?? '';
+        const acct = acctId ? accountsById.get(acctId)?.name ?? '' : '';
+        return [t.merchant ?? '', t.notes ?? '', cat, acct, String(t.amount)].some(
+          v => v.toLowerCase().includes(q),
+        );
+      })
       .sort((a, b) => {
         if (a.date !== b.date) {
           return b.date.localeCompare(a.date);
         }
         return b.createdAt.localeCompare(a.createdAt);
       });
-  }, [transactions, filter]);
 
-  async function performDelete(id: string) {
-    if (!user) return;
-    setDetail(null);
-    try {
-      await deleteTransaction(user.uid, id);
-      toast.success('Transaction deleted.');
-    } catch (err) {
-      toast.error(getFirestoreErrorMessage(err, 'Could not delete.'));
+    const grouped: Section[] = [];
+    let currentDate = '';
+    let current: Section | null = null;
+    for (const txn of filtered) {
+      if (txn.date !== currentDate) {
+        currentDate = txn.date;
+        current = {title: formatRelativeTransactionDate(txn.date, timezone), data: []};
+        grouped.push(current);
+      }
+      current!.data.push(txn);
     }
-  }
+    return {sections: grouped, count: filtered.length};
+  }, [transactions, filter, search, categoriesById, accountsById, timezone]);
 
-  async function handleDelete(id: string) {
-    // Confirm before a destructive, irreversible action.
-    const ok = await dialog.confirm({
-      title: 'Delete transaction?',
-      message:
-        'This permanently removes it from your ledger and updates your balances.',
-      confirmLabel: 'Delete',
-      destructive: true,
-    });
-    if (ok) {
-      await performDelete(id);
-    }
-  }
+  const handleDelete = useCallback(
+    async (id: string) => {
+      setDetail(null);
+      await confirmDelete(id);
+    },
+    [confirmDelete],
+  );
 
-  async function handleVerify(id: string) {
-    if (!user) return;
-    try {
-      await verifyTransaction(user.uid, id);
-      toast.success('Transaction confirmed.');
-    } catch (err) {
-      toast.error(getFirestoreErrorMessage(err, 'Could not confirm.'));
-    }
-  }
+  const handleVerify = useCallback(
+    async (id: string) => {
+      if (!user) {
+        return;
+      }
+      try {
+        await verifyTransaction(user.uid, id);
+        toast.success('Transaction confirmed.');
+      } catch (err) {
+        toast.error(getFirestoreErrorMessage(err, 'Could not confirm.'));
+      }
+    },
+    [toast, user],
+  );
 
-  function handleEdit(txn: Transaction) {
-    if (!isEditableTransaction(txn) || !isQuickEditable(txn.type)) {
-      toast.notify('This entry type can’t be edited here yet.');
-      return;
-    }
-    setDetail(null);
-    openSheet(txn);
-  }
+  const handleEdit = useCallback(
+    (txn: Transaction) => {
+      setDetail(null);
+      editTransaction(txn);
+    },
+    [editTransaction],
+  );
 
-  function accountNameFor(txn: Transaction): string | undefined {
-    const id = txn.fromAccountId ?? txn.toAccountId ?? undefined;
-    return id ? accountsById.get(id)?.name : undefined;
-  }
+  const handlePress = useCallback((txn: Transaction) => setDetail(txn), []);
+
+  const renderItem = useCallback(
+    ({item}: {item: Transaction}) => (
+      <View style={styles.rowGap}>
+        <SwipeableTransactionRow
+          txn={item}
+          settings={settings}
+          categoriesById={categoriesById}
+          accountsById={accountsById}
+          onDelete={handleDelete}
+          onVerify={handleVerify}
+          onPress={handlePress}
+          onLongPress={showTransactionMenu}
+        />
+      </View>
+    ),
+    [
+      settings,
+      categoriesById,
+      accountsById,
+      handleDelete,
+      handleVerify,
+      handlePress,
+      showTransactionMenu,
+    ],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({section}: {section: Section}) => (
+      <AppText style={styles.dayLabel}>{section.title}</AppText>
+    ),
+    [],
+  );
+
+  const accountNameFor = useCallback(
+    (txn: Transaction): string | undefined => {
+      const id = txn.fromAccountId ?? txn.toAccountId ?? undefined;
+      return id ? accountsById.get(id)?.name : undefined;
+    },
+    [accountsById],
+  );
 
   if (loading) {
     return (
@@ -139,90 +191,68 @@ export function TransactionsScreen() {
     );
   }
 
-  // Render rows with day-group headings injected inline.
-  let lastDay = '';
-  let renderIndex = 0;
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
         title="Transactions"
-        subtitle={`${sorted.length} ${sorted.length === 1 ? 'entry' : 'entries'}`}
+        subtitle={`${count} ${count === 1 ? 'entry' : 'entries'}`}
         right={
           <IconButton
-            icon={IconSearch}
-            onPress={() => toast.notify('Search is coming soon.')}
+            icon={searching ? IconClose : IconSearch}
+            onPress={() => {
+              setSearching(s => !s);
+              setSearch('');
+            }}
           />
         }
       />
-      <ScrollView
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filters}>
-          {FILTERS.map(f => {
-            const active = f.key === filter;
-            return (
-              <PressableScale
-                key={f.key}
-                onPress={() => setFilter(f.key)}
-                scaleTo={0.94}>
-                <View style={[styles.filter, active && styles.filterActive]}>
-                  <AppText
-                    variant="sm"
-                    style={[styles.filterText, active && styles.filterTextActive]}>
-                    {f.label}
-                  </AppText>
-                </View>
-              </PressableScale>
-            );
-          })}
-        </ScrollView>
+      {searching ? (
+        <View style={styles.searchBar}>
+          <IconSearch size={16} color={colors.ink400} />
+          <TextInput
+            autoFocus
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search merchant, category, amount…"
+            placeholderTextColor={colors.ink400}
+            style={styles.searchInput}
+            returnKeyType="search"
+          />
+          {search ? (
+            <PressableScale onPress={() => setSearch('')} hitSlop={8}>
+              <IconClose size={16} color={colors.ink400} />
+            </PressableScale>
+          ) : null}
+        </View>
+      ) : null}
 
-        {sorted.length === 0 ? (
+      <SectionList
+        sections={sections}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={9}
+        removeClippedSubviews
+        ListHeaderComponent={
+          <ListHeader filter={filter} onFilter={setFilter} error={error} count={count} />
+        }
+        ListEmptyComponent={
           <View style={styles.center}>
             <Lottie name="receipt-search" size={150} />
             <AppText variant="body" muted>
-              {error ?? 'No transactions here yet. Tap + to add one.'}
+              {search.trim()
+                ? `No matches for “${search.trim()}”.`
+                : error ?? 'No transactions here yet. Tap + to add one.'}
             </AppText>
           </View>
-        ) : (
-          sorted.map(txn => {
-            const dayLabel = formatRelativeTransactionDate(txn.date, timezone);
-            const showHeading = dayLabel !== lastDay;
-            lastDay = dayLabel;
-            const idx = renderIndex++;
-            return (
-              <View key={txn.id}>
-                {showHeading ? (
-                  <AppText style={styles.dayLabel}>{dayLabel}</AppText>
-                ) : null}
-                <Animated.View
-                  entering={FadeInDown.duration(300).delay(
-                    Math.min(idx, 8) * STAGGER_STEP,
-                  )}
-                  style={styles.rowGap}>
-                  <SwipeableTransactionRow
-                    txn={txn}
-                    settings={settings}
-                    categoryName={
-                      txn.categoryId
-                        ? categoriesById.get(txn.categoryId)?.name
-                        : undefined
-                    }
-                    accountsById={accountsById}
-                    onDelete={() => handleDelete(txn.id)}
-                    onVerify={() => handleVerify(txn.id)}
-                    onPress={() => setDetail(txn)}
-                  />
-                </Animated.View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+        }
+      />
 
       <TransactionDetailSheet
         txn={detail}
@@ -240,11 +270,66 @@ export function TransactionsScreen() {
   );
 }
 
+const keyExtractor = (item: Transaction) => item.id;
+
+const ListHeader = memo(function ListHeader({
+  filter,
+  onFilter,
+  error,
+  count,
+}: {
+  filter: FilterKey;
+  onFilter: (key: FilterKey) => void;
+  error: string | null;
+  count: number;
+}) {
+  return (
+    <>
+      {error && count > 0 ? (
+        <View style={styles.bannerWrap}>
+          <ErrorBanner message={error} />
+        </View>
+      ) : null}
+      <View style={styles.filters}>
+        {FILTERS.map(f => {
+          const active = f.key === filter;
+          return (
+            <PressableScale key={f.key} onPress={() => onFilter(f.key)} scaleTo={0.94}>
+              <View style={[styles.filter, active && styles.filterActive]}>
+                <AppText
+                  variant="sm"
+                  style={[styles.filterText, active && styles.filterTextActive]}>
+                  {f.label}
+                </AppText>
+              </View>
+            </PressableScale>
+          );
+        })}
+      </View>
+    </>
+  );
+});
+
 const styles = StyleSheet.create({
   safe: {flex: 1, backgroundColor: colors.canvas},
   skeletons: {paddingHorizontal: spacing.lg, gap: spacing.sm},
-  list: {paddingHorizontal: spacing.lg, paddingBottom: 110},
-  filters: {gap: 7, paddingVertical: 2, paddingRight: spacing.lg},
+  list: {paddingHorizontal: spacing.lg, paddingBottom: 110, flexGrow: 1},
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  searchInput: {flex: 1, fontSize: 15, color: colors.ink900, padding: 0},
+  bannerWrap: {marginTop: spacing.sm},
+  filters: {flexDirection: 'row', flexWrap: 'wrap', gap: 7, paddingVertical: 2},
   filter: {
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -265,6 +350,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 6,
     marginHorizontal: 2,
+    backgroundColor: colors.canvas,
   },
   rowGap: {marginBottom: spacing.sm},
   center: {

@@ -111,9 +111,10 @@ export async function loadSetupDraft(
         : base.baseCurrency,
     timezone: typeof data.timezone === "string" ? data.timezone : base.timezone,
     asOfDate: typeof data.asOfDate === "string" ? data.asOfDate : base.asOfDate,
-    accounts: Array.isArray(stored?.accounts)
-      ? dedupeById(stored.accounts)
-      : [],
+    accounts:
+      stored?.accounts && Array.isArray(stored.accounts)
+        ? dedupeById(stored.accounts)
+        : [],
     primaryAccountId: stored?.primaryAccountId ?? null,
   };
 

@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {
   Dimensions,
   KeyboardAvoidingView,
@@ -26,6 +26,7 @@ import {
 } from '@pfos/shared';
 
 import {AppText} from '@/components/ui/app-text';
+import {useKeyboardAwareScroll} from '@/components/ui/keyboard-aware-scroll-view';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {IconCheck, IconClose} from '@/components/icons';
 import {SPRINGS, TIMINGS} from '@/constants/motion';
@@ -64,6 +65,9 @@ export function PendingEditSheet({txn, userId, onClose}: PendingEditSheetProps) 
 
   const translateY = useSharedValue(SCREEN_H);
   const backdrop = useSharedValue(0);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const keyboardAware = useKeyboardAwareScroll(scrollRef);
 
   const assetAccounts = useMemo(
     () => accounts.filter(a => a.class === 'ASSET' && !a.archived),
@@ -213,9 +217,11 @@ export function PendingEditSheet({txn, userId, onClose}: PendingEditSheetProps) 
           </View>
 
           <ScrollView
+            ref={scrollRef}
             contentContainerStyle={styles.body}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
+            showsVerticalScrollIndicator={false}
+            {...keyboardAware}>
             <Field label="Name">
               <TextInput
                 style={styles.input}

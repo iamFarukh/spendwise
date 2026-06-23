@@ -3,7 +3,10 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {StyleSheet, View} from 'react-native';
 
 import {AppBootShell} from '@/components/splash/app-boot-shell';
+import {SetupCompletionProvider} from '@/providers/setup-completion-provider';
 import {MainStack} from '@/navigation/main-stack';
+import {navigationRef} from '@/navigation/navigation-ref';
+import {flushPendingNotificationNavigation} from '@/lib/notifications/pending-navigation';
 import {useAuth} from '@/providers/auth-provider';
 import {useUserSettings} from '@/hooks/use-user-settings';
 import {LoginScreen} from '@/screens/login-screen';
@@ -28,10 +31,13 @@ export function RootNavigator() {
   return (
     <AppBootShell booting={!sessionReady}>
       {sessionReady ? (
-        <>
+        <SetupCompletionProvider>
           <FirebaseMissingBanner />
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{headerShown: false}}>
+          <NavigationContainer
+            ref={navigationRef}
+            onReady={flushPendingNotificationNavigation}
+            onStateChange={flushPendingNotificationNavigation}>
+            <Stack.Navigator screenOptions={{headerShown: false, freezeOnBlur: true}}>
               {!configured || !user ? (
                 <Stack.Screen name="Login" component={LoginScreen} />
               ) : !setupComplete ? (
@@ -41,7 +47,7 @@ export function RootNavigator() {
               )}
             </Stack.Navigator>
           </NavigationContainer>
-        </>
+        </SetupCompletionProvider>
       ) : (
         <View style={styles.placeholder} />
       )}

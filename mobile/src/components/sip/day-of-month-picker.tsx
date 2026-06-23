@@ -1,91 +1,49 @@
-import {StyleSheet, View} from 'react-native';
+import {useCallback} from 'react';
 
-import {formatSipDayOfMonth, SIP_DAY_OF_MONTH_OPTIONS} from '@pfos/shared';
+import {
+  SIP_DAY_OF_MONTH_OPTIONS,
+  computeInitialRunDate,
+  formatSipDayOfMonth,
+} from '@pfos/shared';
 
-import {AppText} from '@/components/ui/app-text';
-import {PressableScale} from '@/components/motion/pressable-scale';
-import {colors, radius, spacing} from '@/constants/theme';
+import {DayWheelPicker, type WheelOption} from './day-wheel-picker';
+
+const MONTH_OPTIONS: WheelOption[] = SIP_DAY_OF_MONTH_OPTIONS.map(o => ({
+  value: o.value,
+  cardLabel: String(o.value),
+}));
 
 type DayOfMonthPickerProps = {
   value: number;
   onChange: (day: number) => void;
+  /** Used to compute the "next deduction" preview in the user's zone. */
+  timezone?: string;
+  /** Caption above the previewed date. */
+  nextLabel?: string;
 };
 
-/** Compact calendar-style grid — pick the day each month (1–28). */
-export function DayOfMonthPicker({value, onChange}: DayOfMonthPickerProps) {
+/** SIP day-of-month wheel (1–28) built on the shared premium {@link DayWheelPicker}. */
+export function DayOfMonthPicker({
+  value,
+  onChange,
+  timezone = 'Asia/Kolkata',
+  nextLabel = 'Next deduction will be on',
+}: DayOfMonthPickerProps) {
+  const computePreview = useCallback(
+    (day: number) => computeInitialRunDate('MONTHLY', day, 1, timezone),
+    [timezone],
+  );
+
   return (
-    <View style={styles.wrap}>
-      <View style={styles.summary}>
-        <AppText style={styles.summaryLabel}>Every month on the</AppText>
-        <AppText style={styles.summaryValue}>{formatSipDayOfMonth(value)}</AppText>
-      </View>
-      <View style={styles.grid}>
-        {SIP_DAY_OF_MONTH_OPTIONS.map(option => {
-          const active = value === option.value;
-          return (
-            <PressableScale
-              key={option.value}
-              onPress={() => onChange(option.value)}
-              scaleTo={0.92}
-              style={styles.cellWrap}>
-              <View style={[styles.cell, active && styles.cellActive]}>
-                <AppText style={[styles.cellText, active && styles.cellTextActive]}>
-                  {option.value}
-                </AppText>
-              </View>
-            </PressableScale>
-          );
-        })}
-      </View>
-      <AppText variant="xs" muted style={styles.hint}>
-        Days 29–31 vary by month, so we use 1–28 for a reliable schedule.
-      </AppText>
-    </View>
+    <DayWheelPicker
+      value={value}
+      onChange={onChange}
+      options={MONTH_OPTIONS}
+      summaryLabel="Every month on the"
+      formatValue={formatSipDayOfMonth}
+      computePreview={computePreview}
+      previewLabel={nextLabel}
+      hint="Days 29–31 vary by month, so we use 1–28 for a reliable schedule."
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {gap: spacing.sm},
-  summary: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-    paddingHorizontal: 2,
-  },
-  summaryLabel: {fontSize: 14, color: colors.ink600, fontWeight: '600'},
-  summaryValue: {fontSize: 18, fontWeight: '800', color: colors.mint700},
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  cellWrap: {
-    width: '12.5%',
-    minWidth: 38,
-    flexGrow: 1,
-    maxWidth: 48,
-  },
-  cell: {
-    aspectRatio: 1,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cellActive: {
-    borderColor: colors.mint600,
-    backgroundColor: colors.mint50,
-  },
-  cellText: {
-    fontWeight: '700',
-    fontSize: 14,
-    color: colors.ink600,
-  },
-  cellTextActive: {
-    color: colors.mint700,
-    fontWeight: '800',
-  },
-  hint: {paddingHorizontal: 2, lineHeight: 16},
-});

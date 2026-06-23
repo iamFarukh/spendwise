@@ -17,6 +17,7 @@ export type SettingsPatch = Partial<
     | 'lastBackupAt'
     | 'setupComplete'
     | 'asOfDate'
+    | 'notificationPrefs'
   >
 >;
 

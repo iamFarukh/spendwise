@@ -1,3 +1,4 @@
+/* eslint-env jest, node */
 jest.mock('react-native-reanimated', () => {
   const {View} = require('react-native');
   const Easing = {
@@ -84,7 +85,29 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
-jest.mock('react-native-config', () => ({}));
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: {setString: jest.fn()},
+}));
+
+jest.mock('@notifee/react-native', () => ({
+  __esModule: true,
+  default: {
+    createChannel: jest.fn(),
+    displayNotification: jest.fn(),
+    createTriggerNotification: jest.fn(),
+    cancelTriggerNotification: jest.fn(),
+    getTriggerNotificationIds: jest.fn(async () => []),
+    getNotificationSettings: jest.fn(async () => ({authorizationStatus: 1})),
+    requestPermission: jest.fn(async () => ({authorizationStatus: 1})),
+    onForegroundEvent: jest.fn(() => jest.fn()),
+    onBackgroundEvent: jest.fn(),
+  },
+  AndroidImportance: {HIGH: 4},
+  AuthorizationStatus: {AUTHORIZED: 1, DENIED: 0, PROVISIONAL: 2},
+  EventType: {PRESS: 1, ACTION_PRESS: 2},
+  TriggerType: {TIMESTAMP: 0},
+}));
 
 jest.mock('@/navigation/root-navigator', () => ({
   RootNavigator: () => null,

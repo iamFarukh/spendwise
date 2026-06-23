@@ -1,4 +1,4 @@
-import {type ReactNode, useEffect} from 'react';
+import {memo, useCallback, useEffect, useMemo, useRef, type ReactNode} from 'react';
 import {type StyleProp, type ViewStyle} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import Animated, {
@@ -25,9 +25,15 @@ type PressableScaleProps = {
 /**
  * Touchable wrapper with a physical spring press on the UI thread. Replaces
  * TouchableOpacity everywhere — feedback is instant, alive, and reduced-motion
- * aware. Press the element and it eases to scaleTo, releases back with snappy.
+ * aware.
+ *
+ * Perf: this is the app's touch primitive (dozens of instances per screen). The
+ * gesture is built ONCE via useMemo and reads the latest `onPress`/`onLongPress`
+ * through refs, so it is NOT reconstructed on every parent re-render (it used to
+ * be rebuilt inline every render). The component is also memoized so callers
+ * that pass stable props (e.g. a memoized keypad/list row) skip re-rendering it.
  */
-export function PressableScale({
+export const PressableScale = memo(function PressableScale({
   children,
   onPress,
   onLongPress,
@@ -44,42 +50,52 @@ export function PressableScale({
     skipScale.value = reduceMotion ? 1 : 0;
   }, [reduceMotion, skipScale]);
 
+  const onPressRef = useRef(onPress);
+  onPressRef.current = onPress;
+  const onLongPressRef = useRef(onLongPress);
+  onLongPressRef.current = onLongPress;
+
+  const callPress = useCallback(() => onPressRef.current?.(), []);
+  const callLongPress = useCallback(() => onLongPressRef.current?.(), []);
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{scale: scale.value}],
   }));
 
-  const press = (target: number) => {
-    'worklet';
-    scale.value = skipScale.value ? 1 : withSpring(target, SPRINGS.snappy);
-  };
+  const hasLongPress = onLongPress != null;
 
-  const tap = Gesture.Tap()
-    .enabled(!disabled)
-    .maxDuration(10000)
-    .onBegin(() => press(scaleTo))
-    .onFinalize((_event, success) => {
-      press(1);
-      if (success && onPress) {
-        runOnJS(onPress)();
-      }
-    });
+  const gesture = useMemo(() => {
+    const press = (target: number) => {
+      'worklet';
+      scale.value = skipScale.value ? 1 : withSpring(target, SPRINGS.snappy);
+    };
 
-  const composed = onLongPress
-    ? Gesture.Race(
-        tap,
-        Gesture.LongPress()
-          .enabled(!disabled)
-          .minDuration(400)
-          .onStart(() => {
-            if (onLongPress) {
-              runOnJS(onLongPress)();
-            }
-          }),
-      )
-    : tap;
+    const tap = Gesture.Tap()
+      .enabled(!disabled)
+      .maxDuration(10000)
+      .onBegin(() => press(scaleTo))
+      .onFinalize((_event, success) => {
+        press(1);
+        if (success) {
+          runOnJS(callPress)();
+        }
+      });
+
+    if (!hasLongPress) {
+      return tap;
+    }
+
+    return Gesture.Race(
+      tap,
+      Gesture.LongPress()
+        .enabled(!disabled)
+        .minDuration(400)
+        .onStart(() => runOnJS(callLongPress)()),
+    );
+  }, [disabled, scaleTo, hasLongPress, scale, skipScale, callPress, callLongPress]);
 
   return (
-    <GestureDetector gesture={composed}>
+    <GestureDetector gesture={gesture}>
       <Animated.View
         style={[style, animatedStyle, disabled && {opacity: 0.5}]}
         hitSlop={hitSlop}>
@@ -87,4 +103,4 @@ export function PressableScale({
       </Animated.View>
     </GestureDetector>
   );
-}
+});

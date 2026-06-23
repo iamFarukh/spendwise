@@ -6,7 +6,7 @@ import {
   type ReconcileCadence,
   type Transaction,
 } from '@pfos/shared';
-import {doc, writeBatch} from 'firebase/firestore';
+import {doc, setDoc, writeBatch} from 'firebase/firestore';
 
 import {getFirebaseDb} from '@/lib/firebase/client';
 import {sanitizeForFirestore} from '@/lib/firebase/sanitize';
@@ -112,4 +112,68 @@ export async function createAccount(
   await batch.commit();
   await touchUserDocument(uid);
   return id;
+}
+
+export type AccountPatch = {
+  name?: string;
+  icon?: string;
+  color?: string;
+  reconcileCadence?: ReconcileCadence;
+};
+
+/** Edit an existing account's mutable fields (NOT class/kind — those are
+ *  fixed at creation so the ledger stays consistent). */
+export async function updateAccount(
+  uid: string,
+  accountId: string,
+  patch: AccountPatch,
+): Promise<void> {
+  const db = getFirebaseDb();
+  if (!db) {
+    throw new Error('Firebase is not configured.');
+  }
+
+  const clean: Record<string, unknown> = {};
+  if (patch.name !== undefined) {
+    const name = patch.name.trim();
+    if (!name) {
+      throw new Error('Enter an account name.');
+    }
+    clean.name = name;
+  }
+  if (patch.icon !== undefined) {
+    clean.icon = patch.icon;
+  }
+  if (patch.color !== undefined) {
+    clean.color = patch.color;
+  }
+  if (patch.reconcileCadence !== undefined) {
+    clean.reconcileCadence = patch.reconcileCadence;
+  }
+
+  await setDoc(
+    doc(db, firestorePaths.account(uid, accountId)),
+    sanitizeForFirestore(clean),
+    {merge: true},
+  );
+  await touchUserDocument(uid);
+}
+
+/** Hide an account from balances and lists; its history stays in the ledger.
+ *  `deriveAccountBalances` already filters archived accounts out. */
+export async function archiveAccount(
+  uid: string,
+  accountId: string,
+): Promise<void> {
+  const db = getFirebaseDb();
+  if (!db) {
+    throw new Error('Firebase is not configured.');
+  }
+
+  await setDoc(
+    doc(db, firestorePaths.account(uid, accountId)),
+    {archived: true},
+    {merge: true},
+  );
+  await touchUserDocument(uid);
 }

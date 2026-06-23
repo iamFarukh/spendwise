@@ -16,6 +16,8 @@ import {Toggle} from '@/components/ui/toggle';
 import {IconButton, ScreenHeader} from '@/components/ui/screen-header';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {Lottie} from '@/components/motion/lottie';
+import {RecurringSkeleton} from '@/components/motion/screen-skeletons';
+import {PressableScale} from '@/components/motion/pressable-scale';
 import {
   IconBriefcase,
   IconCard,
@@ -58,6 +60,9 @@ function scheduleLine(template: RecurringTemplate): string {
   if (template.frequency === 'WEEKLY') {
     return `Weekly · ${WEEKDAYS[template.dayOfWeek] ?? 'Mon'}`;
   }
+  if (template.frequency === 'BIWEEKLY') {
+    return `Every 2 weeks · ${WEEKDAYS[template.dayOfWeek] ?? 'Mon'}`;
+  }
   return `Monthly · ${ordinal(template.dayOfMonth)}`;
 }
 
@@ -99,6 +104,16 @@ export function RecurringScreen() {
     }
   }
 
+  // SIPs (INVESTMENT) are managed in the SIP form; everything else in the
+  // generic recurring form.
+  function openTemplate(template: RecurringTemplate) {
+    if (template.type === 'INVESTMENT') {
+      navigation.navigate('SipForm', {id: template.id});
+    } else {
+      navigation.navigate('RecurringForm', {id: template.id});
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
@@ -111,13 +126,17 @@ export function RecurringScreen() {
         right={
           <IconButton
             icon={IconPlus}
-            onPress={() => navigation.navigate('SipForm', {})}
+            onPress={() => navigation.navigate('RecurringForm', {})}
           />
         }
       />
       <ScrollView
         contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}>
+        {loading && templates.length === 0 ? <RecurringSkeleton /> : null}
+
+        {!(loading && templates.length === 0) ? (
+        <>
         <FadeInView index={0} style={styles.summaryRow}>
           <SummaryCell
             label="Next 30 days"
@@ -154,28 +173,30 @@ export function RecurringScreen() {
           return (
             <FadeInView key={template.id} index={index + 1}>
               <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <IconBadge icon={visual.icon} tone={visual.tone} size="lg" />
-                  <View style={styles.cardName}>
-                    <AppText style={styles.cardTitle}>{template.name}</AppText>
-                    <AppText variant="xs" muted>
-                      {scheduleLine(template)}
+                <PressableScale onPress={() => openTemplate(template)} scaleTo={0.99}>
+                  <View style={styles.cardTop}>
+                    <IconBadge icon={visual.icon} tone={visual.tone} size="lg" />
+                    <View style={styles.cardName}>
+                      <AppText style={styles.cardTitle}>{template.name}</AppText>
+                      <AppText variant="xs" muted>
+                        {scheduleLine(template)}
+                      </AppText>
+                    </View>
+                    <AppText
+                      style={[
+                        styles.amount,
+                        visual.sign > 0 && {color: colors.income},
+                        visual.sign < 0 && {color: colors.expense},
+                      ]}>
+                      {visual.sign === 0
+                        ? formatLedgerMoney(template.amount, settings)
+                        : `${visual.sign > 0 ? '+' : '−'}${formatLedgerMoney(
+                            template.amount,
+                            settings,
+                          )}`}
                     </AppText>
                   </View>
-                  <AppText
-                    style={[
-                      styles.amount,
-                      visual.sign > 0 && {color: colors.income},
-                      visual.sign < 0 && {color: colors.expense},
-                    ]}>
-                    {visual.sign === 0
-                      ? formatLedgerMoney(template.amount, settings)
-                      : `${visual.sign > 0 ? '+' : '−'}${formatLedgerMoney(
-                          template.amount,
-                          settings,
-                        )}`}
-                  </AppText>
-                </View>
+                </PressableScale>
                 <View style={styles.cardFoot}>
                   <Tag tone={visual.tone} dot>
                     {visual.label}
@@ -193,6 +214,8 @@ export function RecurringScreen() {
             </FadeInView>
           );
         })}
+        </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

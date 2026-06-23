@@ -44,6 +44,7 @@ export type RecurringTemplateInput = {
   autoConfirm: boolean;
   active: boolean;
   investmentType?: SipInvestmentType;
+  investmentSchemeCode?: number | null;
   autoCreateTransaction?: boolean;
   notificationsEnabled?: boolean;
 };
@@ -90,6 +91,7 @@ export async function createRecurringTemplate(
     autoConfirm: input.autoConfirm,
     active: input.active,
     investmentType: input.investmentType,
+    investmentSchemeCode: input.investmentSchemeCode ?? null,
     autoCreateTransaction: input.autoCreateTransaction ?? input.type === "INVESTMENT",
     notificationsEnabled: input.notificationsEnabled ?? input.type === "INVESTMENT",
     snoozedUntil: null,
@@ -131,6 +133,7 @@ export async function updateRecurringTemplate(
     autoConfirm: input.autoConfirm,
     active: input.active,
     investmentType: input.investmentType ?? null,
+    investmentSchemeCode: input.investmentSchemeCode ?? null,
     autoCreateTransaction: input.autoCreateTransaction,
     notificationsEnabled: input.notificationsEnabled,
     updatedAt: new Date().toISOString(),

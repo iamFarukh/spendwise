@@ -48,13 +48,18 @@ export function ScreenHeader({
 type IconButtonProps = {
   icon: ComponentType<IconProps>;
   onPress?: () => void;
+  onLongPress?: () => void;
   badge?: number;
 };
 
 /** Round 42px chrome button — mirrors `.icon-btn` (+ `.dot-badge`). */
-export function IconButton({icon: Icon, onPress, badge}: IconButtonProps) {
+export function IconButton({icon: Icon, onPress, onLongPress, badge}: IconButtonProps) {
   return (
-    <PressableScale onPress={onPress} style={styles.iconBtn} scaleTo={0.9}>
+    <PressableScale
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={styles.iconBtn}
+      scaleTo={0.9}>
       <Icon size={20} color={colors.ink600} />
       {badge && badge > 0 ? (
         <View style={styles.dotBadge}>

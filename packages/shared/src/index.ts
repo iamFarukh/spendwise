@@ -10,3 +10,4 @@ export * from "./transactions";
 export * from "./types/recurring";
 export * from "./recurring";
 export * from "./sip";
+export * from "./investments";

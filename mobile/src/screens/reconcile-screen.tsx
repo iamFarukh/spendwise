@@ -1,12 +1,5 @@
 import {useState} from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import {StyleSheet, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -16,6 +9,7 @@ import {AppText} from '@/components/ui/app-text';
 import {IconBadge} from '@/components/ui/icon-badge';
 import {Tag} from '@/components/ui/tag';
 import {ScreenHeader} from '@/components/ui/screen-header';
+import {KeyboardAwareScrollView} from '@/components/ui/keyboard-aware-scroll-view';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {IconCheck} from '@/components/icons';
@@ -109,12 +103,7 @@ export function ReconcileScreen() {
         titleSize={20}
         onBack={() => navigation.goBack()}
       />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={styles.body}
-          keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.body}>
           <FadeInView style={styles.bodyInner}>
           <View style={styles.head}>
             <IconBadge icon={icon} tone={tone} size="lg" />
@@ -182,8 +171,7 @@ export function ReconcileScreen() {
             </AppText>
           </PressableScale>
           </FadeInView>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

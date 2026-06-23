@@ -1,12 +1,5 @@
 import {useEffect, useMemo, useState, type ReactNode} from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import {ScrollView, StyleSheet, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -14,6 +7,7 @@ import type {RouteProp} from '@react-navigation/native';
 import {
   SIP_INVESTMENT_TYPE_OPTIONS,
   computeInitialRunDate,
+  type RecurringFrequency,
   type SipInvestmentType,
 } from '@pfos/shared';
 
@@ -23,6 +17,9 @@ import {ScreenHeader} from '@/components/ui/screen-header';
 import {FadeInView} from '@/components/motion/fade-in-view';
 import {PressableScale} from '@/components/motion/pressable-scale';
 import {DayOfMonthPicker} from '@/components/sip/day-of-month-picker';
+import {DayOfWeekPicker} from '@/components/sip/day-of-week-picker';
+import {InvestmentNameField} from '@/components/sip/investment-name-field';
+import {KeyboardAwareScrollView} from '@/components/ui/keyboard-aware-scroll-view';
 import {IconCheck, IconTrash} from '@/components/icons';
 import {colors, radius, spacing} from '@/constants/theme';
 import {useAccounts} from '@/hooks/use-accounts';
@@ -57,10 +54,13 @@ export function SipFormScreen() {
   const isEdit = Boolean(existing);
 
   const [name, setName] = useState('');
-  const [investmentType, setInvestmentType] = useState<SipInvestmentType>('MUTUAL_FUND');
+  const [investmentType, setInvestmentType] = useState<SipInvestmentType | null>(null);
+  const [schemeCode, setSchemeCode] = useState<number | null>(null);
   const [amount, setAmount] = useState('');
   const [fromAccountId, setFromAccountId] = useState('');
+  const [frequency, setFrequency] = useState<RecurringFrequency>('MONTHLY');
   const [dayOfMonth, setDayOfMonth] = useState(5);
+  const [dayOfWeek, setDayOfWeek] = useState(1);
   const [notes, setNotes] = useState('');
   const [active, setActive] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -85,9 +85,12 @@ export function SipFormScreen() {
     if (existing) {
       setName(existing.name);
       setInvestmentType(existing.investmentType ?? 'MUTUAL_FUND');
+      setSchemeCode(existing.investmentSchemeCode ?? null);
       setAmount(String(existing.amount));
       setFromAccountId(existing.fromAccountId ?? '');
+      setFrequency(existing.frequency ?? 'MONTHLY');
       setDayOfMonth(existing.dayOfMonth);
+      setDayOfWeek(existing.dayOfWeek ?? 1);
       setNotes(existing.notes ?? '');
       setActive(existing.active);
       setInitialized(true);
@@ -99,8 +102,22 @@ export function SipFormScreen() {
     }
   }, [defaultFromAccountId, existing, initialized]);
 
+  function changeType(next: SipInvestmentType) {
+    if (next === investmentType) {
+      return;
+    }
+    // Switching asset class invalidates the chosen name + scheme.
+    setInvestmentType(next);
+    setName('');
+    setSchemeCode(null);
+  }
+
   async function save() {
     if (!user || !settings) {
+      return;
+    }
+    if (!investmentType) {
+      toast.error('Choose an investment type first.');
       return;
     }
     if (!name.trim()) {
@@ -113,10 +130,16 @@ export function SipFormScreen() {
       return;
     }
 
+    const scheduleChanged =
+      !existing ||
+      existing.frequency !== frequency ||
+      (frequency === 'MONTHLY'
+        ? existing.dayOfMonth !== dayOfMonth
+        : existing.dayOfWeek !== dayOfWeek);
     const nextRunDate =
-      isEdit && existing
+      isEdit && existing && !scheduleChanged
         ? existing.nextRunDate
-        : computeInitialRunDate('MONTHLY', dayOfMonth, 1, timezone);
+        : computeInitialRunDate(frequency, dayOfMonth, dayOfWeek, timezone);
 
     const input = {
       name: name.trim(),
@@ -127,15 +150,16 @@ export function SipFormScreen() {
       categoryId: null,
       merchant: name.trim(),
       notes,
-      frequency: 'MONTHLY' as const,
+      frequency,
       dayOfMonth,
-      dayOfWeek: 1,
+      dayOfWeek,
       nextRunDate,
       autoConfirm: false,
       active,
       investmentType,
+      investmentSchemeCode: schemeCode,
       autoCreateTransaction: true,
-      notificationsEnabled: false,
+      notificationsEnabled: true,
     };
 
     setBusy(true);
@@ -201,21 +225,8 @@ export function SipFormScreen() {
           </PressableScale>
         }
       />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.body}>
           <FadeInView style={styles.bodyInner}>
-          <Field label="Name">
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Tata Index Fund"
-              placeholderTextColor={colors.ink400}
-            />
-          </Field>
-
           <Field label="Type">
             <ScrollRow>
               {SIP_INVESTMENT_TYPE_OPTIONS.map(option => (
@@ -223,11 +234,28 @@ export function SipFormScreen() {
                   key={option.value}
                   label={option.label}
                   active={investmentType === option.value}
-                  onPress={() => setInvestmentType(option.value)}
+                  onPress={() => changeType(option.value)}
                 />
               ))}
             </ScrollRow>
           </Field>
+
+          <View style={styles.nameZone}>
+            <Field label="Name">
+              <InvestmentNameField
+                investmentType={investmentType}
+                value={name}
+                onChangeText={text => {
+                  setName(text);
+                  setSchemeCode(null);
+                }}
+                onSelectResult={(fundName, code) => {
+                  setName(fundName);
+                  setSchemeCode(code);
+                }}
+              />
+            </Field>
+          </View>
 
           <Field label="Amount">
             <TextInput
@@ -253,8 +281,41 @@ export function SipFormScreen() {
             </ScrollRow>
           </Field>
 
-          <Field label="SIP date">
-            <DayOfMonthPicker value={dayOfMonth} onChange={setDayOfMonth} />
+          <Field label="Frequency">
+            <View style={styles.freqRow}>
+              <Chip
+                label="Monthly"
+                active={frequency === 'MONTHLY'}
+                onPress={() => setFrequency('MONTHLY')}
+              />
+              <Chip
+                label="Weekly"
+                active={frequency === 'WEEKLY'}
+                onPress={() => setFrequency('WEEKLY')}
+              />
+              <Chip
+                label="Bi-weekly"
+                active={frequency === 'BIWEEKLY'}
+                onPress={() => setFrequency('BIWEEKLY')}
+              />
+            </View>
+          </Field>
+
+          <Field label={frequency === 'MONTHLY' ? 'SIP date' : 'SIP day'}>
+            {frequency === 'MONTHLY' ? (
+              <DayOfMonthPicker
+                value={dayOfMonth}
+                onChange={setDayOfMonth}
+                timezone={timezone}
+              />
+            ) : (
+              <DayOfWeekPicker
+                value={dayOfWeek}
+                onChange={setDayOfWeek}
+                frequency={frequency}
+                timezone={timezone}
+              />
+            )}
           </Field>
 
           <Field label="Notes (optional)">
@@ -274,7 +335,7 @@ export function SipFormScreen() {
           </View>
 
           <AppText variant="xs" muted style={styles.hint}>
-            On the SIP date, a pending entry is added automatically. Open Pending
+            On each SIP run, a pending entry is added automatically. Open Pending
             and tap ✓ to confirm.
           </AppText>
 
@@ -287,8 +348,7 @@ export function SipFormScreen() {
             </PressableScale>
           ) : null}
           </FadeInView>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
@@ -346,6 +406,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   field: {gap: 8},
+  // Lifts the Name field (and its suggestion dropdown) above the fields below it.
+  nameZone: {zIndex: 20},
   label: {fontWeight: '700', color: colors.ink700},
   input: {
     backgroundColor: colors.paper,
@@ -359,6 +421,7 @@ const styles = StyleSheet.create({
   },
   notes: {minHeight: 72, textAlignVertical: 'top'},
   row: {flexDirection: 'row', gap: 8, paddingVertical: 2},
+  freqRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 2},
   chip: {
     borderWidth: 1,
     borderColor: colors.line,

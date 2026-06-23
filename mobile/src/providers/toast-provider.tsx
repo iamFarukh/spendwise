@@ -1,8 +1,10 @@
 import {
   createContext,
+  forwardRef,
   useCallback,
   useContext,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -193,7 +195,15 @@ const VARIANT_MESSAGE: Record<ToastVariant, object> = {
   info: {color: colors.ink700},
 };
 
-export function ToastProvider({children}: {children: ReactNode}) {
+type ToastHostHandle = {push: (message: string, variant: ToastVariant) => void};
+
+/**
+ * Owns the toast list state and renders the floating layer. Isolated from the
+ * provider so that showing/dismissing a toast re-renders ONLY this component —
+ * not `{children}` (the whole navigator + every mounted screen), which is what
+ * happened when the state lived in the provider above the app tree.
+ */
+const ToastHost = forwardRef<ToastHostHandle>(function ToastHost(_props, ref) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
@@ -206,40 +216,61 @@ export function ToastProvider({children}: {children: ReactNode}) {
     }
   }, []);
 
-  const notify = useCallback(
-    (message: string, variant: ToastVariant = 'info') => {
-      counter += 1;
-      const id = `t-${counter}`;
-      setToasts(current => [...current, {id, message, variant}]);
-      timers.current.set(
-        id,
-        setTimeout(() => remove(id), 3500),
-      );
-    },
+  useImperativeHandle(
+    ref,
+    () => ({
+      push: (message, variant) => {
+        counter += 1;
+        const id = `t-${counter}`;
+        setToasts(current => [...current, {id, message, variant}]);
+        timers.current.set(
+          id,
+          setTimeout(() => remove(id), 3500),
+        );
+      },
+    }),
     [remove],
   );
 
-  const value = useMemo<ToastContextValue>(
-    () => ({
+  useEffect(() => {
+    const map = timers.current;
+    return () => {
+      for (const timer of map.values()) {
+        clearTimeout(timer);
+      }
+      map.clear();
+    };
+  }, []);
+
+  return (
+    <SafeAreaView style={styles.layer} pointerEvents="box-none" edges={['bottom']}>
+      {toasts.map(toast => (
+        <ToastItem key={toast.id} toast={toast} onDismiss={remove} />
+      ))}
+    </SafeAreaView>
+  );
+});
+
+export function ToastProvider({children}: {children: ReactNode}) {
+  const hostRef = useRef<ToastHostHandle>(null);
+
+  // Stable for the provider's lifetime — pushing a toast never changes this
+  // value, so consumers and `{children}` are never re-rendered by a toast.
+  const value = useMemo<ToastContextValue>(() => {
+    const notify = (message: string, variant: ToastVariant = 'info') =>
+      hostRef.current?.push(message, variant);
+    return {
       notify,
       success: m => notify(m, 'success'),
       error: m => notify(m, 'error'),
       warning: m => notify(m, 'warning'),
-    }),
-    [notify],
-  );
+    };
+  }, []);
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <SafeAreaView
-        style={styles.layer}
-        pointerEvents="box-none"
-        edges={['bottom']}>
-        {toasts.map(toast => (
-          <ToastItem key={toast.id} toast={toast} onDismiss={remove} />
-        ))}
-      </SafeAreaView>
+      <ToastHost ref={hostRef} />
     </ToastContext.Provider>
   );
 }

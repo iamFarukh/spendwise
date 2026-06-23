@@ -2,6 +2,7 @@ import {useEffect} from 'react';
 import {StyleSheet, View, type ViewStyle} from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -38,6 +39,7 @@ export function Skeleton({
       -1,
       true,
     );
+    return () => cancelAnimation(opacity);
   }, [opacity, reduceMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({opacity: opacity.value}));

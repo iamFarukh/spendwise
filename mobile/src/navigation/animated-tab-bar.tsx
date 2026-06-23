@@ -1,4 +1,6 @@
 import {type BottomTabBarProps} from '@react-navigation/bottom-tabs';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {type ComponentType, useEffect} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -14,9 +16,13 @@ import Animated, {
 import {AppText} from '@/components/ui/app-text';
 import {
   IconChart,
+  IconDown,
   IconHome,
   IconList,
   IconPlus,
+  IconSwap,
+  IconTrend,
+  IconUp,
   IconWallet,
   type IconProps,
 } from '@/components/icons';
@@ -24,6 +30,8 @@ import {PressableScale} from '@/components/motion/pressable-scale';
 import {SPRINGS} from '@/constants/motion';
 import {colors, radius, spacing} from '@/constants/theme';
 import {useAddSheet} from '@/providers/add-sheet-provider';
+import {useActionSheet} from '@/providers/action-sheet-provider';
+import type {MainStackParamList} from '@/navigation/types';
 
 const ICONS: Record<string, ComponentType<IconProps>> = {
   Home: IconHome,
@@ -46,7 +54,55 @@ export function AnimatedTabBar({
   navigation,
 }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const stackNavigation =
+    useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const {open: openAddSheet} = useAddSheet();
+  const actionSheet = useActionSheet();
+  const fabPulse = useSharedValue(1);
+  const reduceMotion = useReducedMotion();
+
+  const fabStyle = useAnimatedStyle(() => ({
+    transform: [{scale: fabPulse.value}],
+  }));
+
+  function openFabMenu() {
+    fabPulse.value = reduceMotion
+      ? 1
+      : withSpring(1.08, SPRINGS.snappy);
+    actionSheet.show({
+      title: 'Quick actions',
+      subtitle: 'Tap + for expense · hold for more',
+      onDismiss: () => {
+        fabPulse.value = reduceMotion ? 1 : withSpring(1, SPRINGS.snappy);
+      },
+      items: [
+        {
+          id: 'expense',
+          label: 'Add Expense',
+          icon: IconUp,
+          onPress: () => openAddSheet({initialType: 'EXPENSE'}),
+        },
+        {
+          id: 'income',
+          label: 'Add Income',
+          icon: IconDown,
+          onPress: () => openAddSheet({initialType: 'INCOME'}),
+        },
+        {
+          id: 'transfer',
+          label: 'Add Transfer',
+          icon: IconSwap,
+          onPress: () => openAddSheet({initialType: 'TRANSFER'}),
+        },
+        {
+          id: 'sip',
+          label: 'Setup SIP',
+          icon: IconTrend,
+          onPress: () => stackNavigation.navigate('SipForm', {}),
+        },
+      ],
+    });
+  }
 
   const buttons = state.routes.map((route, index) => {
     const focused = state.index === index;
@@ -78,7 +134,6 @@ export function AnimatedTabBar({
     );
   });
 
-  // Split the tabs evenly around the central FAB (2 | FAB | 2).
   const mid = Math.ceil(buttons.length / 2);
 
   return (
@@ -87,10 +142,15 @@ export function AnimatedTabBar({
       <View style={styles.spacer} />
       <View style={styles.side}>{buttons.slice(mid)}</View>
 
-      {/* Full-width overlay centers the FAB; box-none lets tab taps pass through. */}
       <View style={styles.fabWrap} pointerEvents="box-none">
-        <Animated.View entering={ZoomIn.springify().damping(14).stiffness(200).mass(0.7)}>
-          <PressableScale scaleTo={0.9} style={styles.fab} onPress={openAddSheet}>
+        <Animated.View
+          entering={ZoomIn.springify().damping(14).stiffness(200).mass(0.7)}
+          style={fabStyle}>
+          <PressableScale
+            scaleTo={0.9}
+            style={styles.fab}
+            onPress={() => openAddSheet()}
+            onLongPress={openFabMenu}>
             <IconPlus size={26} color={colors.white} strokeWidth={2.4} />
           </PressableScale>
         </Animated.View>

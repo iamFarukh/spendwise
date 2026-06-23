@@ -1,3 +1,4 @@
+import {memo} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import Animated, {
@@ -6,7 +7,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import type {Transaction} from '@pfos/shared';
+import type {Category, Transaction} from '@pfos/shared';
 
 import {TransactionRow} from '@/components/transactions/transaction-row';
 import {AppText} from '@/components/ui/app-text';
@@ -22,26 +23,35 @@ const ACTION_W = 76;
 type Props = {
   txn: Transaction;
   settings: LedgerMoneySettings;
-  categoryName?: string;
+  categoriesById: Map<string, Category>;
   accountsById?: AccountLookup;
-  onDelete: () => void;
-  onVerify?: () => void;
-  onPress?: () => void;
+  /** Callbacks take the row's own data so the parent can pass STABLE handlers,
+   * keeping React.memo effective (no fresh closure per row per render). */
+  onDelete: (id: string) => void;
+  onVerify?: (id: string) => void;
+  onPress?: (txn: Transaction) => void;
+  onLongPress?: (txn: Transaction) => void;
 };
 
 /**
  * Swipe left to reveal Verify (if pending) and Delete actions. The row tracks
- * the finger 1:1 then springs to an open/closed rest position.
+ * the finger 1:1 then springs to an open/closed rest position. Memoized + given
+ * stable props so a FlatList/SectionList re-render (search keystroke, filter)
+ * doesn't re-render or rebuild gestures for rows that didn't change.
  */
-export function SwipeableTransactionRow({
+export const SwipeableTransactionRow = memo(function SwipeableTransactionRow({
   txn,
   settings,
-  categoryName,
+  categoriesById,
   accountsById,
   onDelete,
   onVerify,
   onPress,
+  onLongPress,
 }: Props) {
+  const categoryName = txn.categoryId
+    ? categoriesById.get(txn.categoryId)?.name
+    : undefined;
   const translateX = useSharedValue(0);
   const canVerify = txn.status === 'PENDING' && Boolean(onVerify);
   const revealWidth = (canVerify ? ACTION_W * 2 : ACTION_W) + spacing.sm;
@@ -75,11 +85,25 @@ export function SwipeableTransactionRow({
       if (translateX.value < -4) {
         snapClosed();
       } else {
-        runOnJS(onPress)();
+        runOnJS(onPress)(txn);
       }
     });
 
-  const gesture = onPress ? Gesture.Exclusive(pan, tap) : pan;
+  const longPress = Gesture.LongPress()
+    .minDuration(400)
+    .onStart(() => {
+      if (!onLongPress) {
+        return;
+      }
+      translateX.value = withSpring(0, SPRINGS.default);
+      runOnJS(onLongPress)(txn);
+    });
+
+  const gesture = onLongPress
+    ? Gesture.Race(longPress, onPress ? Gesture.Exclusive(pan, tap) : pan)
+    : onPress
+      ? Gesture.Exclusive(pan, tap)
+      : pan;
 
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{translateX: translateX.value}],
@@ -92,7 +116,7 @@ export function SwipeableTransactionRow({
           <PressableScale
             onPress={() => {
               translateX.value = withSpring(0, SPRINGS.default);
-              onVerify?.();
+              onVerify?.(txn.id);
             }}
             style={[styles.action, {backgroundColor: colors.income}]}>
             <IconCheck size={20} color={colors.white} strokeWidth={2.4} />
@@ -102,7 +126,7 @@ export function SwipeableTransactionRow({
           </PressableScale>
         ) : null}
         <PressableScale
-          onPress={onDelete}
+          onPress={() => onDelete(txn.id)}
           style={[styles.action, {backgroundColor: colors.expense}]}>
           <IconTrash size={20} color={colors.white} />
           <AppText variant="xs" style={styles.actionText}>
@@ -123,7 +147,7 @@ export function SwipeableTransactionRow({
       </GestureDetector>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {justifyContent: 'center'},

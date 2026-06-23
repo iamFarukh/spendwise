@@ -3,10 +3,13 @@ import {type StyleProp, type ViewStyle} from 'react-native';
 import Animated, {
   FadeIn,
   FadeInDown,
+  LinearTransition,
   useReducedMotion,
 } from 'react-native-reanimated';
 
 import {STAGGER_STEP} from '@/constants/motion';
+
+const REFLOW = LinearTransition.springify().damping(24).stiffness(180).mass(0.8);
 
 type FadeInViewProps = {
   children: ReactNode;
@@ -16,6 +19,8 @@ type FadeInViewProps = {
   delay?: number;
   /** Rise distance; translateY + fade is the gold standard for list items. */
   distance?: number;
+  /** Animate layout shifts (e.g. when a sibling above resizes) instead of jumping. */
+  reflow?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -28,6 +33,7 @@ export function FadeInView({
   index = 0,
   delay = 0,
   distance = 14,
+  reflow = false,
   style,
 }: FadeInViewProps) {
   const reduceMotion = useReducedMotion();
@@ -43,7 +49,10 @@ export function FadeInView({
         .delay(totalDelay);
 
   return (
-    <Animated.View entering={entering} style={style}>
+    <Animated.View
+      entering={entering}
+      layout={reflow && !reduceMotion ? REFLOW : undefined}
+      style={style}>
       {children}
     </Animated.View>
   );
