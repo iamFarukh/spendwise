@@ -2,6 +2,7 @@ import type {NotificationPrefs} from '@pfos/shared';
 
 export type NotificationCategory =
   | 'sip'
+  | 'subscription'
   | 'transaction'
   | 'account'
   | 'insight'
@@ -12,6 +13,7 @@ export type NotificationRoute =
   | 'ActionCenter'
   | 'Pending'
   | 'Sip'
+  | 'Subscriptions'
   | 'Reports'
   | 'AddExpense'
   | null;
@@ -33,6 +35,7 @@ export type AppNotification = NotificationInput & {
 /** Which preference toggle gates each category. */
 const PREF_BY_CATEGORY: Record<NotificationCategory, keyof NotificationPrefs> = {
   sip: 'sipReminders',
+  subscription: 'subscriptionReminders',
   transaction: 'transactionReminders',
   account: 'accountAlerts',
   insight: 'weeklyInsights',

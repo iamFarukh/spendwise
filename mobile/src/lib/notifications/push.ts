@@ -11,12 +11,15 @@ import notifee, {
 } from '@notifee/react-native';
 import {
   addDaysInTimezone,
+  filterActiveSubscriptions,
   filterSipTemplates,
+  formatRenewalShort,
   getHourInTimezone,
   listOpenSipOccurrences,
   toDateStringInTimezone,
   type NotificationPrefs,
   type RecurringTemplate,
+  type Subscription,
   type Transaction,
 } from '@pfos/shared';
 import {AppState, Platform} from 'react-native';
@@ -36,6 +39,11 @@ const ANDROID_CHANNELS: Record<
     id: 'spendwise-sip',
     name: 'SIP reminders',
     description: 'When a SIP investment is due today',
+  },
+  subscription: {
+    id: 'spendwise-subscription',
+    name: 'Subscription reminders',
+    description: 'Before a subscription renews',
   },
   transaction: {
     id: 'spendwise-transaction',
@@ -63,12 +71,18 @@ const SCHEDULED_PREFIX = 'scheduled:';
 const EVENING_HOUR = 17;
 const SIP_MORNING_HOUR = 9;
 const SIP_EVENING_HOUR = 18;
+const SUBSCRIPTION_REMINDER_HOUR = 10;
+/** Remind this many days ahead of a subscription renewal. */
+const SUBSCRIPTION_LEAD_DAYS = 1;
+/** Only schedule renewals landing within this window. */
+const SUBSCRIPTION_HORIZON_DAYS = 14;
 
 export type PushPermissionStatus = 'granted' | 'denied' | 'blocked' | 'unknown';
 
 export type ScheduledNotificationParams = {
   transactions: Transaction[];
   templates: RecurringTemplate[];
+  subscriptions: Subscription[];
   prefs: NotificationPrefs;
   timezone: string;
   money: (value: number) => string;
@@ -300,7 +314,7 @@ export async function rescheduleLocalNotifications(
     return;
   }
 
-  const {transactions, templates, prefs, timezone, money} = params;
+  const {transactions, templates, subscriptions, prefs, timezone, money} = params;
   const now = params.now ?? new Date();
   const today = toDateStringInTimezone(now, timezone);
   const hour = getHourInTimezone(timezone, now);
@@ -338,6 +352,34 @@ export async function rescheduleLocalNotifications(
       await scheduleAt(
         {...base, id: `${base.id}-evening`},
         zonedTimeToUtcMs(occ.runDate, SIP_EVENING_HOUR, 0, timezone),
+      );
+    }
+  }
+
+  if (isCategoryEnabled(prefs, 'subscription')) {
+    const horizon = addDaysInTimezone(today, SUBSCRIPTION_HORIZON_DAYS, timezone);
+    const dueSoon = filterActiveSubscriptions(subscriptions).filter(
+      sub =>
+        sub.notificationsEnabled !== false &&
+        sub.nextRenewalDate >= today &&
+        sub.nextRenewalDate <= horizon,
+    );
+    for (const sub of dueSoon) {
+      const leadDate = addDaysInTimezone(
+        sub.nextRenewalDate,
+        -SUBSCRIPTION_LEAD_DAYS,
+        timezone,
+      );
+      const reminderDate = leadDate < today ? today : leadDate;
+      await scheduleAt(
+        {
+          id: `sub-${sub.id}-${sub.nextRenewalDate}`,
+          category: 'subscription',
+          title: 'Subscription renews soon',
+          body: `${sub.name} renews ${formatRenewalShort(sub.nextRenewalDate)} · ${money(sub.amount)}.`,
+          route: 'Subscriptions',
+        },
+        zonedTimeToUtcMs(reminderDate, SUBSCRIPTION_REMINDER_HOUR, 0, timezone),
       );
     }
   }
@@ -405,6 +447,13 @@ export const TEST_NOTIFICATION_SAMPLES: Record<NotificationCategory, Notificatio
     title: 'SIP due today',
     body: 'Nifty 50 Index · ₹5,000 — approve or skip.',
     route: 'ActionCenter',
+  },
+  subscription: {
+    id: 'test-subscription',
+    category: 'subscription',
+    title: 'Subscription renews soon',
+    body: 'ChatGPT Plus renews 28 Jun · ₹1,999.',
+    route: 'Subscriptions',
   },
   transaction: {
     id: 'test-transaction',

@@ -9,10 +9,17 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:subscription-catalog": "node scripts/build-subscription-catalog.mjs",
+    "generate:subscription-icons": "node scripts/generate-subscription-icons.mjs",
+    "generate:subscriptions": "npm run generate:subscription-catalog && npm run generate:subscription-icons"
   },
   "devDependencies": {
+    "@iconify-json/simple-icons": "^1.2.87",
     "typescript": "^5",
     "vitest": "^3.2.6"
+  },
+  "dependencies": {
+    "simple-icons": "^14.15.0"
   }
 }

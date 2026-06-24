@@ -11,3 +11,5 @@ export * from "./types/recurring";
 export * from "./recurring";
 export * from "./sip";
 export * from "./investments";
+export * from "./types/subscription";
+export * from "./subscriptions";

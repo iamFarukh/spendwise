@@ -3,6 +3,7 @@ import notifee, {EventType} from '@notifee/react-native';
 import {DEFAULT_NOTIFICATION_PREFS} from '@pfos/shared';
 
 import {useRecurring} from '@/hooks/use-recurring';
+import {useSubscriptionsData} from '@/providers/ledger-data-provider';
 import {useUserSettings} from '@/hooks/use-user-settings';
 import {formatLedgerMoney} from '@/lib/format/currency';
 import {
@@ -49,6 +50,7 @@ export function PushNotificationProvider({children}: {children: ReactNode}) {
   const {user} = useAuth();
   const {settings} = useUserSettings();
   const {templates} = useRecurring();
+  const {subscriptions} = useSubscriptionsData();
   const {transactions} = useTransactions();
   const addSheet = useAddSheet();
   const permissionRequested = useRef(false);
@@ -90,6 +92,7 @@ export function PushNotificationProvider({children}: {children: ReactNode}) {
       await rescheduleLocalNotifications({
         transactions: transactionsRef.current,
         templates,
+        subscriptions,
         prefs,
         timezone: settings!.timezone,
         money: value => formatLedgerMoney(value, settings!),
@@ -99,7 +102,7 @@ export function PushNotificationProvider({children}: {children: ReactNode}) {
     void syncSchedule();
     const interval = setInterval(() => void syncSchedule(), RESCHEDULE_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [ready, settings, templates, user]);
+  }, [ready, settings, subscriptions, templates, user]);
 
   useEffect(() => {
     return notifee.onForegroundEvent(({type, detail}) => {

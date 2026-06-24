@@ -28,11 +28,13 @@ import {HomeSkeleton} from '@/components/home/home-skeleton';
 import {InsightsCarousel} from '@/components/home/insights-carousel';
 import {NetWorthCard} from '@/components/home/net-worth-card';
 import {StatGrid} from '@/components/home/stat-grid';
+import {SubscriptionSummary} from '@/components/home/subscription-summary';
 import {WelcomeCard} from '@/components/home/welcome-card';
 import {IconBell, IconStar} from '@/components/icons';
 import {colors, radius, spacing} from '@/constants/theme';
 import {useLedgerSummary} from '@/hooks/use-ledger-summary';
 import {useSipDashboard} from '@/hooks/use-sip';
+import {useSubscriptionDashboard} from '@/hooks/use-subscriptions';
 import {useCategories} from '@/providers/ledger-data-provider';
 import {useUnreadCount} from '@/providers/notification-provider';
 import {buildHomeInsights} from '@/lib/home/insights';
@@ -73,6 +75,7 @@ export function HomeScreen() {
     useLedgerSummary();
   const {categories} = useCategories();
   const {dashboard: sipDashboard} = useSipDashboard();
+  const {dashboard: subscriptionDashboard} = useSubscriptionDashboard();
   const unreadCount = useUnreadCount();
   const addSheet = useAddSheet();
   const {showMenu: showTransactionMenu} = useTransactionRowMenu();
@@ -90,6 +93,10 @@ export function HomeScreen() {
   const goSip = useCallback(() => navigation.navigate('Sip'), [navigation]);
   const goSipForm = useCallback(
     () => navigation.navigate('SipForm', {}),
+    [navigation],
+  );
+  const goSubscriptions = useCallback(
+    () => navigation.navigate('Subscriptions'),
     [navigation],
   );
   const goActionCenter = useCallback(
@@ -240,6 +247,16 @@ export function HomeScreen() {
             {insights.length > 0 ? (
               <FadeInView index={2} reflow>
                 <InsightsCarousel insights={insights} />
+              </FadeInView>
+            ) : null}
+
+            {subscriptionDashboard && subscriptionDashboard.activeCount > 0 ? (
+              <FadeInView index={2} reflow>
+                <SubscriptionSummary
+                  dashboard={subscriptionDashboard}
+                  settings={settings}
+                  onPress={goSubscriptions}
+                />
               </FadeInView>
             ) : null}
 

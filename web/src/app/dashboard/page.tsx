@@ -28,6 +28,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
 import { PendingSipNudge } from "@/components/sip/pending-sip-nudge";
+import { SubscriptionSummaryCards } from "@/components/subscriptions/subscription-summary-cards";
+import { useSubscriptionDashboard } from "@/hooks/use-subscriptions";
 import { useAuth } from "@/components/providers/auth-provider";
 import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { IconChip } from "@/components/ui/icon-chip";
@@ -60,6 +62,7 @@ export default function DashboardPage() {
 function DashboardContent() {
   const { user } = useAuth();
   const { summary, settings, loading, error } = useLedgerSummary();
+  const { dashboard: subscriptionDashboard } = useSubscriptionDashboard();
 
   const firstName =
     user?.displayName?.split(" ")[0] ??
@@ -109,6 +112,26 @@ function DashboardContent() {
       <div className="mt-6">
         <PendingSipNudge />
       </div>
+
+      {subscriptionDashboard && subscriptionDashboard.activeCount > 0 ? (
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold text-ink-900">
+              Subscriptions
+            </h2>
+            <Link
+              href="/subscriptions"
+              className="text-[13px] font-bold text-mint-600 hover:text-mint-700"
+            >
+              Manage
+            </Link>
+          </div>
+          <SubscriptionSummaryCards
+            dashboard={subscriptionDashboard}
+            settings={moneySettings}
+          />
+        </section>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.35fr_1fr] xl:grid-rows-[auto_auto]">
         <div className="xl:col-start-1 xl:row-start-1">

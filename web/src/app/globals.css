@@ -359,6 +359,10 @@
     animation: empty-state-in 420ms var(--ease-out) both;
   }
 
+  .subscription-preview-enter {
+    animation: stagger-in 240ms var(--ease-out) both;
+  }
+
   .modal-backdrop-enter {
     animation: fade-in 180ms var(--ease-out) both;
   }

@@ -20,6 +20,9 @@ export function navigateNotificationRoute(
     case 'Sip':
       navigation.navigate('Sip');
       break;
+    case 'Subscriptions':
+      navigation.navigate('Subscriptions');
+      break;
     case 'Reports':
       navigation.navigate('Tabs', {screen: 'Reports'});
       break;

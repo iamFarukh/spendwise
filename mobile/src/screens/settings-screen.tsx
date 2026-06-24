@@ -218,6 +218,11 @@ export function SettingsScreen() {
               onPress={() => navigation.navigate('Sip')}
             />
             <NavRow
+              title="Subscription Management"
+              subtitle="Track ChatGPT, Netflix, Spotify, Google One, Adobe, Cursor and other recurring subscriptions."
+              onPress={() => navigation.navigate('Subscriptions')}
+            />
+            <NavRow
               title="Recurring"
               subtitle="Salary, rent and bills"
               onPress={() => navigation.navigate('Recurring')}
@@ -353,6 +358,13 @@ export function SettingsScreen() {
               onValueChange={v => patchNotifPref('sipReminders', v)}
             />
             <ToggleRow
+              title="Subscription reminders"
+              subtitle="Before a subscription renews"
+              value={notifPrefs.subscriptionReminders}
+              disabled={savingKey === 'notif-subscriptionReminders'}
+              onValueChange={v => patchNotifPref('subscriptionReminders', v)}
+            />
+            <ToggleRow
               title="Account alerts"
               subtitle="Balance discrepancies"
               value={notifPrefs.accountAlerts}
@@ -381,6 +393,7 @@ export function SettingsScreen() {
               {(
                 [
                   ['sip', 'SIP reminder'],
+                  ['subscription', 'Subscription reminder'],
                   ['transaction', 'Transaction nudge'],
                   ['account', 'Account alert'],
                   ['insight', 'Weekly insight'],

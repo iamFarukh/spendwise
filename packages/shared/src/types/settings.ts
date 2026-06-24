@@ -4,6 +4,8 @@ export interface NotificationPrefs {
   transactionReminders: boolean;
   /** SIP due-today reminders. */
   sipReminders: boolean;
+  /** Subscription renewal reminders. */
+  subscriptionReminders: boolean;
   /** Reconciliation / balance-discrepancy alerts. */
   accountAlerts: boolean;
   /** Weekly spending & savings summary. */
@@ -15,6 +17,7 @@ export interface NotificationPrefs {
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   transactionReminders: true,
   sipReminders: true,
+  subscriptionReminders: true,
   accountAlerts: true,
   weeklyInsights: true,
   productUpdates: true,

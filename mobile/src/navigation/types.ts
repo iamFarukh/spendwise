@@ -20,6 +20,8 @@ export type MainStackParamList = {
   RecurringForm: {id?: string};
   Sip: undefined;
   SipForm: {id?: string};
+  Subscriptions: undefined;
+  SubscriptionForm: {id?: string};
   Reconcile: {accountId: string};
   AddAccount: undefined;
   AccountEdit: {accountId: string};

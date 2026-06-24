@@ -3,6 +3,7 @@ import {
   type Account,
   type Category,
   type RecurringTemplate,
+  type Subscription,
   type Transaction,
   type UserSettings,
   firestorePaths,
@@ -55,6 +56,11 @@ type RecurringValue = {
   loading: boolean;
   error: string | null;
 };
+type SubscriptionsValue = {
+  subscriptions: Subscription[];
+  loading: boolean;
+  error: string | null;
+};
 type SettingsValue = {
   settings: UserSettings | null;
   loading: boolean;
@@ -66,6 +72,7 @@ const TransactionsContext = createContext<TransactionsValue | null>(null);
 const CategoriesContext = createContext<CategoriesValue | null>(null);
 const AccountsContext = createContext<AccountsValue | null>(null);
 const RecurringContext = createContext<RecurringValue | null>(null);
+const SubscriptionsContext = createContext<SubscriptionsValue | null>(null);
 const SettingsContext = createContext<SettingsValue | null>(null);
 
 export function LedgerDataProvider({children}: {children: ReactNode}) {
@@ -75,18 +82,23 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [settings, setSettings] = useState<UserSettings | null>(null);
 
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [accountsLoading, setAccountsLoading] = useState(true);
   const [recurringLoading, setRecurringLoading] = useState(true);
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(false);
 
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [accountsError, setAccountsError] = useState<string | null>(null);
   const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [subscriptionsError, setSubscriptionsError] = useState<string | null>(
+    null,
+  );
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -219,6 +231,38 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
 
   useEffect(() => {
     if (!user || !configured) {
+      setSubscriptions([]);
+      setSubscriptionsLoading(false);
+      setSubscriptionsError(null);
+      return;
+    }
+    const db = getFirebaseDb();
+    if (!db) {
+      setSubscriptions([]);
+      setSubscriptionsLoading(false);
+      return;
+    }
+    setSubscriptionsLoading(true);
+    const ref = query(collection(db, firestorePaths.subscriptions(user.uid)));
+    return onSnapshot(
+      ref,
+      snap => {
+        const next = entitiesFromSnapshot<Subscription>(snap.docs).sort((a, b) =>
+          a.nextRenewalDate.localeCompare(b.nextRenewalDate),
+        );
+        setSubscriptions(next);
+        setSubscriptionsLoading(false);
+        setSubscriptionsError(null);
+      },
+      err => {
+        setSubscriptionsError(getFirestoreErrorMessage(err));
+        setSubscriptionsLoading(false);
+      },
+    );
+  }, [configured, user]);
+
+  useEffect(() => {
+    if (!user || !configured) {
       setSettings(null);
       setSettingsLoading(false);
       setSettingsError(null);
@@ -267,6 +311,14 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
     () => ({templates, loading: recurringLoading, error: recurringError}),
     [templates, recurringLoading, recurringError],
   );
+  const subscriptionsValue = useMemo<SubscriptionsValue>(
+    () => ({
+      subscriptions,
+      loading: subscriptionsLoading,
+      error: subscriptionsError,
+    }),
+    [subscriptions, subscriptionsLoading, subscriptionsError],
+  );
   const settingsValue = useMemo<SettingsValue>(
     () => ({
       settings,
@@ -282,9 +334,11 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
       <CategoriesContext.Provider value={categoriesValue}>
         <AccountsContext.Provider value={accountsValue}>
           <RecurringContext.Provider value={recurringValue}>
-            <SettingsContext.Provider value={settingsValue}>
-              {children}
-            </SettingsContext.Provider>
+            <SubscriptionsContext.Provider value={subscriptionsValue}>
+              <SettingsContext.Provider value={settingsValue}>
+                {children}
+              </SettingsContext.Provider>
+            </SubscriptionsContext.Provider>
           </RecurringContext.Provider>
         </AccountsContext.Provider>
       </CategoriesContext.Provider>
@@ -311,6 +365,9 @@ export function useAccounts() {
 }
 export function useRecurring() {
   return useDataContext(RecurringContext, 'useRecurring');
+}
+export function useSubscriptionsData() {
+  return useDataContext(SubscriptionsContext, 'useSubscriptionsData');
 }
 export function useUserSettings() {
   return useDataContext(SettingsContext, 'useUserSettings');

@@ -13,6 +13,8 @@ import {RecurringFormScreen} from '@/screens/recurring-form-screen';
 import {RecurringScreen} from '@/screens/recurring-screen';
 import {SipFormScreen} from '@/screens/sip-form-screen';
 import {SipScreen} from '@/screens/sip-screen';
+import {SubscriptionFormScreen} from '@/screens/subscription-form-screen';
+import {SubscriptionScreen} from '@/screens/subscription-screen';
 import {SettingsScreen} from '@/screens/settings-screen';
 import type {MainStackParamList} from '@/navigation/types';
 
@@ -31,6 +33,8 @@ export function MainStack() {
       <Stack.Screen name="RecurringForm" component={RecurringFormScreen} />
       <Stack.Screen name="Sip" component={SipScreen} />
       <Stack.Screen name="SipForm" component={SipFormScreen} />
+      <Stack.Screen name="Subscriptions" component={SubscriptionScreen} />
+      <Stack.Screen name="SubscriptionForm" component={SubscriptionFormScreen} />
       <Stack.Screen name="Reconcile" component={ReconcileScreen} />
       <Stack.Screen name="AddAccount" component={AddAccountScreen} />
       <Stack.Screen name="AccountEdit" component={AccountEditScreen} />

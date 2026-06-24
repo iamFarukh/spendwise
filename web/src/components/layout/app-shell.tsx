@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { SpendWiseBrand } from "@/components/brand/spendwise-logo";
 import {
+  IconCard,
   IconChart,
   IconClock,
   IconGear,
@@ -40,6 +41,7 @@ const overviewNav: NavItem[] = [
 
 const manageNavBase: Omit<NavItem, "badge">[] = [
   { href: "/recurring", label: "Recurring", icon: <IconRepeat /> },
+  { href: "/subscriptions", label: "Subscriptions", icon: <IconCard /> },
   { href: "/reports", label: "Reports", icon: <IconChart /> },
   { href: "/pending", label: "Pending", icon: <IconClock /> },
 ];

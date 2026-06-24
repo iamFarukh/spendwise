@@ -16,6 +16,7 @@ import {
   IconBell,
   IconChart,
   IconReceipt,
+  IconRepeat,
   IconTrend,
   type IconProps,
 } from '@/components/icons';
@@ -31,6 +32,7 @@ const CATEGORY_META: Record<
   {icon: ComponentType<IconProps>; tone: BadgeTone; label: string}
 > = {
   sip: {icon: IconTrend, tone: 'invest', label: 'SIP'},
+  subscription: {icon: IconRepeat, tone: 'invest', label: 'Subscription'},
   transaction: {icon: IconReceipt, tone: 'mint', label: 'Reminder'},
   account: {icon: IconBank, tone: 'pending', label: 'Account'},
   insight: {icon: IconChart, tone: 'transfer', label: 'Insight'},
