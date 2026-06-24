@@ -63,13 +63,13 @@ export function PrivacyPolicyContent({ policy }: PrivacyPolicyContentProps) {
             href={policy.contactUrl}
             className="min-h-11 text-[15px] font-bold text-mint-700 underline"
           >
-            Dashboard ({policy.contactUrl})
+            Open SpendWise dashboard
           </a>
           <a
             href={APP_LOGIN_URL}
             className="min-h-11 text-[15px] font-bold text-mint-700 underline"
           >
-            Sign in ({APP_LOGIN_URL})
+            Sign in to SpendWise
           </a>
         </div>
       </section>

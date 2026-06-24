@@ -2098,6 +2098,31 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNSentry (8.15.1):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Sentry (= 9.18.0)
+    - Yoga
   - RNSVG (15.15.5):
     - DoubleConversion
     - glog
@@ -2147,6 +2172,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - Sentry (9.18.0):
+    - Sentry/Core (= 9.18.0)
+  - Sentry/Core (9.18.0)
   - SocketRocket (0.7.1)
   - Yoga (0.0.0)
 
@@ -2234,6 +2262,7 @@ DEPENDENCIES:
   - RNReactNativeHapticFeedback (from `../../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../../node_modules/react-native-reanimated`)
   - RNScreens (from `../../node_modules/react-native-screens`)
+  - "RNSentry (from `../../node_modules/@sentry/react-native`)"
   - RNSVG (from `../../node_modules/react-native-svg`)
   - Yoga (from `../../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2244,6 +2273,7 @@ SPEC REPOS:
     - GTMAppAuth
     - GTMSessionFetcher
     - lottie-ios
+    - Sentry
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -2410,6 +2440,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../../node_modules/react-native-screens"
+  RNSentry:
+    :path: "../../node_modules/@sentry/react-native"
   RNSVG:
     :path: "../../node_modules/react-native-svg"
   Yoga:
@@ -2502,7 +2534,9 @@ SPEC CHECKSUMS:
   RNReactNativeHapticFeedback: 7dfb10cca09eb7a4ed6b63ae6415a195beec8cf2
   RNReanimated: 7faff2e430cf8a4c03a40f91c76d9bb077cf9941
   RNScreens: c5c07a86e4088ce92f0d3854082250dfa9c61f75
+  RNSentry: e28c9716a0949a71843474085b720a93060e0977
   RNSVG: d6c460b6c7ee63b92654fee1d9ede7a2768738ec
+  Sentry: 84407b02cd318a63ef0345ad51eaaee555028723
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: c758bfb934100bb4bf9cbaccb52557cee35e8bdf
 

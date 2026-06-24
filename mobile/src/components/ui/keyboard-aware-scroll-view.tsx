@@ -6,6 +6,7 @@ import {
   type RefObject,
 } from 'react';
 import {
+  findNodeHandle,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -21,6 +22,8 @@ import {
 
 /** Breathing room kept between a focused field and the top of the keyboard. */
 const DEFAULT_GAP = 24;
+/** Wait for adjustResize + keyboard animation before measuring on Android. */
+const ANDROID_SCROLL_DELAY_MS = 150;
 
 type FocusedInput = {
   measureInWindow?: (
@@ -34,12 +37,8 @@ type FocusedInput = {
  * iOS resizes/pads correctly via `KeyboardAvoidingView behavior="padding"`, but
  * Android's `adjustResize` only shrinks the window — it does NOT reliably scroll
  * the focused field into the (now shorter) viewport, so fields below the fold
- * stay hidden behind the keyboard. We measure the focused input once the
- * keyboard has settled and scroll it up by however far it overlaps the keyboard.
- *
- * It's self-correcting: if the field is already visible (native already scrolled,
- * or it was never covered) the overlap is ≤ 0 and we do nothing — so it can't
- * fight any built-in scrolling.
+ * stay hidden behind the keyboard. We scroll only when the field is actually
+ * obscured, after the keyboard has settled, so we never fight focus.
  *
  * Attach to an existing ScrollView via {@link useKeyboardAwareScroll}, or use the
  * drop-in {@link KeyboardAwareScrollView} for the common `KAV > ScrollView` case.
@@ -50,39 +49,94 @@ export function useKeyboardAwareScroll(
 ) {
   const gap = options.gap ?? DEFAULT_GAP;
   const offsetY = useRef(0);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastScrollTarget = useRef(0);
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     offsetY.current = event.nativeEvent.contentOffset.y;
   }, []);
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-    const sub = Keyboard.addListener('keyboardDidShow', event => {
+  const scrollFocusedIntoView = useCallback(
+    (gapOverride?: number) => {
+      if (Platform.OS !== 'android') {
+        return;
+      }
       const node = scrollRef.current;
       const input = TextInput.State.currentlyFocusedInput?.() as
         | FocusedInput
         | null
         | undefined;
-      if (!node || !input || typeof input.measureInWindow !== 'function') {
+      if (!node || !input) {
         return;
       }
-      const keyboardTop = event.endCoordinates.screenY;
-      // Measure after the resize settles so positions are post-shrink.
-      requestAnimationFrame(() => {
-        input.measureInWindow?.((_x, y, _w, height) => {
-          const overlap = y + height + gap - keyboardTop;
-          if (overlap > 1) {
-            node.scrollTo({y: offsetY.current + overlap, animated: true});
-          }
-        });
-      });
-    });
-    return () => sub.remove();
-  }, [scrollRef, gap]);
 
-  return {onScroll, scrollEventThrottle: 16};
+      const effectiveGap = gapOverride ?? gap;
+
+      const measureAndScroll = () => {
+        const keyboardTop = Keyboard.metrics()?.screenY ?? 0;
+        if (keyboardTop <= 0) {
+          return;
+        }
+
+        if (typeof input.measureInWindow === 'function') {
+          input.measureInWindow((_x, y, _w, height) => {
+            const overlap = y + height + effectiveGap - keyboardTop;
+            if (overlap <= 1) {
+              return;
+            }
+            const targetY = offsetY.current + overlap;
+            if (Math.abs(targetY - lastScrollTarget.current) < 2) {
+              return;
+            }
+            lastScrollTarget.current = targetY;
+            node.scrollTo({y: targetY, animated: false});
+          });
+          return;
+        }
+
+        const handle = findNodeHandle(input as unknown as React.Component);
+        const scroll = node.scrollResponderScrollNativeHandleToKeyboard;
+        if (handle && typeof scroll === 'function') {
+          scroll.call(node, handle, effectiveGap, false);
+        }
+      };
+
+      measureAndScroll();
+    },
+    [scrollRef, gap],
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    const scheduleScroll = () => {
+      if (scrollTimer.current) {
+        clearTimeout(scrollTimer.current);
+      }
+      scrollTimer.current = setTimeout(() => {
+        scrollTimer.current = null;
+        scrollFocusedIntoView();
+      }, ANDROID_SCROLL_DELAY_MS);
+    };
+
+    const resetOnHide = () => {
+      lastScrollTarget.current = 0;
+    };
+
+    const showSub = Keyboard.addListener('keyboardDidShow', scheduleScroll);
+    const hideSub = Keyboard.addListener('keyboardDidHide', resetOnHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+      if (scrollTimer.current) {
+        clearTimeout(scrollTimer.current);
+      }
+    };
+  }, [scrollFocusedIntoView]);
+
+  return {onScroll, scrollEventThrottle: 16, scrollFocusedIntoView};
 }
 
 type KeyboardAwareScrollViewProps = ScrollViewProps & {

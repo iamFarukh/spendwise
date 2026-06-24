@@ -14,9 +14,10 @@ import {NotificationRunner} from '@/providers/notification-runner';
 import {PushNotificationProvider} from '@/providers/push-notification-provider';
 import {RecurringRunner} from '@/providers/recurring-runner';
 import {ToastProvider} from '@/providers/toast-provider';
+import {wrapWithSentry} from '@/lib/observability/crash-reporting';
 import {colors} from '@/constants/theme';
 
-export default function App() {
+function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
@@ -46,6 +47,8 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapWithSentry(App);
 
 const styles = StyleSheet.create({
   root: {

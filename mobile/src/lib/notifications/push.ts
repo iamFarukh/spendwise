@@ -261,15 +261,22 @@ export async function displayOsNotification(input: NotificationInput): Promise<v
 }
 
 /** Always show an OS notification — used for the settings test button. */
-export async function displayTestOsNotification(input: NotificationInput): Promise<void> {
-  await ensureAndroidChannels();
-  const permission = await requestPushPermission();
-  if (permission !== 'granted') {
-    throw new Error('Notification permission was not granted.');
+export async function sendTestNotification(): Promise<'sent' | 'denied' | 'cancelled'> {
+  let permission = await getPushPermissionStatus();
+  if (permission === 'denied') {
+    return 'denied';
   }
+  if (permission !== 'granted') {
+    permission = await requestPushPermission();
+  }
+  if (permission !== 'granted') {
+    return permission === 'denied' ? 'denied' : 'cancelled';
+  }
+  await ensureAndroidChannels();
   await notifee.displayNotification(
-    buildNotificationPayload(input, {showWhileForeground: true}),
+    buildNotificationPayload(TEST_NOTIFICATION, {showWhileForeground: true}),
   );
+  return 'sent';
 }
 
 async function scheduleAt(
@@ -440,49 +447,12 @@ export async function rescheduleLocalNotifications(
   }
 }
 
-export const TEST_NOTIFICATION_SAMPLES: Record<NotificationCategory, NotificationInput> = {
-  sip: {
-    id: 'test-sip',
-    category: 'sip',
-    title: 'SIP due today',
-    body: 'Nifty 50 Index · ₹5,000 — approve or skip.',
-    route: 'ActionCenter',
-  },
-  subscription: {
-    id: 'test-subscription',
-    category: 'subscription',
-    title: 'Subscription renews soon',
-    body: 'ChatGPT Plus renews 28 Jun · ₹1,999.',
-    route: 'Subscriptions',
-  },
-  transaction: {
-    id: 'test-transaction',
-    category: 'transaction',
-    title: 'Did you spend anything today?',
-    body: 'Add it now so nothing gets missed.',
-    route: 'AddExpense',
-  },
-  account: {
-    id: 'test-account',
-    category: 'account',
-    title: 'Balance needs a look',
-    body: 'Your HDFC Savings balance does not match the ledger.',
-    route: 'Pending',
-  },
-  insight: {
-    id: 'test-insight',
-    category: 'insight',
-    title: 'Your week in money',
-    body: 'Spent ₹12,400 · saved ₹3,200 · invested ₹5,000 this week.',
-    route: 'Reports',
-  },
-  system: {
-    id: 'test-system',
-    category: 'system',
-    title: 'SpendWise is ready',
-    body: 'Push notifications are working. You will get calm, timely reminders.',
-    route: null,
-  },
+export const TEST_NOTIFICATION: NotificationInput = {
+  id: 'test-notification',
+  category: 'system',
+  title: 'SpendWise notifications',
+  body: "You're all set. Calm, timely reminders will appear here.",
+  route: null,
 };
 
 export function parseNotificationPressData(

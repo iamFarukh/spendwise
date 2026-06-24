@@ -32,4 +32,5 @@ export type MainStackParamList = {
     current?: string;
   };
   PrivacyPolicy: {showAcceptance?: boolean; source?: string} | undefined;
+  AccountDeletion: undefined;
 };

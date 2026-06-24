@@ -458,10 +458,18 @@ function SettingsContent() {
             <SettingsRow
               title="Privacy Policy"
               description="How we collect, use, and protect your data"
-              last
             >
               <Link href="/privacy">
                 <Button variant="ghost">View policy</Button>
+              </Link>
+            </SettingsRow>
+            <SettingsRow
+              title="Account deletion"
+              description="How to delete your account and associated data"
+              last
+            >
+              <Link href="/account-deletion">
+                <Button variant="ghost">View details</Button>
               </Link>
             </SettingsRow>
             <p className="mt-3 text-center text-xs font-semibold text-ink-400">

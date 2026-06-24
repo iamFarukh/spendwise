@@ -17,6 +17,7 @@ import {SubscriptionFormScreen} from '@/screens/subscription-form-screen';
 import {SubscriptionScreen} from '@/screens/subscription-screen';
 import {SettingsScreen} from '@/screens/settings-screen';
 import {PrivacyPolicyScreen} from '@/screens/privacy-policy-screen';
+import {AccountDeletionScreen} from '@/screens/account-deletion-screen';
 import type {MainStackParamList} from '@/navigation/types';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -41,6 +42,7 @@ export function MainStack() {
       <Stack.Screen name="AccountEdit" component={AccountEditScreen} />
       <Stack.Screen name="OptionPicker" component={OptionPickerScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      <Stack.Screen name="AccountDeletion" component={AccountDeletionScreen} />
     </Stack.Navigator>
   );
 }

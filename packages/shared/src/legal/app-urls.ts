@@ -9,6 +9,8 @@ export const APP_SETTINGS_URL = `${APP_BASE_URL}/settings`;
 
 export const APP_PRIVACY_URL = `${APP_BASE_URL}/privacy`;
 
+export const APP_ACCOUNT_DELETION_URL = `${APP_BASE_URL}/account-deletion`;
+
 export const LEGAL_CONTACT_EMAIL = "developer.farukh@gmail.com";
 
 /** Linked from the Privacy Policy for app access and support-related requests. */

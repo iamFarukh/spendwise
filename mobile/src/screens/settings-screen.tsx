@@ -32,13 +32,12 @@ import {useAccounts} from '@/hooks/use-accounts';
 import {useUserSettings} from '@/hooks/use-user-settings';
 import {useCategories, useTransactions} from '@/providers/ledger-data-provider';
 import {getFirestoreErrorMessage} from '@/lib/firebase/errors';
+import {getAuthErrorMessage} from '@/lib/auth/errors';
 import {
-  displayTestOsNotification,
   getPushPermissionStatus,
   requestPushPermission,
-  TEST_NOTIFICATION_SAMPLES,
+  sendTestNotification,
 } from '@/lib/notifications/push';
-import type {NotificationCategory} from '@/lib/notifications/types';
 import {resolvePrimaryAccountId} from '@/lib/ledger/account-display';
 import {patchUserSettings} from '@/lib/settings/service';
 import {useAuth} from '@/providers/auth-provider';
@@ -66,7 +65,7 @@ const TIMEZONE_OPTIONS = [
 export function SettingsScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const {user, signOut} = useAuth();
+  const {user, signOut, deleteAccount} = useAuth();
   const toast = useToast();
   const dialog = useDialog();
   const {settings} = useUserSettings();
@@ -74,6 +73,7 @@ export function SettingsScreen() {
   const {transactions} = useTransactions();
   const {categories} = useCategories();
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [pushStatus, setPushStatus] = useState<'granted' | 'denied' | 'unknown'>('unknown');
 
   useEffect(() => {
@@ -91,10 +91,20 @@ export function SettingsScreen() {
     }
   }
 
-  async function sendTestNotification(category: NotificationCategory) {
-    setSavingKey(`test-${category}`);
+  async function handleTestNotification() {
+    setSavingKey('test-notification');
     try {
-      await displayTestOsNotification(TEST_NOTIFICATION_SAMPLES[category]);
+      const result = await sendTestNotification();
+      if (result === 'denied') {
+        setPushStatus('denied');
+        toast.error('Notifications are off. Enable them in system settings.');
+        void Linking.openSettings();
+        return;
+      }
+      if (result === 'cancelled') {
+        toast.error('Notification permission is required to send a test alert.');
+        return;
+      }
       setPushStatus('granted');
       toast.success(
         Platform.OS === 'android'
@@ -102,9 +112,9 @@ export function SettingsScreen() {
           : 'Test notification sent.',
       );
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Could not send test notification.';
-      toast.error(message);
+      toast.error(
+        err instanceof Error ? err.message : 'Could not send test notification.',
+      );
     } finally {
       setSavingKey(null);
     }
@@ -167,6 +177,30 @@ export function SettingsScreen() {
     });
     if (ok) {
       await signOut();
+    }
+  }
+
+  async function handleDeleteAccount() {
+    const confirmed = await dialog.confirm({
+      title: 'Delete your account?',
+      message:
+        'This permanently deletes your SpendWise account, ledger, settings, and notifications. This cannot be undone.',
+      confirmLabel: 'Delete account',
+      cancelLabel: 'Keep account',
+      destructive: true,
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      toast.success('Your account has been deleted.');
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err));
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -386,30 +420,24 @@ export function SettingsScreen() {
               disabled={savingKey === 'notif-productUpdates'}
               onValueChange={v => patchNotifPref('productUpdates', v)}
             />
-            <View style={styles.testBlock}>
-              <AppText variant="xs" muted style={styles.testHint}>
-                Send a sample push for each alert type. Useful to confirm banners,
-                sounds, and deep links.
-              </AppText>
-              {(
-                [
-                  ['sip', 'SIP reminder'],
-                  ['subscription', 'Subscription reminder'],
-                  ['transaction', 'Transaction nudge'],
-                  ['account', 'Account alert'],
-                  ['insight', 'Weekly insight'],
-                  ['system', 'System update'],
-                ] as const
-              ).map(([category, label], index, list) => (
-                <TestNotifRow
-                  key={category}
-                  title={label}
-                  disabled={savingKey === `test-${category}`}
-                  last={index === list.length - 1}
-                  onPress={() => void sendTestNotification(category)}
-                />
-              ))}
-            </View>
+            <PressableScale
+              onPress={() => void handleTestNotification()}
+              disabled={savingKey === 'test-notification'}
+              scaleTo={0.98}>
+              <View style={[styles.row, styles.rowLast]}>
+                <View style={styles.rowText}>
+                  <AppText style={styles.rowTitle}>Test notification</AppText>
+                  <AppText variant="xs" muted>
+                    {pushStatus === 'granted'
+                      ? 'Confirm alerts are working on this device'
+                      : 'Allows notifications if needed, then sends a sample alert'}
+                  </AppText>
+                </View>
+                <AppText style={styles.testAction}>
+                  {savingKey === 'test-notification' ? 'Sending…' : 'Send'}
+                </AppText>
+              </View>
+            </PressableScale>
           </Card>
         </FadeInView>
 
@@ -420,12 +448,39 @@ export function SettingsScreen() {
               title="Privacy Policy"
               subtitle="How we collect, use, and protect your data"
               onPress={() => navigation.navigate('PrivacyPolicy', {source: 'settings'})}
+            />
+            <NavRow
+              title="Account deletion"
+              subtitle="How to delete your account and associated data"
+              onPress={() => navigation.navigate('AccountDeletion')}
               last
             />
           </Card>
         </FadeInView>
 
         <FadeInView index={5}>
+          <Card style={styles.section}>
+            <SectionTitle icon={IconShield}>Account</SectionTitle>
+            <PressableScale
+              onPress={() => void handleDeleteAccount()}
+              disabled={deletingAccount}
+              scaleTo={0.98}>
+              <View style={[styles.dangerRow, styles.rowLast]}>
+                <View style={styles.rowText}>
+                  <AppText style={styles.dangerTitle}>Delete account</AppText>
+                  <AppText variant="xs" muted numberOfLines={2}>
+                    Permanently remove your account and all SpendWise data
+                  </AppText>
+                </View>
+                <AppText style={styles.dangerAction}>
+                  {deletingAccount ? 'Deleting…' : 'Delete'}
+                </AppText>
+              </View>
+            </PressableScale>
+          </Card>
+        </FadeInView>
+
+        <FadeInView index={6}>
           <Card style={styles.section}>
             <SectionTitle icon={IconHeart}>About</SectionTitle>
             <View style={styles.row}>
@@ -449,7 +504,7 @@ export function SettingsScreen() {
           </Card>
         </FadeInView>
 
-        <FadeInView index={6}>
+        <FadeInView index={7}>
           <PressableScale onPress={() => void handleSignOut()} style={styles.signOut}>
             <IconLogout size={19} color={colors.expense} />
             <AppText style={styles.signOutText}>Sign out</AppText>
@@ -539,27 +594,6 @@ function SelectRow({
         <IconChevronDown size={15} color={colors.ink400} />
       </PressableScale>
     </View>
-  );
-}
-
-function TestNotifRow({
-  title,
-  onPress,
-  disabled,
-  last,
-}: {
-  title: string;
-  onPress: () => void;
-  disabled?: boolean;
-  last?: boolean;
-}) {
-  return (
-    <PressableScale onPress={onPress} disabled={disabled} scaleTo={0.98}>
-      <View style={[styles.testRow, last && styles.rowLast]}>
-        <AppText style={styles.testRowTitle}>{title}</AppText>
-        <AppText style={styles.testRowAction}>Send</AppText>
-      </View>
-    </PressableScale>
   );
 }
 
@@ -656,22 +690,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   enablePushText: {color: colors.white, fontWeight: '700', fontSize: 13},
-  testBlock: {
-    borderTopWidth: 1,
-    borderTopColor: colors.lineSoft,
-    paddingTop: spacing.sm,
-  },
-  testHint: {paddingHorizontal: 2, paddingBottom: spacing.sm, lineHeight: 16},
-  testRow: {
+  testAction: {fontSize: 13, fontWeight: '700', color: colors.mint600},
+  dangerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.lineSoft,
+    gap: 14,
+    paddingVertical: 14,
   },
-  testRowTitle: {fontSize: 14, fontWeight: '600', color: colors.ink900},
-  testRowAction: {fontSize: 13, fontWeight: '700', color: colors.mint600},
+  dangerTitle: {fontSize: 15, fontWeight: '700', color: colors.expense},
+  dangerAction: {fontSize: 13, fontWeight: '700', color: colors.expense},
   aboutValue: {fontWeight: '700', fontSize: 15, color: colors.mint600},
   aboutCredit: {
     flexDirection: 'row',

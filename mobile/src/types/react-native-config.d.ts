@@ -12,6 +12,7 @@ declare module 'react-native-config' {
     PRIVACY_POLICY_WEB_URL?: string;
     APP_LOGIN_URL?: string;
     APP_DASHBOARD_URL?: string;
+    SENTRY_DSN?: string;
   }
 
   export const Config: NativeConfig;
