@@ -17,7 +17,10 @@ enableFreeze(true);
 import notifee from '@notifee/react-native';
 import App from './src/App';
 import {name as appName} from './app.json';
+import {initCrashReporting} from './src/lib/observability/crash-reporting';
 import {handleBackgroundNotificationEvent} from './src/providers/push-notification-provider';
+
+initCrashReporting();
 
 // Hermes lacks crypto.randomUUID; get-random-values only polyfills
 // getRandomValues. @pfos/shared builders rely on randomUUID, so add it here.

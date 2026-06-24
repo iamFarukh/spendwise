@@ -189,17 +189,78 @@ mobile/
 
 ---
 
-## Build release APK (Android sideload)
+## Play Store release (signed AAB)
 
-No Play Store required for personal use:
+### 1. Upload keystore (one-time)
+
+A release keystore should already exist at `android/app/spendwise-upload.keystore`.  
+Signing config lives in `android/keystore.properties` (gitignored).
+
+If you need to recreate it:
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 \
+  -keystore android/app/spendwise-upload.keystore \
+  -alias spendwise -keyalg RSA -keysize 2048 -validity 10000
+cp android/keystore.properties.example android/keystore.properties
+# Fill in storePassword, keyPassword, keyAlias, storeFile
+```
+
+**Back up** `spendwise-upload.keystore` and passwords in a password manager.  
+If you lose them, you cannot ship updates to the same Play listing.
+
+Local copy of generated credentials (gitignored): `android/signing-secrets.local.txt`
+
+### 2. Build the AAB
+
+```bash
+cd mobile/android
+./gradlew bundleRelease
+# Output: android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Upload `app-release.aab` to [Google Play Console](https://play.google.com/console).
+
+### 3. Firebase for release
+
+- `android/app/google-services.json` must exist (not committed — add from Firebase Console).
+- Register your **release** keystore SHA-1 in Firebase → Project settings → Android app.
+
+---
+
+## Crash reporting (Sentry)
+
+### Get your Sentry DSN
+
+1. Create a free account at [sentry.io](https://sentry.io/signup/).
+2. **Create project** → choose **React Native**.
+3. Open **Settings → Projects → [your project] → Client Keys (DSN)**.
+4. Copy the DSN — it looks like:
+   ```
+   https://abc123def456@o123456.ingest.us.sentry.io/7890123
+   ```
+
+### Enable in the app
+
+Add to `mobile/.env`:
+
+```bash
+SENTRY_DSN=https://your-key@o123456.ingest.sentry.io/your-project-id
+```
+
+Rebuild the app. Crashes from `ErrorBoundary` and unhandled errors are sent in release builds (`enabled: !__DEV__`).
+
+Optional: run `npx @sentry/wizard@latest -i reactNative` from `mobile/` for source maps and advanced setup.
+
+---
+
+## Build release APK (Android sideload)
 
 ```bash
 cd mobile/android
 ./gradlew assembleRelease
 # APK: android/app/build/outputs/apk/release/app-release.apk
 ```
-
-For a signed release, generate a keystore and update `android/app/build.gradle` — see [React Native signed APK docs](https://reactnative.dev/docs/signed-apk-android).
 
 ---
 

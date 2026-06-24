@@ -1,11 +1,12 @@
 import {
+  APP_ACCOUNT_DELETION_URL,
   LEGAL_CONTACT_EMAIL,
   PRIVACY_POLICY_SUPPORT_URL,
 } from "./app-urls";
 
-export { APP_BASE_URL, APP_DASHBOARD_URL, APP_LOGIN_URL, APP_PRIVACY_URL, APP_SETTINGS_URL, LEGAL_CONTACT_EMAIL, PRIVACY_POLICY_SUPPORT_URL } from "./app-urls";
+export { APP_BASE_URL, APP_ACCOUNT_DELETION_URL, APP_DASHBOARD_URL, APP_LOGIN_URL, APP_PRIVACY_URL, APP_SETTINGS_URL, LEGAL_CONTACT_EMAIL, PRIVACY_POLICY_SUPPORT_URL } from "./app-urls";
 
-export const PRIVACY_POLICY_VERSION = "1.0.0";
+export const PRIVACY_POLICY_VERSION = "1.1.0";
 
 export const PRIVACY_POLICY_LAST_UPDATED = "2026-06-24";
 
@@ -31,7 +32,7 @@ export const BUNDLED_PRIVACY_POLICY: PrivacyPolicyDocument = {
   lastUpdated: PRIVACY_POLICY_LAST_UPDATED,
   title: "Privacy Policy",
   introduction:
-    "SpendWise (“we”, “our”, or “us”) is a personal finance ledger that helps you track accounts, transactions, investments, and subscriptions. This Privacy Policy explains what information we collect, how we use it, how we protect it, and the choices you have. By creating an account or using SpendWise, you agree to this policy.",
+    "SpendWise (“we”, “our”, or “us”) is a personal finance ledger available on web and mobile. It helps you track accounts, transactions, investments, SIP plans, subscriptions, and recurring entries. This Privacy Policy explains what information we collect, how we use it, how we protect it, and the choices you have. By creating an account or using SpendWise, you agree to this policy.",
   sections: [
     {
       id: "information-we-collect",
@@ -41,8 +42,9 @@ export const BUNDLED_PRIVACY_POLICY: PrivacyPolicyDocument = {
       ],
       bullets: [
         "Account information: email address, display name, and authentication identifiers from Firebase Auth (including Google Sign-In when you choose it).",
-        "Financial ledger data: accounts, transactions, categories, recurring entries, SIP plans, subscriptions, reconciliation records, and preferences you save in the app.",
-        "Device and usage data: app version, device type, operating system, and basic interaction events needed to operate and improve the service.",
+        "Financial ledger data: accounts, transactions, categories, merchants, recurring entries, SIP plans, subscriptions, reconciliation records, and preferences you save in the app.",
+        "Device and usage data: app version, device type, operating system, and privacy-respecting analytics events (such as feature usage and policy views) when analytics is enabled.",
+        "Crash and diagnostic data: error reports, stack traces, and limited session replay data sent to our crash-reporting provider when configured, to help us fix bugs.",
         "Notification preferences: your opt-in choices for reminders, alerts, and product updates.",
         "Support communications: information you send when contacting us for help.",
       ],
@@ -56,9 +58,9 @@ export const BUNDLED_PRIVACY_POLICY: PrivacyPolicyDocument = {
       bullets: [
         "Authenticate you and keep your session secure across web and mobile.",
         "Store and sync your ledger data so it is available on your devices.",
-        "Send optional notifications you have enabled (SIP reminders, subscription renewals, weekly insights, and similar alerts).",
+        "Send optional push notifications you have enabled (SIP reminders, subscription renewals, weekly insights, and similar alerts).",
         "Generate reports, exports, and backups you request.",
-        "Diagnose errors, prevent abuse, and understand feature usage through privacy-respecting analytics.",
+        "Diagnose crashes, prevent abuse, and understand feature usage through privacy-respecting analytics and error reporting.",
         "Respond to support requests and communicate important service updates.",
       ],
     },
@@ -78,8 +80,9 @@ export const BUNDLED_PRIVACY_POLICY: PrivacyPolicyDocument = {
         "SpendWise relies on trusted third-party providers to deliver core functionality. These providers process data according to their own privacy policies:",
       ],
       bullets: [
-        "Google Firebase — authentication, database, storage, and (on web) analytics.",
+        "Google Firebase — authentication, database, storage, and analytics when enabled.",
         "Google Sign-In — optional sign-in provider.",
+        "Sentry — optional crash reporting, error diagnostics, and limited session replay on mobile when configured.",
         "Apple Push Notification service / Firebase Cloud Messaging — delivery of notifications you enable.",
         "App distribution platforms (Apple App Store, Google Play) — install and crash metadata as provided by the platform.",
       ],
@@ -93,7 +96,7 @@ export const BUNDLED_PRIVACY_POLICY: PrivacyPolicyDocument = {
       bullets: [
         "Access & portability: export your ledger as CSV or JSON from SpendWise web, or request a copy by email.",
         "Correction: update account details and ledger entries directly in the app.",
-        "Deletion: you may delete your account and associated data by contacting us. We will process verified requests within a reasonable timeframe.",
+        `Deletion: open Settings → Delete account in the SpendWise mobile app to permanently remove your Firebase account, ledger data, settings, and scheduled notifications. You can also request deletion by email — see our account deletion page at ${APP_ACCOUNT_DELETION_URL}.`,
         "Marketing & notifications: disable notification categories in Settings or through your device OS settings.",
         "Withdraw consent: you may stop using SpendWise and request account deletion at any time.",
       ],

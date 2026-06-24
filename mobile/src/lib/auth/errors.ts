@@ -26,6 +26,8 @@ export function getAuthErrorMessage(error: unknown): string {
       return 'Network error. Check your connection and try again.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Try again later.';
+    case 'auth/requires-recent-login':
+      return 'For security, sign out, sign in again, then retry account deletion.';
     case 'auth/cancelled':
     case '12501':
       return 'Google sign-in was cancelled.';

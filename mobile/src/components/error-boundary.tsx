@@ -4,6 +4,7 @@ import {StyleSheet, View} from 'react-native';
 import {AppText} from '@/components/ui/app-text';
 import {Button} from '@/components/ui/button';
 import {colors, spacing} from '@/constants/theme';
+import {captureException} from '@/lib/observability/crash-reporting';
 
 type Props = {children: ReactNode};
 type State = {hasError: boolean};
@@ -21,7 +22,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown) {
-    // Surface in dev; a real build would forward this to crash reporting.
+    captureException(error, {boundary: 'app-root'});
     if (__DEV__) {
       // eslint-disable-next-line no-console
       console.error('[ErrorBoundary]', error);

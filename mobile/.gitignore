@@ -29,3 +29,11 @@ fastlane/Preview.html
 # Firebase config files (user adds locally — see README)
 google-services.json
 GoogleService-Info.plist
+
+# Android release signing (see android/keystore.properties.example)
+android/keystore.properties
+android/signing-secrets.local.txt
+android/sentry.properties
+ios/sentry.properties
+*.keystore
+!android/app/debug.keystore

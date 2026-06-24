@@ -9,6 +9,10 @@ import {
 } from 'react';
 
 import {configureGoogleSignIn, signOutAll} from '@/lib/auth/actions';
+import {
+  deleteAccountAndData,
+  isRecentLoginRequired,
+} from '@/lib/auth/delete-account';
 import {getFirebaseAuth} from '@/lib/firebase/client';
 import {isFirebaseConfigured} from '@/lib/firebase/config';
 
@@ -17,6 +21,7 @@ interface AuthContextValue {
   loading: boolean;
   configured: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -43,12 +48,22 @@ export function AuthProvider({children}: {children: ReactNode}) {
     return unsubscribe;
   }, []);
 
+  async function deleteAccount(): Promise<void> {
+    const auth = getFirebaseAuth();
+    const currentUser = auth?.currentUser;
+    if (!currentUser) {
+      throw new Error('You are not signed in.');
+    }
+    await deleteAccountAndData(currentUser);
+  }
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       loading,
       configured,
       signOut: signOutAll,
+      deleteAccount,
     }),
     [configured, loading, user],
   );
@@ -63,3 +78,5 @@ export function useAuth(): AuthContextValue {
   }
   return context;
 }
+
+export {isRecentLoginRequired};

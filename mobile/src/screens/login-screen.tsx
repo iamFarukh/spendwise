@@ -1,26 +1,18 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 import {
-  Keyboard,
+  Dimensions,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StatusBar,
   StyleSheet,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
+import {getAdditionalUserInfo} from 'firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedKeyboard,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-  runOnJS,
-} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {SpendWiseLoginHero} from '@/components/brand/spendwise-brand';
@@ -36,7 +28,7 @@ import {
   IconLock,
 } from '@/components/icons';
 import {colors, radius, shadow, spacing} from '@/constants/theme';
-import {sendPasswordReset, signInWithEmail, signInWithGoogle, signUpWithEmail} from '@/lib/auth/actions';
+import {sendPasswordReset, signInWithEmail, signInWithGoogle, signOutAll, signUpWithEmail} from '@/lib/auth/actions';
 import {getAuthErrorMessage} from '@/lib/auth/errors';
 import {recordPrivacyAcceptance} from '@/lib/legal/privacy-acceptance';
 import {
@@ -48,21 +40,17 @@ import {useToast} from '@/providers/toast-provider';
 type AuthMode = 'sign-in' | 'sign-up';
 type FocusField = 'email' | 'password' | null;
 
-/** The white card overdraws below the screen so lifting it never reveals a gap. */
-const SHEET_OVERDRAW = 400;
-/** Top padding inside the card. */
-const SHEET_PAD_TOP = 20;
-/** Breathing room kept between the focused target and the keyboard. */
-const FIELD_KB_GAP = 16;
 /** Resting gap between the hero content and the top safe area. */
 const HERO_PAD = 30;
+
+/** Fixed hero height from the full screen — does not change when adjustResize shrinks the window. */
+const HERO_HEIGHT = Math.round(Dimensions.get('window').height * 0.32);
 
 export function LoginScreen() {
   const toast = useToast();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
-  const {height: windowH} = useWindowDimensions();
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,134 +60,7 @@ export function LoginScreen() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [focusedField, setFocusedField] = useState<FocusField>(null);
 
-  const emailRef = useRef<View>(null);
-  const passwordRef = useRef<View>(null);
-  const submitRef = useRef<View>(null);
-  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Single keyboard clock — frame-synced with the OS keyboard curve.
-  const keyboard = useAnimatedKeyboard();
-  const targetBottomY = useSharedValue(0);
-  const windowHeight = useSharedValue(windowH);
-
   const heroPadTop = insets.top + HERO_PAD;
-
-  // Keep animated layout in sync when Android adjustResize shrinks the window.
-  windowHeight.value = windowH;
-
-  const remeasureTarget = useCallback(() => {
-    const ref =
-      focusedField === 'password'
-        ? submitRef
-        : focusedField === 'email'
-          ? passwordRef
-          : null;
-    ref?.current?.measureInWindow((_x, y, _w, h) => {
-      targetBottomY.value = y + h;
-    });
-  }, [focusedField, targetBottomY]);
-
-  const handleFieldFocus = useCallback(
-    (field: FocusField) => {
-      if (blurTimer.current) {
-        clearTimeout(blurTimer.current);
-        blurTimer.current = null;
-      }
-      setFocusedField(field);
-      requestAnimationFrame(() => {
-        const ref = field === 'password' ? submitRef : passwordRef;
-        ref?.current?.measureInWindow((_x, y, _w, h) => {
-          targetBottomY.value = y + h;
-        });
-      });
-    },
-    [targetBottomY],
-  );
-
-  const handleFieldBlur = useCallback(() => {
-    blurTimer.current = setTimeout(() => {
-      setFocusedField(null);
-      targetBottomY.value = 0;
-    }, 120);
-  }, [targetBottomY]);
-
-  // Re-measure when the keyboard height changes so lift stays accurate after
-  // the hero collapses or the sheet shifts.
-  useAnimatedReaction(
-    () => keyboard.height.value,
-    (height, prev) => {
-      if (height > 0 && height !== prev) {
-        runOnJS(remeasureTarget)();
-      }
-    },
-    [remeasureTarget],
-  );
-
-  // Android resizes the window (adjustResize) instead of reporting a reliable
-  // keyboard height — remeasure the focused target whenever the window changes
-  // so the lift reflects the field's post-resize position.
-  useEffect(() => {
-    if (Platform.OS !== 'android' || !focusedField) {
-      return;
-    }
-    const id = requestAnimationFrame(remeasureTarget);
-    return () => cancelAnimationFrame(id);
-  }, [windowH, focusedField, remeasureTarget]);
-
-  const heroCollapse = useDerivedValue(() => {
-    if (Platform.OS === 'android') {
-      return 0;
-    }
-    const tall = windowHeight.value * 0.3;
-    return interpolate(keyboard.height.value, [0, 260], [0, tall * 0.58], Extrapolation.CLAMP);
-  });
-
-  const lift = useDerivedValue(() => {
-    if (targetBottomY.value <= 0) {
-      return 0;
-    }
-    // Android's adjustResize shrinks the window to sit above the keyboard, so the
-    // shrunk window bottom IS the keyboard top. The hero/sheet collapse handles
-    // most of it; lift only what still overflows below the focused field.
-    if (Platform.OS === 'android') {
-      const overflow = targetBottomY.value + FIELD_KB_GAP - windowHeight.value;
-      return Math.max(0, Math.min(SHEET_OVERDRAW, overflow));
-    }
-    if (keyboard.height.value <= 0) {
-      return 0;
-    }
-    const kbTop = windowHeight.value - keyboard.height.value;
-    const overflow = targetBottomY.value + FIELD_KB_GAP - kbTop;
-    return Math.max(0, Math.min(SHEET_OVERDRAW, overflow));
-  });
-
-  const sheetStyle = useAnimatedStyle(() => {
-    const tall = windowHeight.value * 0.3;
-    return {
-      top: tall - heroCollapse.value,
-      height: windowHeight.value - tall + SHEET_OVERDRAW,
-      transform: [{translateY: -lift.value}],
-    };
-  });
-
-  const heroContentStyle = useAnimatedStyle(() => {
-    const p = Math.min(1, keyboard.height.value / 200);
-    return {
-      opacity: interpolate(p, [0, 1], [1, 0], Extrapolation.CLAMP),
-      transform: [
-        {translateY: interpolate(p, [0, 1], [0, -24], Extrapolation.CLAMP)},
-        {scale: interpolate(p, [0, 1], [1, 0.9], Extrapolation.CLAMP)},
-      ],
-    };
-  });
-
-  const taglineStyle = useAnimatedStyle(() => {
-    const p = Math.min(1, keyboard.height.value / 140);
-    return {
-      opacity: interpolate(p, [0, 1], [1, 0], Extrapolation.CLAMP),
-      transform: [{translateY: interpolate(p, [0, 1], [0, -8], Extrapolation.CLAMP)}],
-    };
-  });
 
   function openPrivacyPolicy() {
     navigation.navigate('PrivacyPolicy', {source: 'login'});
@@ -222,7 +83,15 @@ export function LoginScreen() {
     setError(null);
     try {
       const credential = await signInWithGoogle();
-      if (mode === 'sign-up') {
+      const isNewUser = getAdditionalUserInfo(credential)?.isNewUser ?? false;
+      if (isNewUser) {
+        if (!privacyAccepted) {
+          await signOutAll();
+          setMode('sign-up');
+          setError('Please accept the Privacy Policy to create an account.');
+          void trackPrivacyPolicyDeclined({source: 'login'});
+          return;
+        }
         await recordPrivacyAcceptance(credential.user.uid);
       }
     } catch (err) {
@@ -275,6 +144,181 @@ export function LoginScreen() {
     !busy &&
     (mode === 'sign-in' || privacyAccepted);
 
+  const form = (
+    <View style={styles.sheetShell}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={[
+          styles.sheetContent,
+          {paddingBottom: insets.bottom + spacing.lg},
+        ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never">
+        <View style={styles.core}>
+          <View style={styles.seg}>
+            {(
+              [
+                {value: 'sign-in', label: 'Sign in'},
+                {value: 'sign-up', label: 'Create account'},
+              ] as const
+            ).map(option => {
+              const active = option.value === mode;
+              return (
+                <Pressable
+                  key={option.value}
+                  style={[styles.segItem, active && styles.segItemActive]}
+                  onPress={() => {
+                    const nextMode = option.value;
+                    setMode(nextMode);
+                    setError(null);
+                    if (nextMode === 'sign-in') {
+                      setPrivacyAccepted(false);
+                    }
+                  }}>
+                  <AppText
+                    style={[styles.segText, active && styles.segTextActive]}>
+                    {option.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <PressableScale onPress={handleGoogle} style={styles.oauth}>
+            <IconGoogle size={20} />
+            <AppText style={styles.oauthText}>Continue with Google</AppText>
+          </PressableScale>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <AppText variant="sm" style={styles.dividerText}>
+              or use email
+            </AppText>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.field}>
+            <AppText style={styles.fieldLabel}>Email</AppText>
+            <View
+              style={[
+                styles.input,
+                focusedField === 'email' && styles.inputFocused,
+              ]}>
+              <IconGlobe
+                size={18}
+                color={focusedField === 'email' ? colors.mint600 : colors.ink500}
+              />
+              <TextInput
+                style={styles.inputText}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.ink400}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                importantForAutofill="yes"
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+                blurOnSubmit={false}
+                returnKeyType="next"
+              />
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.fieldRow}>
+              <AppText style={styles.fieldLabel}>Password</AppText>
+              <Pressable onPress={handleForgotPassword} hitSlop={8}>
+                <AppText style={styles.forgot}>Forgot?</AppText>
+              </Pressable>
+            </View>
+            <View
+              style={[
+                styles.input,
+                focusedField === 'password' && styles.inputFocused,
+              ]}>
+              <IconLock
+                size={18}
+                color={
+                  focusedField === 'password' ? colors.mint600 : colors.ink500
+                }
+              />
+              <TextInput
+                style={styles.inputText}
+                placeholder="At least 6 characters"
+                placeholderTextColor={colors.ink400}
+                secureTextEntry={!showPassword}
+                autoComplete={mode === 'sign-in' ? 'password' : 'password-new'}
+                textContentType="password"
+                importantForAutofill="yes"
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                returnKeyType="done"
+                onSubmitEditing={() => void handleEmail()}
+              />
+              <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={10}>
+                <IconLock
+                  size={19}
+                  color={
+                    focusedField === 'password' ? colors.mint600 : colors.ink500
+                  }
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          {mode === 'sign-up' ? (
+            <PrivacyConsentCheckbox
+              checked={privacyAccepted}
+              onChange={setPrivacyAccepted}
+              onOpenPolicy={openPrivacyPolicy}
+              disabled={busy}
+            />
+          ) : null}
+
+          {error ? (
+            <AppText variant="sm" style={styles.error}>
+              {error}
+            </AppText>
+          ) : null}
+
+          <PressableScale
+            onPress={handleEmail}
+            disabled={!canSubmit}
+            style={[styles.primary, !canSubmit && styles.primaryDisabled]}>
+            <AppText style={styles.primaryText}>
+              {busy
+                ? 'Please wait…'
+                : mode === 'sign-in'
+                  ? 'Sign in'
+                  : 'Create account'}
+            </AppText>
+            <IconChevronRight size={19} color={colors.white} />
+          </PressableScale>
+        </View>
+
+        <AppText style={styles.foot}>
+          By continuing you agree to our{' '}
+          <AppText
+            style={styles.footLink}
+            onPress={openPrivacyPolicy}
+            accessibilityRole="link"
+            accessibilityLabel="Read Privacy Policy">
+            Privacy Policy
+          </AppText>
+          .
+        </AppText>
+      </ScrollView>
+    </View>
+  );
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
@@ -285,175 +329,42 @@ export function LoginScreen() {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* HERO — logo + wordmark + tagline, fades as keyboard opens. */}
-      <View style={[styles.hero, {paddingTop: heroPadTop}]} pointerEvents="none">
-        <Animated.View style={heroContentStyle}>
-          <FadeInView index={0}>
-            <SpendWiseLoginHero />
-          </FadeInView>
-        </Animated.View>
-        <Animated.View style={taglineStyle}>
-          <FadeInView index={1}>
-            <AppText style={styles.tagline}>
-              Your ledger of truth — where every rupee lives.
-            </AppText>
-          </FadeInView>
-        </Animated.View>
+      <View style={[styles.hero, {paddingTop: heroPadTop, height: HERO_HEIGHT}]}>
+        <FadeInView index={0}>
+          <SpendWiseLoginHero />
+        </FadeInView>
+        <FadeInView index={1}>
+          <AppText style={styles.tagline}>
+            Your ledger of truth — where every rupee lives.
+          </AppText>
+        </FadeInView>
       </View>
 
-      {/* CARD — collapses with the hero, lifts only enough for the focused field. */}
-      <Animated.View style={[styles.sheet, sheetStyle]}>
-        <Pressable
-          style={[styles.sheetContent, {paddingBottom: insets.bottom + 16}]}
-          onPress={Keyboard.dismiss}
-          accessible={false}>
-          <FadeInView index={2} style={styles.sheetInner}>
-            <View style={styles.core}>
-              <View style={styles.seg}>
-                {(
-                  [
-                    {value: 'sign-in', label: 'Sign in'},
-                    {value: 'sign-up', label: 'Create account'},
-                  ] as const
-                ).map(option => {
-                  const active = option.value === mode;
-                  return (
-                    <Pressable
-                      key={option.value}
-                      style={[styles.segItem, active && styles.segItemActive]}
-                      onPress={() => {
-                        const nextMode = option.value;
-                        setMode(nextMode);
-                        setError(null);
-                        if (nextMode === 'sign-in') {
-                          setPrivacyAccepted(false);
-                        }
-                      }}>
-                      <AppText
-                        style={[styles.segText, active && styles.segTextActive]}>
-                        {option.label}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <PressableScale onPress={handleGoogle} style={styles.oauth}>
-                <IconGoogle size={20} />
-                <AppText style={styles.oauthText}>Continue with Google</AppText>
-              </PressableScale>
-
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <AppText variant="sm" style={styles.dividerText}>
-                  or use email
-                </AppText>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <View ref={emailRef} collapsable={false} style={styles.field}>
-                <AppText style={styles.fieldLabel}>Email</AppText>
-                <View style={styles.input}>
-                  <IconGlobe size={18} color={colors.ink400} />
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="you@example.com"
-                    placeholderTextColor={colors.ink400}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    value={email}
-                    onChangeText={setEmail}
-                    onFocus={() => handleFieldFocus('email')}
-                    onBlur={handleFieldBlur}
-                  />
-                </View>
-              </View>
-
-              <View ref={passwordRef} collapsable={false} style={styles.field}>
-                <View style={styles.fieldRow}>
-                  <AppText style={styles.fieldLabel}>Password</AppText>
-                  <Pressable onPress={handleForgotPassword} hitSlop={8}>
-                    <AppText style={styles.forgot}>Forgot?</AppText>
-                  </Pressable>
-                </View>
-                <View style={styles.input}>
-                  <IconLock size={18} color={colors.ink400} />
-                  <TextInput
-                    style={styles.inputText}
-                    placeholder="At least 6 characters"
-                    placeholderTextColor={colors.ink400}
-                    secureTextEntry={!showPassword}
-                    autoComplete="password"
-                    value={password}
-                    onChangeText={setPassword}
-                    onFocus={() => handleFieldFocus('password')}
-                    onBlur={handleFieldBlur}
-                  />
-                  <Pressable onPress={() => setShowPassword(v => !v)} hitSlop={10}>
-                    <IconLock size={19} color={colors.ink400} />
-                  </Pressable>
-                </View>
-              </View>
-
-              {mode === 'sign-up' ? (
-                <PrivacyConsentCheckbox
-                  checked={privacyAccepted}
-                  onChange={setPrivacyAccepted}
-                  onOpenPolicy={openPrivacyPolicy}
-                  disabled={busy}
-                />
-              ) : null}
-
-              {error ? (
-                <AppText variant="sm" style={styles.error}>
-                  {error}
-                </AppText>
-              ) : null}
-
-              <View ref={submitRef} collapsable={false}>
-                <PressableScale
-                  onPress={handleEmail}
-                  disabled={!canSubmit}
-                  style={[styles.primary, !canSubmit && styles.primaryDisabled]}>
-                  <AppText style={styles.primaryText}>
-                    {busy
-                      ? 'Please wait…'
-                      : mode === 'sign-in'
-                        ? 'Sign in'
-                        : 'Create account'}
-                  </AppText>
-                  <IconChevronRight size={19} color={colors.white} />
-                </PressableScale>
-              </View>
-            </View>
-
-            <AppText style={styles.foot}>
-              By continuing you agree to our{' '}
-              <AppText
-                style={styles.footLink}
-                onPress={openPrivacyPolicy}
-                accessibilityRole="link"
-                accessibilityLabel="Read Privacy Policy">
-                Privacy Policy
-              </AppText>
-              .
-            </AppText>
-          </FadeInView>
-        </Pressable>
-      </Animated.View>
+      {/*
+        Android: adjustResize shrinks this flex:1 area and the ScrollView keeps
+        the focused TextInput visible — no custom scrollTo, no keyboard listeners.
+        iOS: KeyboardAvoidingView padding is the only extra handler.
+      */}
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior="padding"
+          keyboardVerticalOffset={insets.top}>
+          {form}
+        </KeyboardAvoidingView>
+      ) : (
+        form
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {flex: 1, backgroundColor: colors.mint700},
+  flex: {flex: 1},
   hero: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 30,
   },
   tagline: {
@@ -465,17 +376,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
     lineHeight: 22,
   },
-  sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+  sheetShell: {
+    flex: 1,
     backgroundColor: colors.paper,
     borderTopLeftRadius: 34,
     borderTopRightRadius: 34,
+    overflow: 'hidden',
     ...shadow.md,
   },
-  sheetContent: {flex: 1, paddingHorizontal: 24, paddingTop: SHEET_PAD_TOP},
-  sheetInner: {gap: spacing.md},
+  sheetContent: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    gap: spacing.md,
+  },
   core: {gap: spacing.sm},
   seg: {
     flexDirection: 'row',
@@ -511,11 +424,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    height: 48,
+    height: 50,
     paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: colors.line,
+    borderWidth: 1.5,
+    borderColor: colors.ink300,
     borderRadius: radius.md,
+    backgroundColor: colors.canvas,
+  },
+  inputFocused: {
+    borderColor: colors.mint500,
     backgroundColor: colors.paper,
   },
   inputText: {flex: 1, fontSize: 15, fontWeight: '600', color: colors.ink900, padding: 0},
@@ -541,6 +458,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingHorizontal: 8,
     paddingTop: 6,
+    paddingBottom: 8,
   },
   footLink: {color: colors.mint700, fontWeight: '700', fontSize: 11.5},
 });

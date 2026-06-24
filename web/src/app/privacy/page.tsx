@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
 
+import { LegalPageHeader } from "@/components/legal/legal-page-header";
 import { PrivacyPolicyContent } from "@/components/legal/privacy-policy-content";
-import { SpendWiseLogoHero } from "@/components/brand/spendwise-logo";
 import { Button } from "@/components/ui/button";
 import { APP_VERSION } from "@/constants/app";
 import { usePrivacyPolicy } from "@/hooks/use-privacy-policy";
@@ -25,29 +24,17 @@ export default function PrivacyPage() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="border-b border-line bg-paper">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-5 md:px-8">
-          <Link href="/login" className="shrink-0" aria-label="Back to SpendWise">
-            <SpendWiseLogoHero iconSize={40} />
-          </Link>
-          <Link
-            href="/login"
-            className="text-sm font-bold text-mint-700 hover:text-mint-800"
-          >
-            Sign in
-          </Link>
-        </div>
-      </header>
+      <LegalPageHeader />
 
       <main className="mx-auto max-w-3xl px-6 py-8 md:px-8 md:py-10">
-        <div className="mb-6">
+        <header className="mb-8 border-b border-line-soft pb-6">
           <h1 className="font-display text-3xl font-bold tracking-tight text-ink-900 md:text-4xl">
             Privacy Policy
           </h1>
-          <p className="mt-2 text-sm font-semibold text-ink-500">
-            How SpendWise handles your data
+          <p className="mt-2 text-[15px] font-semibold leading-6 text-ink-500">
+            How SpendWise handles your data on web and mobile
           </p>
-        </div>
+        </header>
 
         {loading ? (
           <div

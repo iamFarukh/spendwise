@@ -82,7 +82,10 @@ export function PrivacyPolicyScreen() {
       }
     }
 
-    navigation.goBack();
+    const blockingUpdate = params.source === 'policy_update';
+    if (!blockingUpdate) {
+      navigation.goBack();
+    }
   }
 
   function handleDecline() {
@@ -99,7 +102,7 @@ export function PrivacyPolicyScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader
         title="Privacy Policy"
-        subtitle="How SpendWise handles your data"
+        subtitle="How SpendWise handles your data on web and mobile"
         onBack={() => navigation.goBack()}
       />
 

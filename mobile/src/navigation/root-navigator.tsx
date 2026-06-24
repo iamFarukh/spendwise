@@ -1,6 +1,7 @@
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {StyleSheet, View} from 'react-native';
+import {PRIVACY_POLICY_VERSION} from '@pfos/shared';
 
 import {AppBootShell} from '@/components/splash/app-boot-shell';
 import {SetupCompletionProvider} from '@/providers/setup-completion-provider';
@@ -29,6 +30,11 @@ export function RootNavigator() {
   const {settings, setupComplete} = useUserSettings();
 
   const sessionReady = !authLoading && (user == null || settings != null);
+  const needsPrivacyReacceptance =
+    Boolean(user) &&
+    setupComplete &&
+    settings != null &&
+    settings.privacyPolicyVersion !== PRIVACY_POLICY_VERSION;
 
   return (
     <AppBootShell booting={!sessionReady}>
@@ -41,13 +47,24 @@ export function RootNavigator() {
             onStateChange={flushPendingNotificationNavigation}>
             <Stack.Navigator screenOptions={{headerShown: false, freezeOnBlur: true}}>
               {!configured || !user ? (
-                <Stack.Screen name="Login" component={LoginScreen} />
+                <>
+                  <Stack.Screen name="Login" component={LoginScreen} />
+                  <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+                </>
               ) : !setupComplete ? (
                 <Stack.Screen name="Setup" component={SetupWizardScreen} />
+              ) : needsPrivacyReacceptance ? (
+                <Stack.Screen
+                  name="PrivacyPolicy"
+                  component={PrivacyPolicyScreen}
+                  initialParams={{
+                    showAcceptance: true,
+                    source: 'policy_update',
+                  }}
+                />
               ) : (
                 <Stack.Screen name="Main" component={MainStack} />
               )}
-              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </SetupCompletionProvider>
