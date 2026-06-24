@@ -13,3 +13,4 @@ export * from "./sip";
 export * from "./investments";
 export * from "./types/subscription";
 export * from "./subscriptions";
+export * from "./legal";

@@ -38,6 +38,10 @@ export interface UserSettings {
   lastBackupAt: string | null;
   /** Per-category notification opt-outs (optional; defaults all-on). */
   notificationPrefs?: NotificationPrefs;
+  /** ISO timestamp when the user accepted the current privacy policy. */
+  privacyAcceptedAt?: string | null;
+  /** Version string of the privacy policy the user accepted. */
+  privacyPolicyVersion?: string | null;
 }
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
@@ -51,4 +55,6 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   roundAmounts: true,
   lastBackupAt: null,
   notificationPrefs: DEFAULT_NOTIFICATION_PREFS,
+  privacyAcceptedAt: null,
+  privacyPolicyVersion: null,
 };

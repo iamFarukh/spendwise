@@ -16,6 +16,7 @@ import {SipScreen} from '@/screens/sip-screen';
 import {SubscriptionFormScreen} from '@/screens/subscription-form-screen';
 import {SubscriptionScreen} from '@/screens/subscription-screen';
 import {SettingsScreen} from '@/screens/settings-screen';
+import {PrivacyPolicyScreen} from '@/screens/privacy-policy-screen';
 import type {MainStackParamList} from '@/navigation/types';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -39,6 +40,7 @@ export function MainStack() {
       <Stack.Screen name="AddAccount" component={AddAccountScreen} />
       <Stack.Screen name="AccountEdit" component={AccountEditScreen} />
       <Stack.Screen name="OptionPicker" component={OptionPickerScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </Stack.Navigator>
   );
 }

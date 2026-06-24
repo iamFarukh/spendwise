@@ -31,4 +31,5 @@ export type MainStackParamList = {
     options: OptionItem[];
     current?: string;
   };
+  PrivacyPolicy: {showAcceptance?: boolean; source?: string} | undefined;
 };

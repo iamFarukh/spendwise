@@ -12,6 +12,7 @@ import {
   IconDownload,
   IconGlobe,
   IconRepeat,
+  IconShield,
   IconTrend,
 } from "@/components/icons";
 import { AppShell } from "@/components/layout/app-shell";
@@ -38,6 +39,7 @@ import { CURRENCIES, TIMEZONES } from "@/lib/setup/constants";
 import { formatBackupTimestamp } from "@/lib/settings/display";
 import { backupLedger } from "@/lib/settings/backup";
 import { updateUserSettings } from "@/lib/settings/service";
+import { APP_VERSION } from "@/constants/app";
 
 type SettingsDraft = Pick<
   UserSettings,
@@ -447,6 +449,25 @@ function SettingsContent() {
           </section>
 
           <SettingsDangerZone />
+
+          <section className="rounded-lg border border-line bg-paper p-5">
+            <h2 className="mb-4 flex items-center gap-2.5 font-display text-lg font-bold text-ink-900">
+              <IconShield className="text-mint-600" />
+              Legal
+            </h2>
+            <SettingsRow
+              title="Privacy Policy"
+              description="How we collect, use, and protect your data"
+              last
+            >
+              <Link href="/privacy">
+                <Button variant="ghost">View policy</Button>
+              </Link>
+            </SettingsRow>
+            <p className="mt-3 text-center text-xs font-semibold text-ink-400">
+              App v{APP_VERSION}
+            </p>
+          </section>
         </div>
 
         <aside className="flex flex-col gap-5 xl:sticky xl:top-0 xl:self-start">

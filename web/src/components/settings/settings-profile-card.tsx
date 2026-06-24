@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Tag } from "@/components/ui/tag";
 
 type SettingsProfileCardProps = {
@@ -37,6 +39,13 @@ export function SettingsProfileCard({
         <ProfileStat value={accountCount} label="accounts" />
         <ProfileStat value={categoryCount} label="categories" />
       </div>
+
+      <Link
+        href="/privacy"
+        className="mt-4 inline-flex min-h-11 items-center justify-center text-sm font-bold text-mint-700 underline"
+      >
+        Privacy Policy
+      </Link>
     </section>
   );
 }
