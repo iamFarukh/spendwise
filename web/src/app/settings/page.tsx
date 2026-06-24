@@ -17,6 +17,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { SettingsInlineSelect } from "@/components/settings/settings-inline-select";
 import { SettingsProfileCard } from "@/components/settings/settings-profile-card";
 import { SettingsRow } from "@/components/settings/settings-row";
+import { SettingsDangerZone } from "@/components/settings/settings-danger-zone";
 import { SettingsSecurityCard } from "@/components/settings/settings-security-card";
 import { SettingsSyncCard } from "@/components/settings/settings-sync-card";
 import { Button } from "@/components/ui/button";
@@ -360,8 +361,8 @@ function SettingsContent() {
             </h2>
 
             <SettingsRow
-              title="Export ledger"
-              description="Full history as a file you keep"
+              title="Export data"
+              description="Download your full ledger as CSV or JSON"
             >
               <div className="flex gap-2">
                 <Button
@@ -391,8 +392,8 @@ function SettingsContent() {
             </SettingsRow>
 
             <SettingsRow
-              title="Backup ledger"
-              description={`Uploads to Firebase Storage and downloads a local copy. Last backup — ${formatBackupTimestamp(settings?.lastBackupAt, timezone)}`}
+              title="Backup data"
+              description={`Cloud copy plus local download. Last backup — ${formatBackupTimestamp(settings?.lastBackupAt, timezone)}`}
               last
             >
               <Button
@@ -410,6 +411,8 @@ function SettingsContent() {
               </p>
             ) : null}
           </section>
+
+          <SettingsDangerZone />
         </div>
 
         <aside className="flex flex-col gap-5">

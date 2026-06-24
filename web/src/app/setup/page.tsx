@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { RequireAuth } from "@/components/auth/require-auth";
+import {
+  SetupStepTransition,
+  type SetupTransitionDirection,
+} from "@/components/motion/setup-step-transition";
+import { StaggerGroup, StaggerItem } from "@/components/motion/stagger";
 import { AccountRow } from "@/components/setup/account-row";
 import {
   SetupFooter,
@@ -56,6 +61,8 @@ function SetupWizard() {
   const { user } = useAuth();
   const { setupComplete, loading: settingsLoading } = useUserSettings();
   const [step, setStep] = useState<SetupStep>("currency");
+  const [direction, setDirection] =
+    useState<SetupTransitionDirection>("forward");
   const [draft, setDraft] = useState<SetupDraft>(createEmptyDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +84,12 @@ function SetupWizard() {
   }
 
   const stepIndex = SETUP_STEPS.indexOf(step);
+
+  function goToStep(next: SetupStep) {
+    const nextIndex = SETUP_STEPS.indexOf(next);
+    setDirection(nextIndex >= stepIndex ? "forward" : "back");
+    setStep(next);
+  }
 
   async function persistDraft(next: SetupDraft) {
     if (!user) return;
@@ -106,7 +119,7 @@ function SetupWizard() {
         setError("Choose your as-of date.");
         return;
       }
-      setStep("accounts");
+      goToStep("accounts");
       return;
     }
 
@@ -115,7 +128,7 @@ function SetupWizard() {
         setError("Add at least one account.");
         return;
       }
-      setStep("balances");
+      goToStep("balances");
       return;
     }
 
@@ -137,7 +150,7 @@ function SetupWizard() {
           current.accounts[0]?.id ??
           null,
       }));
-      setStep("primary");
+      goToStep("primary");
       return;
     }
 
@@ -156,7 +169,7 @@ function SetupWizard() {
   function goBack() {
     setError(null);
     const prev = SETUP_STEPS[stepIndex - 1];
-    if (prev) setStep(prev);
+    if (prev) goToStep(prev);
   }
 
   function addAccount() {
@@ -195,52 +208,63 @@ function SetupWizard() {
 
   return (
     <SetupShell step={step} onSaveExit={handleSaveExit} saving={busy}>
-      <SetupIntro
-        kicker={`Step ${stepIndex + 1} of ${SETUP_STEPS.length}`}
-        title={stepCopy[step].title}
-        description={stepCopy[step].description}
-        note={step === "accounts" ? stepCopy.accounts.note : undefined}
-      />
+      <SetupStepTransition stepKey={step} direction={direction} variant="intro">
+        <SetupIntro
+          kicker={`Step ${stepIndex + 1} of ${SETUP_STEPS.length}`}
+          title={stepCopy[step].title}
+          description={stepCopy[step].description}
+          note={step === "accounts" ? stepCopy.accounts.note : undefined}
+        />
+      </SetupStepTransition>
 
       <SetupPanel>
-        {step === "currency" ? (
-          <CurrencyStep draft={draft} onChange={setDraft} />
-        ) : null}
+        <SetupStepTransition stepKey={step} direction={direction}>
+          {step === "currency" ? (
+            <CurrencyStep draft={draft} onChange={setDraft} />
+          ) : null}
 
-        {step === "accounts" ? (
-          <AccountsStep
-            draft={draft}
-            newAccount={newAccount}
-            onNewAccountChange={setNewAccount}
-            onAdd={addAccount}
-            onRemove={removeAccount}
-          />
-        ) : null}
+          {step === "accounts" ? (
+            <AccountsStep
+              draft={draft}
+              newAccount={newAccount}
+              onNewAccountChange={setNewAccount}
+              onAdd={addAccount}
+              onRemove={removeAccount}
+            />
+          ) : null}
 
-        {step === "balances" ? (
-          <BalancesStep
-            draft={draft}
-            onBalanceChange={updateBalance}
-          />
-        ) : null}
+          {step === "balances" ? (
+            <BalancesStep
+              draft={draft}
+              onBalanceChange={updateBalance}
+            />
+          ) : null}
 
-        {step === "primary" ? (
-          <PrimaryStep
-            draft={draft}
-            onSelect={(id) =>
-              setDraft((current) => ({ ...current, primaryAccountId: id }))
-            }
-          />
-        ) : null}
+          {step === "primary" ? (
+            <PrimaryStep
+              draft={draft}
+              onSelect={(id) =>
+                setDraft((current) => ({ ...current, primaryAccountId: id }))
+              }
+            />
+          ) : null}
+        </SetupStepTransition>
 
         {savedMessage ? (
-          <p className="mt-4 rounded-md border border-mint-200 bg-mint-50 px-4 py-3 text-sm font-semibold text-mint-700">
+          <p
+            key={savedMessage}
+            className="setup-message-enter mt-4 rounded-md border border-mint-200 bg-mint-50 px-4 py-3 text-sm font-semibold text-mint-700"
+          >
             {savedMessage}
           </p>
         ) : null}
 
         {error ? (
-          <p className="mt-4 rounded-md border border-expense/30 bg-expense-bg px-4 py-3 text-sm font-semibold text-expense" role="alert">
+          <p
+            key={error}
+            className="setup-message-enter mt-4 rounded-md border border-expense/30 bg-expense-bg px-4 py-3 text-sm font-semibold text-expense"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
@@ -300,39 +324,45 @@ function CurrencyStep({
   onChange: (draft: SetupDraft) => void;
 }) {
   return (
-    <div className="space-y-4">
-      <SelectField
-        label="Base currency"
-        hint="All balances, reports, and new transactions use this currency."
-        value={draft.baseCurrency}
-        onChange={(baseCurrency) => onChange({ ...draft, baseCurrency })}
-        options={CURRENCIES.map((c) => ({
-          value: c.code,
-          label: c.label,
-          description: c.description,
-        }))}
-      />
+    <StaggerGroup className="space-y-4">
+      <StaggerItem index={0}>
+        <SelectField
+          label="Base currency"
+          hint="All balances, reports, and new transactions use this currency."
+          value={draft.baseCurrency}
+          onChange={(baseCurrency) => onChange({ ...draft, baseCurrency })}
+          options={CURRENCIES.map((c) => ({
+            value: c.code,
+            label: c.label,
+            description: c.description,
+          }))}
+        />
+      </StaggerItem>
 
-      <SelectField
-        label="Timezone"
-        hint="Transaction dates are recorded in this timezone."
-        value={draft.timezone}
-        onChange={(timezone) => onChange({ ...draft, timezone })}
-        options={TIMEZONES.map((tz) => ({
-          value: tz.value,
-          label: tz.label,
-          description: tz.description,
-        }))}
-      />
+      <StaggerItem index={1}>
+        <SelectField
+          label="Timezone"
+          hint="Transaction dates are recorded in this timezone."
+          value={draft.timezone}
+          onChange={(timezone) => onChange({ ...draft, timezone })}
+          options={TIMEZONES.map((tz) => ({
+            value: tz.value,
+            label: tz.label,
+            description: tz.description,
+          }))}
+        />
+      </StaggerItem>
 
-      <DateField
-        label="As-of date"
-        value={draft.asOfDate}
-        onChange={(asOfDate) => onChange({ ...draft, asOfDate })}
-        timezone={draft.timezone}
-        hint="Your ledger starts here. Do not backfill before this date."
-      />
-    </div>
+      <StaggerItem index={2}>
+        <DateField
+          label="As-of date"
+          value={draft.asOfDate}
+          onChange={(asOfDate) => onChange({ ...draft, asOfDate })}
+          timezone={draft.timezone}
+          hint="Your ledger starts here. Do not backfill before this date."
+        />
+      </StaggerItem>
+    </StaggerGroup>
   );
 }
 
@@ -362,22 +392,24 @@ function AccountsStep({
         ) : null}
       </div>
 
-      <div className="space-y-2.5">
-        {draft.accounts.map((account) => (
-          <div key={account.id} className="group relative">
-            <AccountRow account={account} currency={draft.baseCurrency} />
-            <button
-              type="button"
-              onClick={() => onRemove(account.id)}
-              className="absolute top-2 right-2 rounded-md px-2 py-1 text-[11px] font-bold text-ink-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-tint hover:text-expense"
-            >
-              Remove
-            </button>
-          </div>
+      <StaggerGroup className="space-y-2.5">
+        {draft.accounts.map((account, index) => (
+          <StaggerItem key={account.id} index={index}>
+            <div className="group relative">
+              <AccountRow account={account} currency={draft.baseCurrency} />
+              <button
+                type="button"
+                onClick={() => onRemove(account.id)}
+                className="absolute top-2 right-2 rounded-md px-2 py-1 text-[11px] font-bold text-ink-400 opacity-0 transition-opacity duration-[var(--duration-fast)] group-hover:opacity-100 hover:bg-tint hover:text-expense"
+              >
+                Remove
+              </button>
+            </div>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGroup>
 
-      <div className="mt-5 space-y-3 rounded-lg border border-dashed border-mint-300 bg-tint p-4">
+      <div className="stagger-item mt-5 space-y-3 rounded-lg border border-dashed border-mint-300 bg-tint p-4" style={{ "--stagger-index": Math.min(draft.accounts.length, 5) } as React.CSSProperties}>
         <Input
           label="Account name"
           value={newAccount.name}
@@ -443,29 +475,31 @@ function BalancesStep({
   onBalanceChange: (id: string, value: string) => void;
 }) {
   return (
-    <div className="space-y-4">
-      {draft.accounts.map((account) => (
-        <div key={account.id} className="space-y-2">
-          <AccountRow
-            account={account}
-            currency={draft.baseCurrency}
-          />
-          <Input
-            label={
-              account.class === "LIABILITY"
-                ? "Amount currently owed"
-                : account.class === "TRACKING"
-                  ? "Amount invested so far"
-                  : "Opening balance"
-            }
-            inputMode="decimal"
-            value={account.openingBalance}
-            onChange={(e) => onBalanceChange(account.id, e.target.value)}
-            placeholder="0"
-          />
-        </div>
+    <StaggerGroup className="space-y-4">
+      {draft.accounts.map((account, index) => (
+        <StaggerItem key={account.id} index={index}>
+          <div className="space-y-2">
+            <AccountRow
+              account={account}
+              currency={draft.baseCurrency}
+            />
+            <Input
+              label={
+                account.class === "LIABILITY"
+                  ? "Amount currently owed"
+                  : account.class === "TRACKING"
+                    ? "Amount invested so far"
+                    : "Opening balance"
+              }
+              inputMode="decimal"
+              value={account.openingBalance}
+              onChange={(e) => onBalanceChange(account.id, e.target.value)}
+              placeholder="0"
+            />
+          </div>
+        </StaggerItem>
       ))}
-    </div>
+    </StaggerGroup>
   );
 }
 
@@ -477,29 +511,31 @@ function PrimaryStep({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="space-y-2">
-      {draft.accounts.map((account) => {
+    <StaggerGroup className="space-y-2">
+      {draft.accounts.map((account, index) => {
         const selected = draft.primaryAccountId === account.id;
         return (
-          <button
-            key={account.id}
-            type="button"
-            onClick={() => onSelect(account.id)}
-            className={cn(
-              "w-full rounded-md border p-3 text-left transition-[border-color,background-color,box-shadow] duration-[var(--duration-fast)]",
-              selected
-                ? "border-mint-300 bg-mint-50 shadow-[0_0_0_3px_var(--mint-50)]"
-                : "border-line bg-paper hover:bg-tint",
-            )}
-          >
-            <AccountRow
-              account={account}
-              currency={draft.baseCurrency}
-              showBalance
-            />
-          </button>
+          <StaggerItem key={account.id} index={index}>
+            <button
+              type="button"
+              onClick={() => onSelect(account.id)}
+              className={cn(
+                "w-full rounded-md border p-3 text-left transition-[border-color,background-color,box-shadow,transform] duration-[var(--duration-base)] ease-[var(--ease-out)]",
+                selected
+                  ? "border-mint-300 bg-mint-50 shadow-[0_0_0_3px_var(--mint-50)]"
+                  : "border-line bg-paper hover:bg-tint",
+                "motion-press",
+              )}
+            >
+              <AccountRow
+                account={account}
+                currency={draft.baseCurrency}
+                showBalance
+              />
+            </button>
+          </StaggerItem>
         );
       })}
-    </div>
+    </StaggerGroup>
   );
 }

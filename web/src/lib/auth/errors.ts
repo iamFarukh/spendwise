@@ -34,6 +34,8 @@ export function getAuthErrorMessage(error: unknown): string {
       return "Network error. Check your connection and try again.";
     case "auth/internal-error":
       return "Firebase auth error. Confirm your Vercel env vars match web/.env.local and the domain is authorized.";
+    case "auth/requires-recent-login":
+      return "Please confirm your identity again to continue.";
     case "auth/too-many-requests":
       return "Too many attempts. Try again later.";
     default: {
