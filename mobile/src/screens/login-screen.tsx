@@ -9,6 +9,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -22,6 +24,7 @@ import Animated, {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {SpendWiseLoginHero} from '@/components/brand/spendwise-brand';
+import {PrivacyConsentCheckbox} from '@/components/legal/privacy-consent-checkbox';
 import {AppText} from '@/components/ui/app-text';
 import {Gradient} from '@/components/ui/gradient';
 import {FadeInView} from '@/components/motion/fade-in-view';
@@ -35,6 +38,11 @@ import {
 import {colors, radius, shadow, spacing} from '@/constants/theme';
 import {sendPasswordReset, signInWithEmail, signInWithGoogle, signUpWithEmail} from '@/lib/auth/actions';
 import {getAuthErrorMessage} from '@/lib/auth/errors';
+import {recordPrivacyAcceptance} from '@/lib/legal/privacy-acceptance';
+import {
+  trackPrivacyPolicyDeclined,
+} from '@/lib/analytics/privacy';
+import type {RootStackParamList} from '@/navigation/root-navigator';
 import {useToast} from '@/providers/toast-provider';
 
 type AuthMode = 'sign-in' | 'sign-up';
@@ -51,6 +59,8 @@ const HERO_PAD = 30;
 
 export function LoginScreen() {
   const toast = useToast();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {height: windowH} = useWindowDimensions();
   const [mode, setMode] = useState<AuthMode>('sign-in');
@@ -59,6 +69,7 @@ export function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [focusedField, setFocusedField] = useState<FocusField>(null);
 
   const emailRef = useRef<View>(null);
@@ -190,11 +201,30 @@ export function LoginScreen() {
     };
   });
 
+  function openPrivacyPolicy() {
+    navigation.navigate('PrivacyPolicy', {source: 'login'});
+  }
+
+  function requirePrivacyConsent(): boolean {
+    if (mode !== 'sign-up' || privacyAccepted) {
+      return true;
+    }
+    setError('Please accept the Privacy Policy to create an account.');
+    void trackPrivacyPolicyDeclined({source: 'login'});
+    return false;
+  }
+
   async function handleGoogle() {
+    if (!requirePrivacyConsent()) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await signInWithGoogle();
+      const credential = await signInWithGoogle();
+      if (mode === 'sign-up') {
+        await recordPrivacyAcceptance(credential.user.uid);
+      }
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -203,13 +233,17 @@ export function LoginScreen() {
   }
 
   async function handleEmail() {
+    if (!requirePrivacyConsent()) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       if (mode === 'sign-in') {
         await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(email, password);
+        const credential = await signUpWithEmail(email, password);
+        await recordPrivacyAcceptance(credential.user.uid);
       }
     } catch (err) {
       setError(getAuthErrorMessage(err));
@@ -235,7 +269,11 @@ export function LoginScreen() {
     }
   }
 
-  const canSubmit = Boolean(email) && password.length >= 6 && !busy;
+  const canSubmit =
+    Boolean(email) &&
+    password.length >= 6 &&
+    !busy &&
+    (mode === 'sign-in' || privacyAccepted);
 
   return (
     <View style={styles.root}>
@@ -284,8 +322,12 @@ export function LoginScreen() {
                       key={option.value}
                       style={[styles.segItem, active && styles.segItemActive]}
                       onPress={() => {
-                        setMode(option.value);
+                        const nextMode = option.value;
+                        setMode(nextMode);
                         setError(null);
+                        if (nextMode === 'sign-in') {
+                          setPrivacyAccepted(false);
+                        }
                       }}>
                       <AppText
                         style={[styles.segText, active && styles.segTextActive]}>
@@ -354,6 +396,15 @@ export function LoginScreen() {
                 </View>
               </View>
 
+              {mode === 'sign-up' ? (
+                <PrivacyConsentCheckbox
+                  checked={privacyAccepted}
+                  onChange={setPrivacyAccepted}
+                  onOpenPolicy={openPrivacyPolicy}
+                  disabled={busy}
+                />
+              ) : null}
+
               {error ? (
                 <AppText variant="sm" style={styles.error}>
                   {error}
@@ -379,8 +430,14 @@ export function LoginScreen() {
 
             <AppText style={styles.foot}>
               By continuing you agree to our{' '}
-              <AppText style={styles.footLink}>Terms</AppText> &{' '}
-              <AppText style={styles.footLink}>Privacy Policy</AppText>.
+              <AppText
+                style={styles.footLink}
+                onPress={openPrivacyPolicy}
+                accessibilityRole="link"
+                accessibilityLabel="Read Privacy Policy">
+                Privacy Policy
+              </AppText>
+              .
             </AppText>
           </FadeInView>
         </Pressable>

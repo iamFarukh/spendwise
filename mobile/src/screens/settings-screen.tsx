@@ -22,6 +22,7 @@ import {
   IconGrid,
   IconHeart,
   IconLogout,
+  IconShield,
   type IconProps,
 } from '@/components/icons';
 import {DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs} from '@pfos/shared';
@@ -414,6 +415,18 @@ export function SettingsScreen() {
 
         <FadeInView index={4}>
           <Card style={styles.section}>
+            <SectionTitle icon={IconShield}>Legal</SectionTitle>
+            <NavRow
+              title="Privacy Policy"
+              subtitle="How we collect, use, and protect your data"
+              onPress={() => navigation.navigate('PrivacyPolicy', {source: 'settings'})}
+              last
+            />
+          </Card>
+        </FadeInView>
+
+        <FadeInView index={5}>
+          <Card style={styles.section}>
             <SectionTitle icon={IconHeart}>About</SectionTitle>
             <View style={styles.row}>
               <View style={styles.rowText}>
@@ -436,7 +449,7 @@ export function SettingsScreen() {
           </Card>
         </FadeInView>
 
-        <FadeInView index={5}>
+        <FadeInView index={6}>
           <PressableScale onPress={() => void handleSignOut()} style={styles.signOut}>
             <IconLogout size={19} color={colors.expense} />
             <AppText style={styles.signOutText}>Sign out</AppText>

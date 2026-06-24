@@ -18,6 +18,8 @@ export type SettingsPatch = Partial<
     | 'setupComplete'
     | 'asOfDate'
     | 'notificationPrefs'
+    | 'privacyAcceptedAt'
+    | 'privacyPolicyVersion'
   >
 >;
 

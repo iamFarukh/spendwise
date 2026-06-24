@@ -8,6 +8,10 @@ declare module 'react-native-config' {
     FIREBASE_APP_ID?: string;
     FIREBASE_MEASUREMENT_ID?: string;
     GOOGLE_WEB_CLIENT_ID?: string;
+    PRIVACY_POLICY_URL?: string;
+    PRIVACY_POLICY_WEB_URL?: string;
+    APP_LOGIN_URL?: string;
+    APP_DASHBOARD_URL?: string;
   }
 
   export const Config: NativeConfig;

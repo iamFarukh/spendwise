@@ -10,6 +10,7 @@ import {flushPendingNotificationNavigation} from '@/lib/notifications/pending-na
 import {useAuth} from '@/providers/auth-provider';
 import {useUserSettings} from '@/hooks/use-user-settings';
 import {LoginScreen} from '@/screens/login-screen';
+import {PrivacyPolicyScreen} from '@/screens/privacy-policy-screen';
 import {SetupWizardScreen} from '@/screens/setup-wizard-screen';
 import {FirebaseMissingBanner} from '@/screens/more-screen';
 import {colors} from '@/constants/theme';
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   Login: undefined;
   Setup: undefined;
   Main: undefined;
+  PrivacyPolicy: {showAcceptance?: boolean; source?: string} | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -45,6 +47,7 @@ export function RootNavigator() {
               ) : (
                 <Stack.Screen name="Main" component={MainStack} />
               )}
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </SetupCompletionProvider>

@@ -17,6 +17,8 @@ export type SettingsPatch = Partial<
     | "includeTrackingInNetWorth"
     | "roundAmounts"
     | "lastBackupAt"
+    | "privacyAcceptedAt"
+    | "privacyPolicyVersion"
   >
 >;
 

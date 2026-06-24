@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+import { PrivacyConsentCheckbox } from "@/components/legal/privacy-consent-checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,6 +13,8 @@ import {
   signUpWithEmail,
 } from "@/lib/auth/actions";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { recordPrivacyAcceptance } from "@/lib/legal/privacy-acceptance";
+import { trackPrivacyPolicyDeclined } from "@/lib/analytics/privacy";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -21,14 +25,27 @@ export function LoginForm({ configured }: { configured: boolean }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+  function requirePrivacyConsent(): boolean {
+    if (mode !== "sign-up" || privacyAccepted) {
+      return true;
+    }
+    setError("Please accept the Privacy Policy to create an account.");
+    void trackPrivacyPolicyDeclined({ source: "login" });
+    return false;
+  }
 
   async function handleGoogleSignIn() {
-    if (!configured) return;
+    if (!configured || !requirePrivacyConsent()) return;
     setBusy(true);
     setError(null);
 
     try {
-      await signInWithGoogle();
+      const credential = await signInWithGoogle();
+      if (mode === "sign-up") {
+        await recordPrivacyAcceptance(credential.user.uid);
+      }
       router.replace("/dashboard");
     } catch (err) {
       setError(getAuthErrorMessage(err));
@@ -39,7 +56,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
 
   async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!configured) return;
+    if (!configured || !requirePrivacyConsent()) return;
     setBusy(true);
     setError(null);
 
@@ -47,7 +64,8 @@ export function LoginForm({ configured }: { configured: boolean }) {
       if (mode === "sign-in") {
         await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(email, password);
+        const credential = await signUpWithEmail(email, password);
+        await recordPrivacyAcceptance(credential.user.uid);
       }
 
       router.replace("/dashboard");
@@ -124,11 +142,23 @@ export function LoginForm({ configured }: { configured: boolean }) {
           </p>
         ) : null}
 
+        {mode === "sign-up" ? (
+          <PrivacyConsentCheckbox
+            checked={privacyAccepted}
+            onChange={setPrivacyAccepted}
+            disabled={busy || !configured}
+          />
+        ) : null}
+
         <Button
           type="submit"
           size="lg"
           fullWidth
-          disabled={busy || !configured}
+          disabled={
+            busy ||
+            !configured ||
+            (mode === "sign-up" && !privacyAccepted)
+          }
         >
           {busy
             ? "Please wait…"
@@ -143,8 +173,12 @@ export function LoginForm({ configured }: { configured: boolean }) {
         <button
           type="button"
           onClick={() => {
-            setMode(mode === "sign-in" ? "sign-up" : "sign-in");
+            const nextMode = mode === "sign-in" ? "sign-up" : "sign-in";
+            setMode(nextMode);
             setError(null);
+            if (nextMode === "sign-in") {
+              setPrivacyAccepted(false);
+            }
           }}
           className="font-bold text-mint-700"
         >
@@ -152,6 +186,14 @@ export function LoginForm({ configured }: { configured: boolean }) {
             ? "Create an account — setup takes 3 minutes."
             : "Sign in instead"}
         </button>
+      </p>
+
+      <p className="mt-4 text-center text-[11.5px] font-semibold leading-5 text-ink-400">
+        By continuing you agree to our{" "}
+        <Link href="/privacy" className="font-bold text-mint-700 underline">
+          Privacy Policy
+        </Link>
+        .
       </p>
     </div>
   );
