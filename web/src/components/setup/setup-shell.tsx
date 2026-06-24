@@ -2,6 +2,7 @@
 
 import { SpendWiseBrand } from "@/components/brand/spendwise-logo";
 import { IconCheck } from "@/components/icons";
+import { SetupStepLottie } from "@/components/setup/setup-step-lottie";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import {
@@ -12,46 +13,79 @@ import {
 
 type SetupShellProps = {
   step: SetupStep;
+  /** All steps render as done (used during the success state). */
+  complete?: boolean;
   onSaveExit?: () => void;
-  saving?: boolean;
+  savingExit?: boolean;
+  /** Makes completed stepper nodes clickable to jump back. */
+  onStepSelect?: (step: SetupStep) => void;
   children: React.ReactNode;
 };
 
 export function SetupShell({
   step,
+  complete = false,
   onSaveExit,
-  saving = false,
+  savingExit = false,
+  onStepSelect,
   children,
 }: SetupShellProps) {
   const stepIndex = SETUP_STEPS.indexOf(step);
+  const progress = complete ? 1 : (stepIndex + 1) / SETUP_STEPS.length;
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
-      <header className="setup-enter flex h-[78px] shrink-0 items-center gap-6 border-b border-line bg-paper px-6 lg:px-8">
+      <header className="setup-enter relative flex h-[78px] shrink-0 items-center gap-6 border-b border-line bg-paper px-6 lg:px-8">
         <SpendWiseBrand size={36} />
 
-        <SetupStepper current={step} />
+        <SetupStepper
+          current={step}
+          complete={complete}
+          onStepSelect={onStepSelect}
+        />
 
         <Button
           type="button"
           variant="ghost"
           onClick={onSaveExit}
-          disabled={saving}
+          loading={savingExit}
+          disabled={complete}
           className="ml-auto shrink-0"
         >
-          Save & exit
+          Save &amp; exit
         </Button>
+
+        {/* Mobile progress — the stepper is hidden below md. */}
+        <span
+          className="absolute inset-x-0 bottom-0 h-[3px] overflow-hidden md:hidden"
+          aria-hidden="true"
+        >
+          <span
+            className="setup-progress-bar block h-full bg-mint-500"
+            style={{ transform: `scaleX(${progress})` }}
+          />
+        </span>
       </header>
 
-      <div className="setup-enter mx-auto grid w-full max-w-[1100px] flex-1 items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:px-8">
+      <div className="setup-enter mx-auto grid w-full max-w-[1100px] flex-1 items-center gap-8 px-6 py-8 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-12">
         {children}
       </div>
     </div>
   );
 }
 
-function SetupStepper({ current }: { current: SetupStep }) {
-  const currentIndex = SETUP_STEPS.indexOf(current);
+function SetupStepper({
+  current,
+  complete,
+  onStepSelect,
+}: {
+  current: SetupStep;
+  complete: boolean;
+  onStepSelect?: (step: SetupStep) => void;
+}) {
+  const currentIndex = complete
+    ? SETUP_STEPS.length
+    : SETUP_STEPS.indexOf(current);
 
   return (
     <nav
@@ -60,8 +94,42 @@ function SetupStepper({ current }: { current: SetupStep }) {
     >
       {SETUP_STEPS.map((step, index) => {
         const done = index < currentIndex;
-        const active = step === current;
+        const active = !complete && step === current;
         const connectorFilled = index <= currentIndex;
+        const clickable = done && !!onStepSelect;
+
+        const node = (
+          <>
+            <span
+              className={cn(
+                "relative grid h-[30px] w-[30px] place-items-center rounded-full text-[13px] font-bold transition-[background-color,color,box-shadow,transform] duration-300 ease-[var(--ease-out)]",
+                active &&
+                  "scale-100 bg-mint-50 text-mint-700 shadow-[0_0_0_4px_var(--mint-100)]",
+                done && "scale-100 bg-mint-100 text-mint-700",
+                !active && !done && "scale-95 bg-canvas-2 text-ink-500",
+                clickable && "group-hover/step:bg-mint-200",
+              )}
+            >
+              {done ? (
+                <IconCheck className="setup-step-check h-3.5 w-3.5" />
+              ) : (
+                index + 1
+              )}
+              {active ? (
+                <span className="setup-stepper-pulse pointer-events-none absolute inset-0 rounded-full" />
+              ) : null}
+            </span>
+            <span
+              className={cn(
+                "hidden text-[13px] font-bold transition-colors duration-200 ease-[var(--ease-out)] lg:inline",
+                active ? "text-ink-900" : done ? "text-ink-700" : "text-ink-500",
+                clickable && "group-hover/step:text-mint-700",
+              )}
+            >
+              {SETUP_STEP_LABELS[step]}
+            </span>
+          </>
+        );
 
         return (
           <div key={step} className="flex items-center gap-1">
@@ -78,36 +146,23 @@ function SetupStepper({ current }: { current: SetupStep }) {
                 />
               </span>
             ) : null}
-            <div
-              className={cn(
-                "flex items-center gap-2 text-[13px] font-bold transition-colors duration-200 ease-[var(--ease-out)]",
-                active ? "text-ink-900" : done ? "text-ink-700" : "text-ink-400",
-              )}
-            >
-              <span
-                className={cn(
-                  "grid h-[26px] w-[26px] place-items-center rounded-full text-[13px] transition-[background-color,color,box-shadow,transform] duration-300 ease-[var(--ease-out)]",
-                  active &&
-                    "scale-100 bg-mint-500 text-white shadow-[0_0_0_4px_var(--mint-100)]",
-                  done && !active && "scale-100 bg-mint-100 text-mint-700",
-                  !active && !done && "scale-95 bg-canvas-2 text-ink-400",
-                )}
+            {clickable ? (
+              <button
+                type="button"
+                onClick={() => onStepSelect?.(step)}
+                title={`Go back to ${SETUP_STEP_LABELS[step]}`}
+                className="group/step flex cursor-pointer items-center gap-2 rounded-pill p-0.5 pr-1.5 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-mint-200"
               >
-                {done ? (
-                  <IconCheck className="setup-step-check h-3.5 w-3.5" />
-                ) : (
-                  index + 1
-                )}
-              </span>
-              <span
-                className={cn(
-                  "hidden transition-[opacity,transform] duration-300 ease-[var(--ease-out)] lg:inline",
-                  active ? "translate-x-0 opacity-100" : "translate-x-0 opacity-80",
-                )}
+                {node}
+              </button>
+            ) : (
+              <div
+                className="flex items-center gap-2 p-0.5 pr-1.5"
+                aria-current={active ? "step" : undefined}
               >
-                {SETUP_STEP_LABELS[step]}
-              </span>
-            </div>
+                {node}
+              </div>
+            )}
           </div>
         );
       })}
@@ -116,11 +171,13 @@ function SetupStepper({ current }: { current: SetupStep }) {
 }
 
 export function SetupIntro({
+  step,
   kicker,
   title,
   description,
   note,
 }: {
+  step: SetupStep;
   kicker: string;
   title: string;
   description: string;
@@ -128,21 +185,22 @@ export function SetupIntro({
 }) {
   return (
     <div>
-      <span className="mb-3 inline-block text-[11.5px] font-extrabold tracking-wide text-mint-600 uppercase">
+      <SetupStepLottie step={step} className="mb-5 lg:mb-6" />
+      <span className="mb-3 inline-block text-[11.5px] font-extrabold tracking-wide text-mint-700 uppercase">
         {kicker}
       </span>
-      <h2 className="font-display text-[32px] leading-[1.12] font-bold tracking-[-0.8px] text-ink-900">
+      <h2 className="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.6px] text-ink-900 lg:text-[32px] lg:tracking-[-0.8px]">
         {title}
       </h2>
       <p className="mt-3 text-base text-ink-500">{description}</p>
-      {note ? <div className="mt-6">{note}</div> : null}
+      {note ? <div className="mt-6 hidden lg:block">{note}</div> : null}
     </div>
   );
 }
 
 export function SetupPanel({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-line bg-paper p-6 shadow-md transition-[box-shadow] duration-300 ease-[var(--ease-out)]">
+    <section className="rounded-xl border border-line bg-paper p-5 shadow-md lg:p-6">
       {children}
     </section>
   );
@@ -177,13 +235,11 @@ function ShieldIcon() {
 
 export function SetupFooter({
   onBack,
-  onNext,
   nextLabel,
   busy = false,
   disableNext = false,
 }: {
   onBack?: () => void;
-  onNext: () => void;
   nextLabel: string;
   busy?: boolean;
   disableNext?: boolean;
@@ -197,12 +253,8 @@ export function SetupFooter({
       ) : (
         <span />
       )}
-      <Button
-        type="button"
-        onClick={onNext}
-        disabled={busy || disableNext}
-      >
-        {busy ? "Saving…" : nextLabel}
+      <Button type="submit" loading={busy} disabled={disableNext}>
+        {nextLabel}
       </Button>
     </div>
   );

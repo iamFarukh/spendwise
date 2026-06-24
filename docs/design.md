@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last updated:** 10 June 2026
-**Surface:** Web portal (Next.js + Tailwind), with a mobile companion later
+**Surface:** Web portal (Next.js + Tailwind), shipping now. Future companion: bare React Native mobile app (no Expo).
 **Theme support:** Light + Dark (the portal ships a theme toggle)
 
 > This is the single source of truth for color, type, spacing, components, and accessibility. Engineering consumes the tokens in §11 directly; design works from the primitives and semantic layers. **Do not hardcode hex values in components — always go through a semantic token.**

@@ -111,16 +111,19 @@ export function validateTransactionForm(
       return null;
     }
     case "INVESTMENT": {
-      if (!input.fromAccountId || !input.toAccountId) {
-        return "Choose both accounts for the investment.";
+      if (!input.fromAccountId) {
+        return "Choose which account paid for this investment.";
       }
       const from = byId.get(input.fromAccountId);
-      const to = byId.get(input.toAccountId);
       if (!from || from.class !== "ASSET") {
         return "Investments move money from an asset account.";
       }
+      if (!input.toAccountId) {
+        return null;
+      }
+      const to = byId.get(input.toAccountId);
       if (!to || to.class !== "TRACKING") {
-        return "Investments move money into a tracking account.";
+        return "Invest into a tracking account, or leave blank for simple SIP tracking.";
       }
       return null;
     }

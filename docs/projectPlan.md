@@ -1,9 +1,9 @@
 # Personal Finance Operating System (PFOS)
 
 **Version:** 3.0 (generalized — multi-account, multi-user)
-**Last updated:** 10 June 2026
+**Last updated:** 14 June 2026
 **Owner model:** Multi-user. Each user owns their own private data.
-**Platforms:** React Native (mobile) + Next.js (web dashboard), both on Firebase
+**Platforms:** Next.js (web dashboard, shipping now) + React Native bare mobile app (planned — **no Expo**), both on Firebase
 
 > **What changed in 3.0:** the engine is identical, but nothing is hardcoded to a fixed set of accounts anymore. A user creates **any number of accounts**, gives each a **class** (asset / liability / tracking), and **designates one as the Primary account**. All accounting rules now key off the account **class** and the transaction **type** — never off a specific account ID like "main" or "spending." Currency and timezone are user settings. Everything else from v2 (the one rule, day-zero init, all transaction types, splitting, loans, recurring, capture/dedup, reconciliation, reports, backup) is preserved.
 
@@ -451,9 +451,11 @@ users/{uid}
 
 ---
 
-## 17. Mobile App Features
+## 17. Mobile App Features (future — bare React Native)
 
-Create / Edit / Delete transaction · Natural-language quick entry (defaults to Primary account) · Manage accounts (add/edit/archive, set Primary) · Review pending · Confirm recurring · Reconcile account · View reports · Search & filter (by merchant, amount range, date, category, account, type) · Account balances.
+When the `mobile/` workspace is added, it will be a **bare React Native** app (React Navigation, Gradle/Xcode builds — not Expo). Features:
+
+Create / Edit / Delete transaction · Natural-language quick entry (defaults to Primary account) · Manage accounts (add/edit/archive, set Primary) · Review pending · Confirm recurring · Reconcile account · View reports · Search & filter (by merchant, amount range, date, category, account, type) · Account balances · Android SMS capture (Phase 3).
 
 ## 18. Web Dashboard Features
 

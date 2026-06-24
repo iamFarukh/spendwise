@@ -15,6 +15,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { ensureDefaultCategories } from "@/lib/categories/service";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { getFirestoreErrorMessage } from "@/lib/firebase/errors";
+import { entitiesFromSnapshot } from "@/lib/firebase/snapshot";
 
 type LedgerDataContextValue = {
   transactions: Transaction[];
@@ -57,7 +58,7 @@ export function LedgerDataProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onSnapshot(
       ref,
       (snap) => {
-        setTransactions(snap.docs.map((doc) => doc.data() as Transaction));
+        setTransactions(entitiesFromSnapshot<Transaction>(snap.docs));
         setTransactionsLoading(false);
         setTransactionsError(null);
       },
@@ -100,9 +101,7 @@ export function LedgerDataProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onSnapshot(
       ref,
       (snap) => {
-        const next = snap.docs
-          .map((docSnap) => docSnap.data() as Category)
-          .sort((a, b) => {
+        const next = entitiesFromSnapshot<Category>(snap.docs).sort((a, b) => {
             if (Boolean(a.system) !== Boolean(b.system)) {
               return a.system ? 1 : -1;
             }

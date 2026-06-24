@@ -15,13 +15,17 @@ export function RecurringRunner() {
       return;
     }
 
-    void runDueRecurringTemplates(user.uid, settings.timezone).catch(() => {
-      // Retry on the next focus or mount.
+    void runDueRecurringTemplates(user.uid, settings.timezone).catch((err) => {
+      // Idempotent posting (deterministic ids) makes a retry safe on the next
+      // focus or mount; log so failures aren't silently swallowed.
+      console.error("Recurring runner failed:", err);
     });
   }, [settings, setupComplete, user]);
 
   useEffect(() => {
     run();
+    const interval = window.setInterval(run, 60 * 60 * 1000);
+    return () => window.clearInterval(interval);
   }, [run]);
 
   useEffect(() => {

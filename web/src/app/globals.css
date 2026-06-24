@@ -32,6 +32,7 @@
   --income: #12b886;
   --income-bg: #e4f8ef;
   --expense: #e26a57;
+  --expense-strong: #b5402e;
   --expense-bg: #fcede9;
   --invest: #5b86e5;
   --invest-bg: #eaf0fd;
@@ -64,6 +65,9 @@
   --z-dropdown: 40;
   --z-modal: 50;
   --z-toast: 60;
+
+  /* Single source of truth for disabled affordances. */
+  --opacity-disabled: 0.55;
 }
 
 @theme inline {
@@ -96,6 +100,7 @@
   --color-income: var(--income);
   --color-income-bg: var(--income-bg);
   --color-expense: var(--expense);
+  --color-expense-strong: var(--expense-strong);
   --color-expense-bg: var(--expense-bg);
   --color-invest: var(--invest);
   --color-invest-bg: var(--invest-bg);
@@ -183,23 +188,265 @@
   }
 
   .setup-step-enter-forward {
-    animation: setup-step-in-forward 280ms var(--ease-out) forwards;
+    animation: setup-step-in-forward 260ms var(--ease-out) both;
   }
 
   .setup-step-enter-back {
-    animation: setup-step-in-back 280ms var(--ease-out) forwards;
+    animation: setup-step-in-back 260ms var(--ease-out) both;
+  }
+
+  .setup-step-exit-forward {
+    animation: setup-step-out-forward 150ms var(--ease-standard) both;
+  }
+
+  .setup-step-exit-back {
+    animation: setup-step-out-back 150ms var(--ease-standard) both;
   }
 
   .setup-intro-enter {
-    animation: setup-intro-in 300ms var(--ease-out) forwards;
+    animation: setup-intro-in 300ms var(--ease-out) both;
+  }
+
+  .setup-intro-exit {
+    animation: setup-intro-out 150ms var(--ease-standard) both;
   }
 
   .setup-step-check {
     animation: setup-check-in 240ms var(--ease-out) forwards;
   }
 
+  .setup-step-check path {
+    stroke-dasharray: 26;
+    stroke-dashoffset: 26;
+    animation: check-draw 300ms var(--ease-out) 60ms forwards;
+  }
+
+  .setup-row-flash {
+    animation: setup-row-flash 900ms var(--ease-out) both;
+  }
+
+  .setup-undo-enter {
+    animation: setup-message-in 200ms var(--ease-out) both;
+  }
+
+  .input-shake {
+    animation: input-shake 340ms var(--ease-out) both;
+  }
+
+  .setup-lottie-swap {
+    animation: setup-lottie-swap 340ms var(--ease-out) both;
+  }
+
+  .setup-success-card {
+    animation: setup-success-pop 420ms var(--ease-out) both;
+  }
+
+  .setup-success-circle {
+    stroke-dasharray: 190;
+    stroke-dashoffset: 190;
+    animation: check-draw 520ms var(--ease-out) 120ms forwards;
+  }
+
+  .setup-success-check {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: check-draw 340ms var(--ease-out) 560ms forwards;
+  }
+
+  .setup-success-ripple {
+    animation: setup-success-ripple 1.1s var(--ease-out) 620ms both;
+  }
+
+  .setup-success-copy {
+    animation: setup-intro-in 380ms var(--ease-out) 700ms both;
+  }
+
+  .setup-success-figure {
+    animation: setup-intro-in 380ms var(--ease-out) 860ms both;
+  }
+
+  .setup-confetti {
+    position: absolute;
+    top: 18%;
+    width: 7px;
+    height: 11px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: setup-confetti-fall 1.25s var(--ease-standard) both;
+  }
+
   .setup-message-enter {
     animation: setup-message-in 220ms var(--ease-out) forwards;
+  }
+
+  .setup-lottie-glow {
+    background: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--mint-200) 55%, transparent) 0%,
+      transparent 72%
+    );
+    animation: setup-lottie-glow 3s var(--ease-out) infinite;
+  }
+
+  .setup-lottie-ring {
+    border: 1.5px solid color-mix(in oklab, var(--mint-300) 35%, transparent);
+    animation: setup-lottie-ring 3s var(--ease-out) infinite;
+  }
+
+  .setup-stepper-pulse {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--mint-500) 35%, transparent);
+    animation: setup-stepper-pulse 2.4s var(--ease-out) infinite;
+  }
+
+  .setup-loading-intro {
+    animation: setup-intro-in 360ms var(--ease-out) forwards;
+  }
+
+  .setup-loading-caption {
+    animation: setup-message-in 280ms var(--ease-out) 120ms backwards;
+  }
+
+  .setup-loading-dots {
+    display: inline-flex;
+    gap: 1px;
+    margin-left: 1px;
+  }
+
+  .setup-loading-dot {
+    display: inline-block;
+    width: 3px;
+    animation: setup-loading-dot 1.2s var(--ease-out) infinite;
+  }
+
+  .setup-loading-dot:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .setup-loading-dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  .setup-loading-step-active {
+    animation: setup-stepper-pulse 2.4s var(--ease-out) infinite;
+  }
+
+  .brand-loader-enter {
+    animation: page-enter 360ms var(--ease-out) both;
+  }
+
+  .brand-loader-glow {
+    background: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--mint-200) 55%, transparent) 0%,
+      transparent 70%
+    );
+    animation: setup-lottie-glow 2.8s var(--ease-out) infinite;
+  }
+
+  .brand-loader-mark {
+    animation: brand-breathe 2.8s var(--ease-out) infinite;
+  }
+
+  .brand-loader-orbit {
+    animation: spin-reverse 2.6s linear infinite;
+  }
+
+  .brand-loader-caption {
+    animation: setup-message-in 320ms var(--ease-out) 140ms backwards;
+  }
+
+  .empty-state-enter {
+    animation: empty-state-in 420ms var(--ease-out) both;
+  }
+
+  .subscription-preview-enter {
+    animation: stagger-in 240ms var(--ease-out) both;
+  }
+
+  .modal-backdrop-enter {
+    animation: fade-in 180ms var(--ease-out) both;
+  }
+
+  .modal-backdrop-exit {
+    animation: fade-out 160ms var(--ease-standard) both;
+  }
+
+  .modal-panel-enter {
+    animation: modal-pop-in 220ms var(--ease-out) both;
+  }
+
+  .modal-panel-exit {
+    animation: modal-pop-out 160ms var(--ease-standard) both;
+  }
+
+  .toast-enter {
+    animation: toast-in 240ms var(--ease-out) both;
+  }
+
+  .toast-exit {
+    animation: toast-out 200ms var(--ease-standard) both;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
   }
 }
 
@@ -281,26 +528,176 @@
 @keyframes setup-step-in-forward {
   from {
     opacity: 0;
-    transform: translateX(14px);
-    filter: blur(3px);
+    transform: translateX(18px);
   }
   to {
     opacity: 1;
     transform: translateX(0);
-    filter: blur(0);
   }
 }
 
 @keyframes setup-step-in-back {
   from {
     opacity: 0;
-    transform: translateX(-14px);
-    filter: blur(3px);
+    transform: translateX(-18px);
   }
   to {
     opacity: 1;
     transform: translateX(0);
-    filter: blur(0);
+  }
+}
+
+@keyframes setup-step-out-forward {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+
+@keyframes setup-step-out-back {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+@keyframes setup-intro-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes setup-row-flash {
+  0% {
+    background-color: var(--mint-100);
+    box-shadow: 0 0 0 3px var(--mint-100);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes input-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes setup-lottie-swap {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes setup-success-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.015) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes setup-success-ripple {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes setup-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) rotate(0deg) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(4px) rotate(40deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(110px) rotate(320deg) scale(0.9);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes brand-breathe {
+  0%,
+  100% {
+    transform: scale(0.97);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes empty-state-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -337,11 +734,77 @@
   }
 }
 
+@keyframes setup-lottie-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes setup-lottie-ring {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes setup-stepper-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--mint-500) 30%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--mint-500) 0%, transparent);
+  }
+}
+
+@keyframes setup-loading-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer {
     background: var(--line-soft);
     animation: none;
   }
+}
+
+/* Essential progress indicators — stay animated under reduced motion. */
+.btn-spinner {
+  animation: spin 700ms linear infinite !important;
+}
+
+.brand-loader-arc {
+  transform-origin: center;
+  animation: spin 1.1s linear infinite !important;
+}
+
+.setup-progress-bar {
+  transform-origin: left;
+  transition: transform 420ms var(--ease-out);
+}
+
+.animated-height {
+  transition: height 280ms var(--ease-out);
 }
 
 body {

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { getFirestoreErrorMessage } from "@/lib/firebase/errors";
+import { entitiesFromSnapshot } from "@/lib/firebase/snapshot";
 
 export function useRecurring() {
   const { user, configured } = useAuth();
@@ -34,9 +35,9 @@ export function useRecurring() {
     const unsubscribe = onSnapshot(
       ref,
       (snap) => {
-        const next = snap.docs
-          .map((docSnap) => docSnap.data() as RecurringTemplate)
-          .sort((a, b) => a.nextRunDate.localeCompare(b.nextRunDate));
+        const next = entitiesFromSnapshot<RecurringTemplate>(snap.docs).sort(
+          (a, b) => a.nextRunDate.localeCompare(b.nextRunDate),
+        );
         setTemplates(next);
         setLoading(false);
         setError(null);

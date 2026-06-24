@@ -134,6 +134,31 @@ export function computeLedgerSummary(
   };
 }
 
+// Constructing `Intl.DateTimeFormat` is one of the most expensive ops on
+// Hermes; this function is called once per visible transaction row. Cache one
+// formatter per timezone (null = this runtime's Intl rejects the IANA zone, so
+// fall back to manual formatting without re-trying the throw every call).
+const dayMonthFormatterCache = new Map<string, Intl.DateTimeFormat | null>();
+
+function getDayMonthFormatter(timezone: string): Intl.DateTimeFormat | null {
+  const cached = dayMonthFormatterCache.get(timezone);
+  if (cached !== undefined) {
+    return cached;
+  }
+  try {
+    const fmt = new Intl.DateTimeFormat("en-IN", {
+      day: "numeric",
+      month: "short",
+      timeZone: timezone,
+    });
+    dayMonthFormatterCache.set(timezone, fmt);
+    return fmt;
+  } catch {
+    dayMonthFormatterCache.set(timezone, null);
+    return null;
+  }
+}
+
 export function formatRelativeTransactionDate(
   date: string,
   timezone: string,
@@ -152,13 +177,19 @@ export function formatRelativeTransactionDate(
     return "Yesterday";
   }
 
-  try {
-    return new Intl.DateTimeFormat("en-IN", {
-      day: "numeric",
-      month: "short",
-      timeZone: timezone,
-    }).format(new Date(`${date}T12:00:00`));
-  } catch {
+  const formatter = getDayMonthFormatter(timezone);
+  if (formatter) {
+    return formatter.format(new Date(`${date}T12:00:00`));
+  }
+
+  // Runtimes whose Intl rejects IANA zones: format "D Mon" manually.
+  const monthsShort = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const [, month, day] = date.split("-").map(Number);
+  if (!month || !day) {
     return date;
   }
+  return `${day} ${monthsShort[(month - 1) % 12]}`;
 }

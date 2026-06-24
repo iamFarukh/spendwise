@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { FirebaseAnalytics } from "@/components/providers/firebase-analytics";
 import { LedgerDataProvider } from "@/components/providers/ledger-data-provider";
 import { RecurringRunner } from "@/components/providers/recurring-runner";
+import { ToastProvider } from "@/components/providers/toast-provider";
 import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
 import "./globals.css";
@@ -49,9 +50,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <LedgerDataProvider>
-            <FirebaseAnalytics />
-            <RecurringRunner />
-            {children}
+            <ToastProvider>
+              <FirebaseAnalytics />
+              <RecurringRunner />
+              {children}
+            </ToastProvider>
           </LedgerDataProvider>
         </AuthProvider>
       </body>

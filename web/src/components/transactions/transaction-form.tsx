@@ -432,7 +432,7 @@ export function TransactionFormScreen({
           />
         </div>
 
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-4 xl:sticky xl:top-0 xl:self-start">
           <section className="rounded-xl border border-mint-200 bg-tint p-5">
             <div className="mb-2.5 inline-flex items-center gap-2 text-[13px] font-extrabold text-mint-700">
               <ShieldIcon />

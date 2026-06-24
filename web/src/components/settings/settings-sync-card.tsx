@@ -1,10 +1,9 @@
 "use client";
 
-import { firebaseConfig, isFirebaseConfigured } from "@/lib/firebase/config";
+import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { Tag } from "@/components/ui/tag";
 
 type SettingsSyncCardProps = {
-  uid: string;
   email: string;
   transactionCount: number;
   accountCount: number;
@@ -14,7 +13,6 @@ type SettingsSyncCardProps = {
 };
 
 export function SettingsSyncCard({
-  uid,
   email,
   transactionCount,
   accountCount,
@@ -22,10 +20,17 @@ export function SettingsSyncCard({
   transactionsError,
   setupComplete,
 }: SettingsSyncCardProps) {
-  const projectId = firebaseConfig.projectId ?? "not configured";
   const configured = isFirebaseConfigured();
-  const healthy =
-    configured && !transactionsError && transactionCount > 0 && setupComplete;
+  const synced =
+    configured && !transactionsError && setupComplete;
+
+  const ledgerSummary = [
+    transactionCount === 1
+      ? "1 transaction"
+      : `${transactionCount} transactions`,
+    accountCount === 1 ? "1 account" : `${accountCount} accounts`,
+    categoryCount === 1 ? "1 category" : `${categoryCount} categories`,
+  ].join(" · ");
 
   return (
     <section className="rounded-lg border border-line bg-paper p-5">
@@ -34,22 +39,17 @@ export function SettingsSyncCard({
       </h3>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Tag variant={healthy ? "income" : "pending"} dot>
-          {healthy ? "Synced to Firebase" : "Check sync"}
+        <Tag variant={synced ? "income" : "pending"} dot>
+          {synced ? "Everything synced" : "Sync needs attention"}
         </Tag>
         {!configured ? (
-          <Tag variant="expense">Firebase not configured</Tag>
+          <Tag variant="expense">Cloud not configured</Tag>
         ) : null}
       </div>
 
       <dl className="space-y-2 text-sm">
-        <SyncRow label="Project" value={projectId} />
-        <SyncRow label="Your user ID" value={uid} mono />
         <SyncRow label="Signed in as" value={email} />
-        <SyncRow
-          label="In app right now"
-          value={`${transactionCount} transactions · ${accountCount} accounts · ${categoryCount} categories`}
-        />
+        <SyncRow label="Your ledger" value={ledgerSummary} />
       </dl>
 
       {transactionsError ? (
@@ -61,43 +61,36 @@ export function SettingsSyncCard({
         </p>
       ) : null}
 
-      {!transactionsError && transactionCount === 0 ? (
+      {!transactionsError && !setupComplete ? (
         <p className="mt-4 text-sm leading-relaxed text-ink-600">
-          The app sees <b>0 transactions</b> in Firestore for this login. In the
-          Firebase console, open{" "}
-          <code className="rounded bg-tint px-1 font-mono text-xs">
-            users / {uid.slice(0, 8)}… / transactions
-          </code>
-          . If that collection is missing, saves are not reaching the cloud —
-          add a transaction and watch for a red error on the form.
+          Finish setup to start syncing your accounts and transactions to the
+          cloud.
         </p>
       ) : null}
 
-      <p className="mt-3 text-xs font-semibold text-ink-500">
-        Mobile will use the same project ID and this user ID when you sign in
-        with the same account.
-      </p>
+      {!transactionsError && setupComplete && transactionCount === 0 ? (
+        <p className="mt-4 text-sm leading-relaxed text-ink-600">
+          Your account is connected, but no transactions are saved yet. Add one
+          from the dashboard — if it does not appear here, check for an error on
+          the form.
+        </p>
+      ) : null}
+
+      {synced ? (
+        <p className="mt-3 text-xs font-semibold text-ink-500">
+          Sign in with the same account on another device or browser to pick up
+          where you left off.
+        </p>
+      ) : null}
     </section>
   );
 }
 
-function SyncRow({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
+function SyncRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-4">
       <dt className="font-semibold text-ink-500">{label}</dt>
-      <dd
-        className={`font-semibold text-ink-900 ${mono ? "font-mono text-xs break-all" : ""}`}
-      >
-        {value}
-      </dd>
+      <dd className="font-semibold text-ink-900">{value}</dd>
     </div>
   );
 }

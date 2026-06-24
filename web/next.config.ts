@@ -9,6 +9,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(rootDir, ".."),
   },
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
+  experimental: {
+    // Tree-shake large libraries down to only the imports actually used.
+    optimizePackageImports: ["firebase", "lottie-react"],
+  },
 };
 
 export default nextConfig;

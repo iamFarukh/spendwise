@@ -8,6 +8,7 @@ import {
   IconWallet,
 } from "@/components/icons";
 import { IconChip } from "@/components/ui/icon-chip";
+import { cn } from "@/lib/cn";
 import { accountChipStyle } from "@/lib/setup/account-style";
 import type { DraftAccount } from "@/lib/setup/types";
 import { CLASS_LABELS, ACCOUNT_KIND_OPTIONS } from "@/lib/setup/constants";
@@ -47,9 +48,16 @@ export function AccountRow({
           {CLASS_LABELS[account.class]} · {kindLabel}
         </small>
       </div>
-      {showBalance && amount > 0 ? (
+      {showBalance ? (
         <span
-          className={`tnum font-display text-[15px] font-bold whitespace-nowrap ${account.class === "LIABILITY" ? "text-expense" : "text-ink-900"}`}
+          className={cn(
+            "tnum font-display text-[15px] font-bold whitespace-nowrap",
+            account.class === "LIABILITY" && amount > 0
+              ? "text-expense-strong"
+              : amount > 0
+                ? "text-ink-900"
+                : "text-ink-400",
+          )}
         >
           {displayAmount}
         </span>

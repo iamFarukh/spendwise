@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   canReconcileAccount,
@@ -17,6 +17,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useReconciliations } from "@/hooks/use-reconciliations";
 import { useTransactions } from "@/hooks/use-transactions";
@@ -61,32 +62,21 @@ function ReconcileContent() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (reconcileable.length === 0) {
-      setSelectedId(null);
-      return;
+  // Selection is derived: a stale or empty selectedId falls back to the
+  // first account due for reconciliation, so no syncing effect is needed.
+  const selected = useMemo(() => {
+    const current = reconcileable.find(
+      ({ account }) => account.id === selectedId,
+    );
+    if (current) {
+      return current;
     }
-
-    setSelectedId((current) => {
-      if (current && reconcileable.some(({ account }) => account.id === current)) {
-        return current;
-      }
-
-      const dueAccount = reconcileable.find(({ account }) =>
-        isReconciliationDue(
-          account,
-          lastByAccount.get(account.id),
-          timezone,
-        ),
-      );
-
-      return dueAccount?.account.id ?? reconcileable[0]?.account.id ?? null;
-    });
-  }, [lastByAccount, reconcileable, timezone]);
-
-  const selected = reconcileable.find(
-    ({ account }) => account.id === selectedId,
-  );
+    return (
+      reconcileable.find(({ account }) =>
+        isReconciliationDue(account, lastByAccount.get(account.id), timezone),
+      ) ?? reconcileable[0]
+    );
+  }, [lastByAccount, reconcileable, selectedId, timezone]);
 
   const loading =
     settingsLoading ||
@@ -129,21 +119,28 @@ function ReconcileContent() {
       }
     >
       {reconcileable.length === 0 ? (
-        <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-          No accounts are set up for reconciliation.{" "}
-          <Link href="/accounts" className="font-bold text-mint-700">
-            Back to accounts
-          </Link>
-        </div>
+        <EmptyState
+          bordered
+          animation="wallet"
+          title="Nothing to reconcile"
+          description="No accounts are set up for reconciliation yet."
+          action={
+            <EmptyStateAction href="/accounts">
+              Back to accounts
+            </EmptyStateAction>
+          }
+        />
       ) : (
         <div className="recon-page grid grid-cols-1 items-start gap-5 xl:grid-cols-[280px_1fr]">
-          <ReconcileAccountPicker
-            accounts={reconcileable}
-            selectedId={selectedId}
-            lastByAccount={lastByAccount}
-            timezone={timezone}
-            onSelect={setSelectedId}
-          />
+          <div className="xl:sticky xl:top-0 xl:self-start">
+            <ReconcileAccountPicker
+              accounts={reconcileable}
+              selectedId={selected?.account.id ?? null}
+              lastByAccount={lastByAccount}
+              timezone={timezone}
+              onSelect={setSelectedId}
+            />
+          </div>
 
           {selected && user ? (
             <ReconcilePanel

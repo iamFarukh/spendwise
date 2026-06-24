@@ -10,6 +10,7 @@ import { deleteDoc, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { sanitizeForFirestore } from "@/lib/firebase/sanitize";
 import { touchUserDocument } from "@/lib/firebase/user-doc";
+import { advanceSipAfterConfirm } from "@/lib/sip/service";
 
 export async function saveTransaction(
   uid: string,
@@ -82,10 +83,18 @@ export async function verifyTransaction(
     throw new Error("Firebase is not configured.");
   }
 
-  await updateDoc(doc(db, firestorePaths.transaction(uid, transactionId)), {
+  const ref = doc(db, firestorePaths.transaction(uid, transactionId));
+  const snap = await getDoc(ref);
+  const txn = snap.exists() ? (snap.data() as Transaction) : null;
+
+  await updateDoc(ref, {
     status: "VERIFIED",
     updatedAt: new Date().toISOString(),
   });
+
+  if (txn?.recurringId && txn.type === "INVESTMENT") {
+    await advanceSipAfterConfirm(uid, txn.recurringId, txn.date);
+  }
 }
 
 export async function deleteTransaction(

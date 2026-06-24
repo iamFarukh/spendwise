@@ -94,8 +94,14 @@ export function groupTransactionsByDate(
   transactions: Transaction[],
 ): { date: string; items: Transaction[] }[] {
   const groups = new Map<string, Transaction[]>();
+  const seenIds = new Set<string>();
 
   for (const txn of transactions) {
+    if (seenIds.has(txn.id)) {
+      continue;
+    }
+    seenIds.add(txn.id);
+
     const bucket = groups.get(txn.date) ?? [];
     bucket.push(txn);
     groups.set(txn.date, bucket);

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import {
   isEditableTransaction,
+  formatPendingBadge,
   type Transaction,
 } from "@pfos/shared";
 
@@ -17,6 +18,7 @@ import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/tag";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
@@ -116,13 +118,15 @@ function PendingContent() {
     );
   }
 
+  const pendingBadge = formatPendingBadge(pending.length);
+
   return (
     <AppShell
       title="Pending review"
       subtitle={
         pending.length === 0
           ? "All caught up"
-          : `${pending.length} ${pending.length === 1 ? "entry needs" : "entries need"} your attention`
+          : `${pendingBadge ?? pending.length} ${pending.length === 1 ? "entry needs" : "entries need"} your tick`
       }
       showSearch={false}
       headerActions={
@@ -141,11 +145,8 @@ function PendingContent() {
             <b className="text-ink-900">
               Not yet in your numbers until you confirm.
             </b>{" "}
-            Review the category and account, then confirm. Entries stay{" "}
-            <code className="rounded bg-pending-bg px-1.5 py-0.5 text-[12px] font-bold text-pending">
-              PENDING
-            </code>{" "}
-            until you do.
+            Review the amount and account, then tap ✓ to confirm. SIP
+            payments land here automatically on their due date.
           </div>
         </div>
 
@@ -159,13 +160,17 @@ function PendingContent() {
         ) : null}
 
         {pending.length === 0 ? (
-          <div className="rounded-xl border border-line bg-paper p-10 text-center text-sm text-ink-500">
-            No pending entries.{" "}
-            <Link href="/transactions/new" className="font-bold text-mint-700">
-              Add a transaction
-            </Link>{" "}
-            or mark one as pending when saving.
-          </div>
+          <EmptyState
+            bordered
+            animation="caught-up"
+            title="All caught up"
+            description="Nothing needs your review. Entries you mark as pending while saving will land here."
+            action={
+              <EmptyStateAction href="/transactions/new">
+                Add a transaction
+              </EmptyStateAction>
+            }
+          />
         ) : (
           <div className="space-y-3">
             {pending.map((txn, index) => (
@@ -220,6 +225,7 @@ function PendingCard({
         </b>
         <small className="mt-0.5 block text-[12px] font-semibold text-ink-400">
           {accountLabel} · {formatTransactionDetailDate(txn.date, timezone)}
+          {txn.recurringId && txn.type === "INVESTMENT" ? " · SIP" : ""}
         </small>
       </div>
 
@@ -255,7 +261,7 @@ function PendingCard({
         ) : null}
         <Button onClick={onConfirm} disabled={busy}>
           <IconCheck className="h-4 w-4" />
-          {busy ? "…" : "Confirm"}
+          {busy ? "…" : "✓"}
         </Button>
       </div>
     </article>

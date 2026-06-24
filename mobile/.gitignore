@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# env (never commit secrets)
+.env
+
+# Metro
+.metro-health-check*
+
+# Android build artifacts
+android/.gradle/
+android/app/build/
+android/build/
+android/.cxx/
+android/app/.cxx/
+
+# iOS build artifacts
+ios/build/
+ios/Pods/
+
+# Xcode
+*.xcuserstate
+*.xcodeproj/xcuserdata/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+
+# Firebase config files (user adds locally — see README)
+google-services.json
+GoogleService-Info.plist

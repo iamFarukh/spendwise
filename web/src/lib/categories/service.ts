@@ -1,11 +1,13 @@
 import { DEFAULT_CATEGORIES, firestorePaths, type Category } from "@pfos/shared";
 import {
   collection,
-  deleteDoc,
   doc,
+  getDoc,
   getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 
@@ -85,6 +87,14 @@ export async function updateCategory(
   });
 }
 
+/** Firestore caps a write batch at 500 operations. */
+const BATCH_LIMIT = 450;
+
+/**
+ * Deletes a category and reassigns any transactions that referenced it to
+ * "Uncategorized" (null) so reports and spending summaries never read a
+ * dangling categoryId. Built-in (system) categories cannot be deleted.
+ */
 export async function deleteCategory(
   uid: string,
   categoryId: string,
@@ -94,5 +104,34 @@ export async function deleteCategory(
     throw new Error("Firebase is not configured.");
   }
 
-  await deleteDoc(doc(db, firestorePaths.category(uid, categoryId)));
+  const categoryRef = doc(db, firestorePaths.category(uid, categoryId));
+  const categorySnap = await getDoc(categoryRef);
+  if (categorySnap.exists() && (categorySnap.data() as Category).system) {
+    throw new Error("Built-in categories can't be deleted.");
+  }
+
+  // Find every transaction still pointing at this category.
+  const referencing = await getDocs(
+    query(
+      collection(db, firestorePaths.transactions(uid)),
+      where("categoryId", "==", categoryId),
+    ),
+  );
+
+  const now = new Date().toISOString();
+  const refs = referencing.docs.map((docSnap) => docSnap.ref);
+
+  // Reassign in chunks to stay under the batch limit, then delete the category.
+  for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+    const chunk = refs.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const ref of chunk) {
+      batch.update(ref, { categoryId: null, updatedAt: now });
+    }
+    await batch.commit();
+  }
+
+  const finalBatch = writeBatch(db);
+  finalBatch.delete(categoryRef);
+  await finalBatch.commit();
 }

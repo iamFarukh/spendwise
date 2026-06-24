@@ -2,7 +2,7 @@ import { Children, isValidElement } from "react";
 
 import { cn } from "@/lib/cn";
 
-type StaggerGroupProps = {
+type StaggerGroupProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactNode;
   className?: string;
   /** Max items to stagger (rest appear together). */
@@ -13,11 +13,12 @@ export function StaggerGroup({
   children,
   className,
   cap = 12,
+  ...props
 }: StaggerGroupProps) {
   const items = Children.toArray(children);
 
   return (
-    <div className={className}>
+    <div className={className} {...props}>
       {items.map((child, index) => {
         if (!isValidElement(child)) {
           return child;

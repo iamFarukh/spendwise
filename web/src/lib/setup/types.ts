@@ -1,4 +1,7 @@
+import { toDateStringInTimezone } from "@pfos/shared";
 import type { AccountClass, AccountKind } from "@pfos/shared";
+
+import { TIMEZONES } from "./constants";
 
 export type SetupStep = "currency" | "accounts" | "balances" | "primary";
 
@@ -32,12 +35,40 @@ export type SetupDraft = {
   primaryAccountId: string | null;
 };
 
+const TIMEZONE_CURRENCY: Record<string, string> = {
+  "Asia/Kolkata": "INR",
+  "Asia/Dubai": "AED",
+  "Asia/Singapore": "SGD",
+  "Europe/London": "GBP",
+  "America/New_York": "USD",
+  "America/Los_Angeles": "USD",
+};
+
+/** Detect the device timezone, falling back to IST when unsupported. */
+function detectTimezone(): string {
+  try {
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (TIMEZONES.some((tz) => tz.value === detected)) {
+      return detected;
+    }
+  } catch {
+    // Intl unavailable — fall through to default.
+  }
+  return "Asia/Kolkata";
+}
+
 export function createEmptyDraft(): SetupDraft {
-  const today = new Date().toISOString().slice(0, 10);
+  const timezone = detectTimezone();
+  let asOfDate: string;
+  try {
+    asOfDate = toDateStringInTimezone(new Date(), timezone);
+  } catch {
+    asOfDate = new Date().toISOString().slice(0, 10);
+  }
   return {
-    baseCurrency: "INR",
-    timezone: "Asia/Kolkata",
-    asOfDate: today,
+    baseCurrency: TIMEZONE_CURRENCY[timezone] ?? "INR",
+    timezone,
+    asOfDate,
     accounts: [],
     primaryAccountId: null,
   };

@@ -1,3 +1,7 @@
+import {
+  SpendWiseMark,
+  SpendWiseWordmark,
+} from "@/components/brand/spendwise-logo";
 import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/motion/skeleton";
 
@@ -26,13 +30,79 @@ export function AppLoading({
   );
 }
 
+/**
+ * Full-screen branded boot loader. Pure CSS/SVG so it renders instantly —
+ * a Lottie chunk would itself need a loading state at app boot.
+ */
 export function AuthLoading() {
   return (
     <div className="grid min-h-screen place-items-center bg-canvas px-6">
-      <div className="w-full max-w-sm text-center">
-        <div className="mx-auto mb-5 h-12 w-12 rounded-full skeleton-shimmer" />
-        <Skeleton className="mx-auto mb-2 h-4 w-32" />
-        <Skeleton className="mx-auto h-3 w-48" />
+      <div className="brand-loader-enter flex flex-col items-center text-center">
+        <div className="relative h-[132px] w-[132px]">
+          <div className="brand-loader-glow pointer-events-none absolute inset-3 rounded-full" />
+
+          {/* Track ring */}
+          <svg
+            viewBox="0 0 132 132"
+            className="absolute inset-0 h-full w-full"
+            aria-hidden="true"
+          >
+            <circle
+              cx="66"
+              cy="66"
+              r="58"
+              fill="none"
+              stroke="var(--mint-100)"
+              strokeWidth="3"
+            />
+          </svg>
+
+          {/* Spinning arc — stays animated under reduced motion (essential indicator) */}
+          <svg
+            viewBox="0 0 132 132"
+            className="brand-loader-arc absolute inset-0 h-full w-full"
+            aria-hidden="true"
+          >
+            <circle
+              cx="66"
+              cy="66"
+              r="58"
+              fill="none"
+              stroke="var(--mint-500)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeDasharray="92 273"
+            />
+          </svg>
+
+          {/* Counter-orbiting accent dot */}
+          <div
+            className="brand-loader-orbit absolute inset-0"
+            aria-hidden="true"
+          >
+            <span className="absolute top-[3px] left-1/2 h-[9px] w-[9px] -translate-x-1/2 rounded-full bg-mint-bright shadow-[0_0_10px_var(--mint-bright)]" />
+          </div>
+
+          <div className="brand-loader-mark absolute inset-0 grid place-items-center">
+            <SpendWiseMark size={58} priority />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <SpendWiseWordmark />
+        </div>
+        <p
+          className="brand-loader-caption mt-2.5 text-[13px] font-semibold text-ink-500"
+          role="status"
+          aria-live="polite"
+        >
+          Getting your money in order
+          <span className="setup-loading-dots" aria-hidden="true">
+            <span className="setup-loading-dot">.</span>
+            <span className="setup-loading-dot">.</span>
+            <span className="setup-loading-dot">.</span>
+          </span>
+        </p>
       </div>
     </div>
   );

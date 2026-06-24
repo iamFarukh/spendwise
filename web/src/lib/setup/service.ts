@@ -8,9 +8,22 @@ import {
 import { doc, getDoc, setDoc, writeBatch } from "firebase/firestore";
 
 import { getFirebaseDb } from "@/lib/firebase/client";
+import { dedupeById } from "@/lib/firebase/snapshot";
 import { touchUserDocument } from "@/lib/firebase/user-doc";
 
-import type { DraftAccount, SetupDraft } from "./types";
+import {
+  SETUP_STEPS,
+  createEmptyDraft,
+  type DraftAccount,
+  type SetupDraft,
+  type SetupStep,
+} from "./types";
+
+export type StoredSetupDraft = {
+  draft: SetupDraft;
+  step: SetupStep;
+  savedAt: number;
+};
 
 export async function fetchUserSettings(
   uid: string,
@@ -33,6 +46,7 @@ export async function fetchUserSettings(
 export async function saveSetupDraft(
   uid: string,
   draft: SetupDraft,
+  step: SetupStep,
 ): Promise<void> {
   const db = getFirebaseDb();
   if (!db) {
@@ -45,15 +59,88 @@ export async function saveSetupDraft(
       baseCurrency: draft.baseCurrency,
       timezone: draft.timezone,
       asOfDate: draft.asOfDate,
-      primaryAccountId: draft.primaryAccountId,
       setupComplete: false,
       loansEnabled: false,
       includeTrackingInNetWorth: true,
       roundAmounts: true,
       lastBackupAt: null,
+      setupDraft: {
+        accounts: draft.accounts,
+        primaryAccountId: draft.primaryAccountId,
+        step,
+        savedAt: Date.now(),
+      },
     },
     { merge: true },
   );
+}
+
+/** Restore an in-progress setup draft saved with `saveSetupDraft`. */
+export async function loadSetupDraft(
+  uid: string,
+): Promise<StoredSetupDraft | null> {
+  const db = getFirebaseDb();
+  if (!db) {
+    return null;
+  }
+
+  const snap = await getDoc(doc(db, firestorePaths.settings(uid)));
+  if (!snap.exists()) {
+    return null;
+  }
+
+  const data = snap.data();
+  if (data.setupComplete) {
+    return null;
+  }
+
+  const stored = data.setupDraft as
+    | {
+        accounts?: DraftAccount[];
+        primaryAccountId?: string | null;
+        step?: SetupStep;
+        savedAt?: number;
+      }
+    | undefined;
+
+  const base = createEmptyDraft();
+  const draft: SetupDraft = {
+    baseCurrency:
+      typeof data.baseCurrency === "string"
+        ? data.baseCurrency
+        : base.baseCurrency,
+    timezone: typeof data.timezone === "string" ? data.timezone : base.timezone,
+    asOfDate: typeof data.asOfDate === "string" ? data.asOfDate : base.asOfDate,
+    accounts:
+      stored?.accounts && Array.isArray(stored.accounts)
+        ? dedupeById(stored.accounts)
+        : [],
+    primaryAccountId: stored?.primaryAccountId ?? null,
+  };
+
+  if (!stored && typeof data.baseCurrency !== "string") {
+    return null;
+  }
+
+  return {
+    draft,
+    step: normalizeStoredStep(stored?.step, draft),
+    savedAt: stored?.savedAt ?? 0,
+  };
+}
+
+/** Steps past "accounts" make no sense without accounts — clamp them. */
+export function normalizeStoredStep(
+  step: SetupStep | undefined,
+  draft: SetupDraft,
+): SetupStep {
+  if (!step || !SETUP_STEPS.includes(step)) {
+    return "currency";
+  }
+  if (draft.accounts.length === 0 && step !== "currency") {
+    return "accounts";
+  }
+  return step;
 }
 
 export async function completeDayZeroSetup(

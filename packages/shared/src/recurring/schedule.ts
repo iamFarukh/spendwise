@@ -25,6 +25,9 @@ export function advanceRecurringRunDate(
   if (frequency === "WEEKLY") {
     return addDays(current, 7);
   }
+  if (frequency === "BIWEEKLY") {
+    return addDays(current, 14);
+  }
   return addMonthsClamped(current, 1);
 }
 
@@ -37,7 +40,7 @@ export function computeInitialRunDate(
 ): string {
   const today = toDateStringInTimezone(referenceDate, timezone);
 
-  if (frequency === "WEEKLY") {
+  if (frequency === "WEEKLY" || frequency === "BIWEEKLY") {
     const currentDay = getWeekday(today, timezone);
     let delta = dayOfWeek - currentDay;
     if (delta < 0) {

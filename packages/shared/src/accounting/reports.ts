@@ -123,12 +123,29 @@ function shiftMonth(
   return { year: y, month: m };
 }
 
+// Manual fallbacks for runtimes whose Intl rejects IANA time zones (some React
+// Native / Hermes builds throw "Incorrect timeZone information provided").
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const MONTH_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 function getWeekStartMonday(dateStr: string, timezone: string): string {
   const anchor = new Date(`${dateStr}T12:00:00`);
-  const weekday = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    timeZone: timezone,
-  }).format(anchor);
+  let weekday: string;
+  try {
+    weekday = new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      timeZone: timezone,
+    }).format(anchor);
+  } catch {
+    weekday = WEEKDAY_SHORT[new Date(`${dateStr}T12:00:00Z`).getUTCDay()];
+  }
   const daysFromMonday = WEEKDAY_OFFSET[weekday] ?? 0;
   return addDaysInTimezone(dateStr, -daysFromMonday, timezone);
 }
@@ -151,10 +168,14 @@ function formatMonthShortLabel(
   timezone: string,
 ): string {
   const anchor = new Date(Date.UTC(year, month - 1, 15, 12));
-  return new Intl.DateTimeFormat("en-IN", {
-    month: "short",
-    timeZone: timezone,
-  }).format(anchor);
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      month: "short",
+      timeZone: timezone,
+    }).format(anchor);
+  } catch {
+    return MONTH_SHORT[(((month - 1) % 12) + 12) % 12];
+  }
 }
 
 function formatMonthLongLabel(
@@ -163,11 +184,15 @@ function formatMonthLongLabel(
   timezone: string,
 ): string {
   const anchor = new Date(Date.UTC(year, month - 1, 15, 12));
-  return new Intl.DateTimeFormat("en-IN", {
-    month: "long",
-    year: "numeric",
-    timeZone: timezone,
-  }).format(anchor);
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      month: "long",
+      year: "numeric",
+      timeZone: timezone,
+    }).format(anchor);
+  } catch {
+    return `${MONTH_LONG[(((month - 1) % 12) + 12) % 12]} ${year}`;
+  }
 }
 
 function formatWeekShortLabel(start: string, end: string): string {

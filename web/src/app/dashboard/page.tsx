@@ -27,7 +27,11 @@ import { QuickAddExpense } from "@/components/dashboard/quick-add-expense";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
+import { PendingSipNudge } from "@/components/sip/pending-sip-nudge";
+import { SubscriptionSummaryCards } from "@/components/subscriptions/subscription-summary-cards";
+import { useSubscriptionDashboard } from "@/hooks/use-subscriptions";
 import { useAuth } from "@/components/providers/auth-provider";
+import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
 import { IconChip } from "@/components/ui/icon-chip";
 import { Tag } from "@/components/ui/tag";
 import { useLedgerSummary } from "@/hooks/use-ledger-summary";
@@ -58,6 +62,7 @@ export default function DashboardPage() {
 function DashboardContent() {
   const { user } = useAuth();
   const { summary, settings, loading, error } = useLedgerSummary();
+  const { dashboard: subscriptionDashboard } = useSubscriptionDashboard();
 
   const firstName =
     user?.displayName?.split(" ")[0] ??
@@ -103,6 +108,30 @@ function DashboardContent() {
       primaryAction={{ label: "Full entry", href: "/transactions/new" }}
     >
       {user ? <QuickAddExpense userId={user.uid} /> : null}
+
+      <div className="mt-6">
+        <PendingSipNudge />
+      </div>
+
+      {subscriptionDashboard && subscriptionDashboard.activeCount > 0 ? (
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold text-ink-900">
+              Subscriptions
+            </h2>
+            <Link
+              href="/subscriptions"
+              className="text-[13px] font-bold text-mint-600 hover:text-mint-700"
+            >
+              Manage
+            </Link>
+          </div>
+          <SubscriptionSummaryCards
+            dashboard={subscriptionDashboard}
+            settings={moneySettings}
+          />
+        </section>
+      ) : null}
 
       <div className="mt-6 grid grid-cols-1 items-start gap-6 xl:grid-cols-[1.35fr_1fr] xl:grid-rows-[auto_auto]">
         <div className="xl:col-start-1 xl:row-start-1">
@@ -364,16 +393,24 @@ function AccountsCard({
   if (balances.length === 0) {
     return (
       <CardShell title="Accounts" link="Manage" linkHref="/accounts">
-        <p className="text-sm text-ink-500">
-          No accounts yet. Finish setup to add your first account.
-        </p>
+        <EmptyState
+          compact
+          animation="wallet"
+          title="No accounts yet"
+          description="Add your first account to start tracking balances."
+          action={
+            <EmptyStateAction href="/accounts/new">
+              Add account
+            </EmptyStateAction>
+          }
+        />
       </CardShell>
     );
   }
 
   return (
     <CardShell title="Accounts" link="Manage" linkHref="/accounts">
-      <div className="flex flex-col gap-1">
+      <div className="flex max-h-[min(360px,48vh)] flex-col gap-1 overflow-y-auto overscroll-contain">
         {balances.map(({ account, balance }) => {
           const style = accountChipStyle(account.class, account.kind);
           const isLiability = account.class === "LIABILITY";
@@ -431,18 +468,25 @@ function RecentActivityCard({
   if (transactions.length === 0) {
     return (
       <CardShell title="Recent activity" link="View all" linkHref="/transactions">
-        <p className="text-sm text-ink-500">
-          No transactions yet besides your opening balances. Add your first
-          expense or income to see activity here.
-        </p>
+        <EmptyState
+          compact
+          animation="receipt-search"
+          title="No activity yet"
+          description="Add your first expense or income to see it here."
+          action={
+            <EmptyStateAction href="/transactions/new">
+              Add transaction
+            </EmptyStateAction>
+          }
+        />
       </CardShell>
     );
   }
 
   return (
     <CardShell title="Recent activity" link="View all" linkHref="/transactions">
-      <div className="flex flex-col">
-        {transactions.map((txn, index) => (
+      <div className="flex max-h-[min(420px,52vh)] flex-col overflow-y-auto overscroll-contain">
+        {transactions.slice(0, 10).map((txn, index) => (
           <StaggerItem key={txn.id} index={index}>
             <ActivityRow
               txn={txn}

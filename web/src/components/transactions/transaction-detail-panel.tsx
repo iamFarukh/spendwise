@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import {
   isEditableTransaction,
@@ -46,6 +49,12 @@ export function TransactionDetailPanel({
   deleting = false,
   verifying = false,
 }: TransactionDetailPanelProps) {
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    setDeleteConfirm(false);
+  }, [txn?.id]);
+
   if (!txn) {
     return (
       <aside className="flex min-h-[420px] items-center justify-center rounded-xl border border-line bg-paper p-6 text-center text-sm text-ink-500 shadow-sm">
@@ -70,7 +79,7 @@ export function TransactionDetailPanel({
       : "";
 
   return (
-    <aside className="flex min-h-[420px] flex-col rounded-xl border border-line bg-paper p-6 shadow-sm">
+    <aside className="flex min-h-[420px] flex-col rounded-xl border border-line bg-paper p-6 shadow-sm xl:sticky xl:top-0 xl:self-start">
       <div className="mb-3 flex justify-center">
         <TransactionTypeIcon txn={txn} />
       </div>
@@ -125,40 +134,82 @@ export function TransactionDetailPanel({
       </div>
 
       <div className="mt-auto flex w-full flex-col gap-2.5">
-        {txn.status === "PENDING" && onVerify ? (
-          <Button
-            fullWidth
-            disabled={verifying}
-            onClick={() => onVerify(txn)}
-          >
-            <IconCheck className="h-4 w-4" />
-            {verifying ? "Confirming…" : "Confirm"}
-          </Button>
-        ) : null}
-
-        <div className="flex w-full gap-2.5">
-          {editable ? (
-            <Link href={`/transactions/${txn.id}/edit`} className="flex-1">
-              <Button variant="ghost" fullWidth disabled={deleting || verifying}>
-                Edit
+        {deleteConfirm ? (
+          <div className="rounded-lg border border-expense/25 bg-expense-bg px-4 py-4">
+            <p className="text-sm leading-relaxed font-semibold text-ink-700">
+              Delete{" "}
+              <b className="text-ink-900">{getTransactionTitle(txn)}</b>{" "}
+              permanently?
+            </p>
+            <p className="mt-1 text-xs font-medium text-ink-500">
+              This cannot be undone.
+            </p>
+            <div className="mt-4 flex gap-2.5">
+              <Button
+                variant="ghost"
+                fullWidth
+                disabled={deleting}
+                onClick={() => setDeleteConfirm(false)}
+              >
+                Cancel
               </Button>
-            </Link>
-          ) : (
-            <Button variant="ghost" fullWidth disabled className="flex-1 opacity-60">
-              Edit
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            fullWidth
-            disabled={!editable || deleting || verifying}
-            onClick={() => onDelete(txn)}
-            className="text-expense hover:bg-expense-bg hover:text-expense"
-          >
-            <IconTrash />
-            {deleting ? "Deleting…" : "Delete"}
-          </Button>
-        </div>
+              <Button
+                fullWidth
+                disabled={deleting}
+                onClick={() => onDelete(txn)}
+                className="border-expense/30 bg-expense-bg text-expense hover:bg-expense/15"
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {txn.status === "PENDING" && onVerify ? (
+              <Button
+                fullWidth
+                disabled={verifying}
+                onClick={() => onVerify(txn)}
+              >
+                <IconCheck className="h-4 w-4" />
+                {verifying ? "Confirming…" : "Confirm"}
+              </Button>
+            ) : null}
+
+            <div className="flex w-full gap-2.5">
+              {editable ? (
+                <Link href={`/transactions/${txn.id}/edit`} className="flex-1">
+                  <Button
+                    variant="ghost"
+                    fullWidth
+                    disabled={deleting || verifying}
+                  >
+                    Edit
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  disabled
+                  className="flex-1 opacity-60"
+                >
+                  Edit
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                fullWidth
+                disabled={!editable || deleting || verifying}
+                onClick={() => setDeleteConfirm(true)}
+                className="text-expense hover:bg-expense-bg hover:text-expense"
+              >
+                <IconTrash />
+                Delete
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );

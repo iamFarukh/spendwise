@@ -172,7 +172,7 @@ export function ResetDataDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink-900/45 p-4"
+      className="modal-backdrop-enter fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-ink-900/45 p-4"
       onClick={() => {
         if (!busy) {
           onClose();
@@ -185,7 +185,7 @@ export function ResetDataDialog({
         aria-modal="true"
         aria-labelledby="reset-dialog-title"
         tabIndex={-1}
-        className="w-full max-w-[480px] rounded-xl border border-line bg-paper p-6 shadow-xl outline-none"
+        className="modal-panel-enter w-full max-w-[480px] rounded-xl border border-line bg-paper p-6 shadow-lg outline-none"
         onClick={(event) => event.stopPropagation()}
       >
         <h2
