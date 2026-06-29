@@ -252,6 +252,8 @@ Rebuild the app. Crashes from `ErrorBoundary` and unhandled errors are sent in r
 
 Optional: run `npx @sentry/wizard@latest -i reactNative` from `mobile/` for source maps and advanced setup.
 
+**Monorepo note:** dependencies live in the workspace root `node_modules/`, not `mobile/node_modules/`. The iOS Xcode phases pass `$REACT_NATIVE_PATH` into Sentry scripts so bundling resolves correctly. Copy `ios/sentry.properties.example` → `ios/sentry.properties` (and the Android equivalent) with your auth token; use `https://us.sentry.io/` if your org is in the US region.
+
 ---
 
 ## Build release APK (Android sideload)
@@ -273,6 +275,7 @@ cd mobile/android
 | Google Sign-In fails on Android | Add SHA-1 to Firebase, set `GOOGLE_WEB_CLIENT_ID`, add `google-services.json` |
 | Gradle / SDK errors | Open `mobile/android` in Android Studio and sync Gradle |
 | iOS pod errors | `cd mobile/ios && pod install --repo-update` |
+| `sentry-cli` / source map upload fails on iOS | Monorepo paths are set in Xcode build phases; ensure `ios/sentry.properties` exists (copy from `sentry.properties.example`) and `defaults.url` matches your region (`https://us.sentry.io/` for US orgs) |
 | Blank screen after login | Complete setup on mobile or web — both seed categories atomically |
 
 ---

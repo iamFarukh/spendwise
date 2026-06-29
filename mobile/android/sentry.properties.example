@@ -1,0 +1,10 @@
+# Copy to sentry.properties and paste your auth token from Sentry → Settings → Auth Tokens.
+# Generate a token with "Project: Read & Write" and "Release: Admin" scopes.
+#
+# Use the regional URL that matches your Sentry org (US orgs use us.sentry.io).
+
+auth.token=
+
+defaults.org=your-org-slug
+defaults.project=react-native
+defaults.url=https://us.sentry.io/

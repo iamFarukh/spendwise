@@ -8,6 +8,7 @@ import {AddSheetProvider} from '@/providers/add-sheet-provider';
 import {ActionSheetProvider} from '@/providers/action-sheet-provider';
 import {AuthProvider} from '@/providers/auth-provider';
 import {DialogProvider} from '@/providers/dialog-provider';
+import {NetworkProvider} from '@/providers/network-provider';
 import {LedgerDataProvider} from '@/providers/ledger-data-provider';
 import {NotificationProvider} from '@/providers/notification-provider';
 import {NotificationRunner} from '@/providers/notification-runner';
@@ -27,7 +28,8 @@ function App() {
             <LedgerDataProvider>
               <NotificationProvider>
                 <DialogProvider>
-                  <ToastProvider>
+                  <NetworkProvider>
+                    <ToastProvider>
                     <ActionSheetProvider>
                       <AddSheetProvider>
                         <PushNotificationProvider>
@@ -37,7 +39,8 @@ function App() {
                         </PushNotificationProvider>
                       </AddSheetProvider>
                     </ActionSheetProvider>
-                  </ToastProvider>
+                    </ToastProvider>
+                  </NetworkProvider>
                 </DialogProvider>
               </NotificationProvider>
             </LedgerDataProvider>

@@ -19,6 +19,14 @@ REPLACEMENTS = [
     'WITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n\"$WITH_ENVIRONMENT\" \"$REACT_NATIVE_XCODE\"\n',
     'WITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n. \"$WITH_ENVIRONMENT\"\n/bin/bash \"$REACT_NATIVE_XCODE\"\n',
   ],
+  [
+    'WITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nSENTRY_XCODE=\"$REACT_NATIVE_PATH/../@sentry/react-native/scripts/sentry-xcode.sh\"\n\n. \"$WITH_ENVIRONMENT\"\n/bin/bash \"$SENTRY_XCODE\"\n',
+    'WITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nSENTRY_XCODE=\"$REACT_NATIVE_PATH/../@sentry/react-native/scripts/sentry-xcode.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n. \"$WITH_ENVIRONMENT\"\n/bin/bash \"$SENTRY_XCODE\" \"$REACT_NATIVE_XCODE\"\n',
+  ],
+  [
+    '/bin/sh ../node_modules/@sentry/react-native/scripts/sentry-xcode-debug-files.sh',
+    'set -e\n\nSENTRY_DEBUG_FILES=\"$REACT_NATIVE_PATH/../@sentry/react-native/scripts/sentry-xcode-debug-files.sh\"\n/bin/bash \"$SENTRY_DEBUG_FILES\"\n',
+  ],
 ].freeze
 
 paths = ARGV

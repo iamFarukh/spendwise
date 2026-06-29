@@ -1,4 +1,10 @@
+import {OfflineError, OFFLINE_ALERT_MESSAGE} from '@/lib/network/connectivity';
+
 export function getAuthErrorMessage(error: unknown): string {
+  if (error instanceof OfflineError) {
+    return OFFLINE_ALERT_MESSAGE;
+  }
+
   const code =
     typeof error === 'object' &&
     error !== null &&

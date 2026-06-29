@@ -7,7 +7,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 
 export function LegalPageHeader() {
   const { user, loading } = useAuth();
-  const homeHref = user ? "/dashboard" : "/login";
+  const homeHref = user ? "/dashboard" : "/";
   const actionHref = user ? "/dashboard" : "/login";
   const actionLabel = user ? "Go to dashboard" : "Sign in";
 

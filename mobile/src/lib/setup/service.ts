@@ -13,6 +13,7 @@ import {toDateStringInTimezone} from '@pfos/shared';
 import {doc, writeBatch} from 'firebase/firestore';
 
 import {getFirebaseDb} from '@/lib/firebase/client';
+import {ensureOnline} from '@/lib/network/registry';
 import {sanitizeForFirestore} from '@/lib/firebase/sanitize';
 import {touchUserDocument} from '@/lib/firebase/user-doc';
 
@@ -78,6 +79,7 @@ export async function completeMobileSetup(
   uid: string,
   input: MobileSetupInput,
 ): Promise<void> {
+  await ensureOnline();
   const db = getFirebaseDb();
   if (!db) {
     throw new Error('Firebase is not configured.');

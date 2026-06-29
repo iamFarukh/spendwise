@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { PrivacyConsentCheckbox } from "@/components/legal/privacy-consent-checkbox";
 import { Button } from "@/components/ui/button";
@@ -18,14 +18,28 @@ import { trackPrivacyPolicyDeclined } from "@/lib/analytics/privacy";
 
 type AuthMode = "sign-in" | "sign-up";
 
-export function LoginForm({ configured }: { configured: boolean }) {
+export function LoginForm({
+  configured,
+  initialMode = "sign-in",
+}: {
+  configured: boolean;
+  initialMode?: AuthMode;
+}) {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("sign-in");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+  useEffect(() => {
+    setMode(initialMode);
+    setError(null);
+    if (initialMode === "sign-in") {
+      setPrivacyAccepted(false);
+    }
+  }, [initialMode]);
 
   function requirePrivacyConsent(): boolean {
     if (mode !== "sign-up" || privacyAccepted) {
@@ -79,12 +93,16 @@ export function LoginForm({ configured }: { configured: boolean }) {
   return (
     <div>
       <span className="mb-3 inline-block text-[11.5px] font-extrabold tracking-wide text-mint-600 uppercase">
-        Welcome back
+        {mode === "sign-in" ? "Welcome back" : "Get started"}
       </span>
       <h3 className="font-display text-[26px] font-bold text-ink-900">
-        Sign in to SpendWise
+        {mode === "sign-in" ? "Sign in to SpendWise" : "Create your SpendWise account"}
       </h3>
-      <p className="mt-1.5 mb-6 text-ink-500">Pick up exactly where you left off.</p>
+      <p className="mt-1.5 mb-6 text-ink-500">
+        {mode === "sign-in"
+          ? "Pick up exactly where you left off."
+          : "Setup takes about three minutes."}
+      </p>
 
       <Button
         type="button"

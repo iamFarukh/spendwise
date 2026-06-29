@@ -1,9 +1,9 @@
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {StyleSheet, View} from 'react-native';
 import {PRIVACY_POLICY_VERSION} from '@pfos/shared';
 
 import {AppBootShell} from '@/components/splash/app-boot-shell';
+import {SplashScene} from '@/components/splash/splash-scene';
 import {SetupCompletionProvider} from '@/providers/setup-completion-provider';
 import {MainStack} from '@/navigation/main-stack';
 import {navigationRef} from '@/navigation/navigation-ref';
@@ -14,7 +14,6 @@ import {LoginScreen} from '@/screens/login-screen';
 import {PrivacyPolicyScreen} from '@/screens/privacy-policy-screen';
 import {SetupWizardScreen} from '@/screens/setup-wizard-screen';
 import {FirebaseMissingBanner} from '@/screens/more-screen';
-import {colors} from '@/constants/theme';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -30,6 +29,10 @@ export function RootNavigator() {
   const {settings, setupComplete} = useUserSettings();
 
   const sessionReady = !authLoading && (user == null || settings != null);
+  const needsPrivacyAcceptance =
+    Boolean(user) &&
+    settings != null &&
+    !settings.privacyAcceptedAt;
   const needsPrivacyReacceptance =
     Boolean(user) &&
     setupComplete &&
@@ -51,6 +54,15 @@ export function RootNavigator() {
                   <Stack.Screen name="Login" component={LoginScreen} />
                   <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
                 </>
+              ) : needsPrivacyAcceptance ? (
+                <Stack.Screen
+                  name="PrivacyPolicy"
+                  component={PrivacyPolicyScreen}
+                  initialParams={{
+                    showAcceptance: true,
+                    source: 'signup',
+                  }}
+                />
               ) : !setupComplete ? (
                 <Stack.Screen name="Setup" component={SetupWizardScreen} />
               ) : needsPrivacyReacceptance ? (
@@ -69,15 +81,12 @@ export function RootNavigator() {
           </NavigationContainer>
         </SetupCompletionProvider>
       ) : (
-        <View style={styles.placeholder} />
+        <SplashScene
+          mode="loading"
+          message={user ? 'Signing you in…' : 'Getting things ready…'}
+          showProgress
+        />
       )}
     </AppBootShell>
   );
 }
-
-const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    backgroundColor: colors.canvas,
-  },
-});
