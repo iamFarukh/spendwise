@@ -10,7 +10,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {getAdditionalUserInfo} from 'firebase/auth';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -28,13 +27,15 @@ import {
   IconLock,
 } from '@/components/icons';
 import {colors, radius, shadow, spacing} from '@/constants/theme';
-import {sendPasswordReset, signInWithEmail, signInWithGoogle, signOutAll, signUpWithEmail} from '@/lib/auth/actions';
+import {sendPasswordReset, signInWithEmail, signInWithGoogle, signUpWithEmail} from '@/lib/auth/actions';
 import {getAuthErrorMessage} from '@/lib/auth/errors';
+import {OfflineError} from '@/lib/network/connectivity';
 import {recordPrivacyAcceptance} from '@/lib/legal/privacy-acceptance';
 import {
   trackPrivacyPolicyDeclined,
 } from '@/lib/analytics/privacy';
 import type {RootStackParamList} from '@/navigation/root-navigator';
+import {useNetwork} from '@/providers/network-provider';
 import {useToast} from '@/providers/toast-provider';
 
 type AuthMode = 'sign-in' | 'sign-up';
@@ -48,6 +49,7 @@ const HERO_HEIGHT = Math.round(Dimensions.get('window').height * 0.32);
 
 export function LoginScreen() {
   const toast = useToast();
+  const {requireOnline} = useNetwork();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -79,23 +81,23 @@ export function LoginScreen() {
     if (!requirePrivacyConsent()) {
       return;
     }
+    if (!(await requireOnline())) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const credential = await signInWithGoogle();
-      const isNewUser = getAdditionalUserInfo(credential)?.isNewUser ?? false;
-      if (isNewUser) {
-        if (!privacyAccepted) {
-          await signOutAll();
-          setMode('sign-up');
-          setError('Please accept the Privacy Policy to create an account.');
-          void trackPrivacyPolicyDeclined({source: 'login'});
-          return;
-        }
+      // Sign-up tab with consent checked — record now so root nav can skip the
+      // blocking privacy screen. Sign-in tab new users are routed to privacy
+      // acceptance by RootNavigator instead of being signed out mid-flow.
+      if (mode === 'sign-up' && privacyAccepted) {
         await recordPrivacyAcceptance(credential.user.uid);
       }
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      if (!(err instanceof OfflineError)) {
+        setError(getAuthErrorMessage(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -103,6 +105,9 @@ export function LoginScreen() {
 
   async function handleEmail() {
     if (!requirePrivacyConsent()) {
+      return;
+    }
+    if (!(await requireOnline())) {
       return;
     }
     setBusy(true);
@@ -115,7 +120,9 @@ export function LoginScreen() {
         await recordPrivacyAcceptance(credential.user.uid);
       }
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      if (!(err instanceof OfflineError)) {
+        setError(getAuthErrorMessage(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -126,13 +133,18 @@ export function LoginScreen() {
       toast.error('Enter your email first.');
       return;
     }
+    if (!(await requireOnline())) {
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await sendPasswordReset(email);
       toast.success('Password reset email sent.');
     } catch (err) {
-      setError(getAuthErrorMessage(err));
+      if (!(err instanceof OfflineError)) {
+        setError(getAuthErrorMessage(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -187,9 +199,14 @@ export function LoginScreen() {
             })}
           </View>
 
-          <PressableScale onPress={handleGoogle} style={styles.oauth}>
+          <PressableScale
+            onPress={handleGoogle}
+            disabled={busy}
+            style={[styles.oauth, busy && styles.oauthDisabled]}>
             <IconGoogle size={20} />
-            <AppText style={styles.oauthText}>Continue with Google</AppText>
+            <AppText style={styles.oauthText}>
+              {busy ? 'Signing in…' : 'Continue with Google'}
+            </AppText>
           </PressableScale>
 
           <View style={styles.divider}>
@@ -412,6 +429,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.paper,
   },
+  oauthDisabled: {opacity: 0.6},
   oauthText: {fontWeight: '700', fontSize: 15, color: colors.ink900},
   divider: {flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginVertical: spacing.sm},
   dividerLine: {flex: 1, height: 1, backgroundColor: colors.line},

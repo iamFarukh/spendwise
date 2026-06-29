@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { AuthLoading } from "@/components/motion/app-loading";
@@ -10,8 +10,19 @@ import { IconCheck } from "@/components/icons";
 import { useAuth } from "@/components/providers/auth-provider";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<AuthLoading />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { configured, user, loading } = useAuth();
+  const initialMode =
+    searchParams.get("mode") === "sign-up" ? "sign-up" : "sign-in";
 
   useEffect(() => {
     if (!loading && user) {
@@ -42,7 +53,7 @@ export default function LoginPage() {
               </p>
             </div>
           ) : null}
-          <LoginForm configured={configured} />
+          <LoginForm configured={configured} initialMode={initialMode} />
         </div>
       </div>
     </div>

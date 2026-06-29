@@ -85,6 +85,17 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    addEventListener: jest.fn(() => jest.fn()),
+    fetch: jest.fn(async () => ({
+      isConnected: true,
+      isInternetReachable: true,
+    })),
+  },
+}));
+
 jest.mock('@react-native-clipboard/clipboard', () => ({
   __esModule: true,
   default: {setString: jest.fn()},

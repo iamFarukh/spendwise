@@ -38,11 +38,21 @@ export type ConfirmOptions = {
   destructive?: boolean;
   /** Overrides the icon/accent. Inferred from `destructive` when omitted. */
   tone?: DialogTone;
+  /** Single-button acknowledgement (no cancel). */
+  alertOnly?: boolean;
+};
+
+export type AlertOptions = {
+  title: string;
+  message?: string;
+  confirmLabel?: string;
 };
 
 type DialogContextValue = {
   /** Promise resolves true on confirm, false on cancel / backdrop / back. */
   confirm: (options: ConfirmOptions) => Promise<boolean>;
+  /** Single-button alert. Resolves when dismissed. */
+  alert: (options: AlertOptions) => Promise<void>;
 };
 
 const DialogContext = createContext<DialogContextValue | null>(null);
@@ -74,6 +84,18 @@ export function DialogProvider({children}: {children: ReactNode}) {
     });
   }, []);
 
+  const alert = useCallback((options: AlertOptions) => {
+    return new Promise<void>(resolve => {
+      resolverRef.current?.(false);
+      resolverRef.current = () => resolve();
+      setRequest({
+        ...options,
+        alertOnly: true,
+        confirmLabel: options.confirmLabel ?? 'OK',
+      });
+    });
+  }, []);
+
   // Open: overlay fades in, card scales 0.95 → 1.
   useEffect(() => {
     if (!request) {
@@ -91,9 +113,13 @@ export function DialogProvider({children}: {children: ReactNode}) {
       resolverRef.current = null;
       setRequest(null);
       scale.value = 0.95; // reset for the next open
-      resolve?.(result);
+      if (request?.alertOnly) {
+        (resolve as (() => void) | null)?.();
+        return;
+      }
+      (resolve as ((value: boolean) => void) | null)?.(result);
     },
-    [scale],
+    [request?.alertOnly, scale],
   );
 
   const close = useCallback(
@@ -120,7 +146,7 @@ export function DialogProvider({children}: {children: ReactNode}) {
     return () => sub.remove();
   }, [request, close]);
 
-  const value = useMemo<DialogContextValue>(() => ({confirm}), [confirm]);
+  const value = useMemo<DialogContextValue>(() => ({confirm, alert}), [alert, confirm]);
 
   const overlayStyle = useAnimatedStyle(() => ({opacity: overlay.value}));
   const cardStyle = useAnimatedStyle(() => ({
@@ -133,6 +159,7 @@ export function DialogProvider({children}: {children: ReactNode}) {
   const toneStyle = TONE_STYLE[tone];
   const ToneIcon = toneStyle.Icon;
   const destructive = request?.destructive ?? tone === 'danger';
+  const alertOnly = request?.alertOnly === true;
 
   return (
     <DialogContext.Provider value={value}>
@@ -163,18 +190,20 @@ export function DialogProvider({children}: {children: ReactNode}) {
               </AppText>
             ) : null}
             <View style={styles.actions}>
-              <PressableScale
-                onPress={() => close(false)}
-                style={styles.actionFlex}>
-                <View style={[styles.btn, styles.btnCancel]}>
-                  <AppText variant="body" style={styles.btnCancelText}>
-                    {request.cancelLabel ?? 'Cancel'}
-                  </AppText>
-                </View>
-              </PressableScale>
+              {alertOnly ? null : (
+                <PressableScale
+                  onPress={() => close(false)}
+                  style={styles.actionFlex}>
+                  <View style={[styles.btn, styles.btnCancel]}>
+                    <AppText variant="body" style={styles.btnCancelText}>
+                      {request.cancelLabel ?? 'Cancel'}
+                    </AppText>
+                  </View>
+                </PressableScale>
+              )}
               <PressableScale
                 onPress={() => close(true)}
-                style={styles.actionFlex}>
+                style={alertOnly ? styles.actionFull : styles.actionFlex}>
                 <View
                   style={[
                     styles.btn,
@@ -250,6 +279,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   actionFlex: {flex: 1},
+  actionFull: {alignSelf: 'stretch', width: '100%'},
   btn: {
     height: 50,
     borderRadius: radius.md,

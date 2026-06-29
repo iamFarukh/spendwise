@@ -8,7 +8,7 @@ import {
   type UserSettings,
   firestorePaths,
 } from '@pfos/shared';
-import {collection, doc, onSnapshot, query} from 'firebase/firestore';
+import {collection, doc, getDocFromCache, onSnapshot, query} from 'firebase/firestore';
 import {
   ReactNode,
   createContext,
@@ -276,7 +276,28 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
     }
     setSettingsLoading(true);
     const ref = doc(db, firestorePaths.settings(user.uid));
-    return onSnapshot(
+    let cancelled = false;
+
+    // Hydrate from local Firestore cache first so post-login navigation is not
+    // blocked on a round-trip when the user has opened the app before.
+    void getDocFromCache(ref)
+      .then(snap => {
+        if (cancelled) {
+          return;
+        }
+        setSettings(
+          snap.exists()
+            ? {...DEFAULT_USER_SETTINGS, ...(snap.data() as UserSettings)}
+            : {...DEFAULT_USER_SETTINGS},
+        );
+        setSettingsLoading(false);
+        setSettingsError(null);
+      })
+      .catch(() => {
+        // Cache miss — onSnapshot below will deliver server or first fetch.
+      });
+
+    const unsubscribe = onSnapshot(
       ref,
       snap => {
         if (!snap.exists()) {
@@ -293,6 +314,11 @@ export function LedgerDataProvider({children}: {children: ReactNode}) {
         setSettingsLoading(false);
       },
     );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [configured, user]);
 
   const transactionsValue = useMemo<TransactionsValue>(

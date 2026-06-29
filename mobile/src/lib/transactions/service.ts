@@ -8,6 +8,7 @@ import {
 import {deleteDoc, doc, getDoc, setDoc, updateDoc} from 'firebase/firestore';
 
 import {getFirebaseDb} from '@/lib/firebase/client';
+import {ensureOnline} from '@/lib/network/registry';
 import {sanitizeForFirestore} from '@/lib/firebase/sanitize';
 import {touchUserDocument} from '@/lib/firebase/user-doc';
 import {advanceSipAfterConfirm} from '@/lib/sip/service';
@@ -16,6 +17,7 @@ export async function saveTransaction(
   uid: string,
   input: TransactionFormInput,
 ): Promise<string> {
+  await ensureOnline();
   const db = getFirebaseDb();
   if (!db) {
     throw new Error('Firebase is not configured.');
@@ -38,6 +40,7 @@ export async function updateTransaction(
   existing: Transaction,
   input: TransactionFormInput,
 ): Promise<void> {
+  await ensureOnline();
   const db = getFirebaseDb();
   if (!db) {
     throw new Error('Firebase is not configured.');

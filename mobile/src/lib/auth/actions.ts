@@ -11,6 +11,7 @@ import {Platform} from 'react-native';
 import Config from 'react-native-config';
 
 import {getFirebaseAuth} from '@/lib/firebase/client';
+import {ensureOnline} from '@/lib/network/registry';
 
 function requireAuth() {
   const auth = getFirebaseAuth();
@@ -28,6 +29,7 @@ export function configureGoogleSignIn(): void {
 }
 
 export async function signInWithGoogle(): Promise<UserCredential> {
+  await ensureOnline();
   const auth = requireAuth();
   if (Platform.OS === 'android') {
     await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
@@ -45,6 +47,7 @@ export async function signInWithEmail(
   email: string,
   password: string,
 ): Promise<UserCredential> {
+  await ensureOnline();
   const auth = requireAuth();
   return signInWithEmailAndPassword(auth, email.trim(), password);
 }
@@ -53,11 +56,13 @@ export async function signUpWithEmail(
   email: string,
   password: string,
 ): Promise<UserCredential> {
+  await ensureOnline();
   const auth = requireAuth();
   return createUserWithEmailAndPassword(auth, email.trim(), password);
 }
 
 export async function sendPasswordReset(email: string): Promise<void> {
+  await ensureOnline();
   const auth = requireAuth();
   await sendPasswordResetEmail(auth, email.trim());
 }

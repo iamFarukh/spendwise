@@ -25,6 +25,7 @@ import {
   trackPrivacyPolicyViewed,
 } from '@/lib/analytics/privacy';
 import {patchUserSettings} from '@/lib/settings/service';
+import {signOutAll} from '@/lib/auth/actions';
 import {useAuth} from '@/providers/auth-provider';
 import {useToast} from '@/providers/toast-provider';
 import type {MainStackParamList} from '@/navigation/types';
@@ -95,7 +96,13 @@ export function PrivacyPolicyScreen() {
         source: params.source ?? source,
       });
     }
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    if (showAcceptance && user) {
+      void signOutAll();
+    }
   }
 
   return (

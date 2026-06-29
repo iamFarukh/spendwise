@@ -2,6 +2,7 @@ import {type Account, type UserSettings, firestorePaths} from '@pfos/shared';
 import {doc, setDoc, writeBatch} from 'firebase/firestore';
 
 import {getFirebaseDb} from '@/lib/firebase/client';
+import {ensureOnline} from '@/lib/network/registry';
 import {sanitizeForFirestore} from '@/lib/firebase/sanitize';
 import {touchUserDocument} from '@/lib/firebase/user-doc';
 
@@ -29,6 +30,7 @@ export async function updateUserSettings(
   patch: SettingsPatch,
   accounts: Account[] = [],
 ): Promise<void> {
+  await ensureOnline();
   const db = getFirebaseDb();
   if (!db) {
     throw new Error('Firebase is not configured.');
@@ -73,6 +75,7 @@ export async function patchUserSettings(
   uid: string,
   patch: SettingsPatch,
 ): Promise<void> {
+  await ensureOnline();
   const db = getFirebaseDb();
   if (!db) {
     throw new Error('Firebase is not configured.');
