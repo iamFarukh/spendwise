@@ -19,4 +19,30 @@ describe('googlePayParser', () => {
     const r = googlePayParser.parse('Random unrelated text with Rs 10');
     expect(r.score).toBe(0);
   });
+
+  it('parses a real Google Pay receipt OCR (₹ misread as ·) at medium confidence', () => {
+    const ocr = [
+      'To MOHAMMAD FARUKH',
+      '·3,000',
+      'Pay again',
+      'Completed',
+      '6 Jul 2026, 4:58pm',
+      'ICICI Bank 1958',
+      'UPI transaction ID',
+      '618721215751',
+      'To: MOHAMMAD FARUKH',
+      'PhonePe · 7023496501@ybl',
+      'From: MOHAMMAD FARUKH (ICICI Bank)',
+      'Google Pay · mdfarukh534-1@okicici',
+      'Google transaction ID',
+      'CICAgNjz7aridA',
+    ].join('\n');
+    const r = googlePayParser.parse(ocr);
+    expect(r.fields.amount).toBe(3000);
+    expect(r.fields.merchant).toContain('MOHAMMAD FARUKH');
+    expect(r.fields.txnRef).toBe('618721215751');
+    expect(r.fields.type).toBe('EXPENSE');
+    expect(r.score).toBeLessThan(90);
+    expect(r.score).toBeGreaterThanOrEqual(70);
+  });
 });

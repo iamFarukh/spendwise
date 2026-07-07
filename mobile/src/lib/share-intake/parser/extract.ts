@@ -10,12 +10,14 @@ export function num(v?: string): number | undefined {
 const STRICT_AMOUNT = /(?:₹|rs\.?|inr)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i;
 
 /**
- * A line that is just a number, optionally prefixed by a single glyph. On UPI
- * receipts the amount is shown on its own prominent line as "₹20"; OCR frequently
- * misreads the ₹ as F, R, z, T, ¥, $ or ? — so we accept one leading letter/symbol.
+ * A line that is essentially just a number, optionally prefixed by a little OCR
+ * noise. On UPI receipts the amount is shown on its own prominent line as "₹20"
+ * / "₹3,000"; OCR misreads the ₹ as a letter (F, R) OR punctuation (·, •, ., :,
+ * ¥, $), so we tolerate up to two leading non-alphanumeric glyphs plus one
+ * optional letter before the digits.
  */
 const OCR_AMOUNT_LINE =
-  /^[₹¥$₨frzt?]?\s?((?:[0-9]{1,3}(?:,[0-9]{2,3})+|[0-9]{1,7})(?:\.[0-9]{1,2})?)$/i;
+  /^[^0-9A-Za-z\n]{0,2}[A-Za-z]?\s?((?:[0-9]{1,3}(?:,[0-9]{2,3})+|[0-9]{1,7})(?:\.[0-9]{1,2})?)$/;
 
 const YEAR = /^(?:19|20)[0-9]{2}$/;
 

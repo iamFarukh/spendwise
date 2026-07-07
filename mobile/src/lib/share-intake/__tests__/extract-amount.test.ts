@@ -14,6 +14,13 @@ describe('extractAmount', () => {
     expect(extractAmount(ocr)).toEqual({amount: 20, fallback: true});
   });
 
+  it('recovers a comma amount where ₹ became punctuation (₹3,000 -> ·3,000)', () => {
+    const ocr = ['To MOHAMMAD FARUKH', '·3,000', 'Pay again', 'ICICI Bank 1958'].join(
+      '\n',
+    );
+    expect(extractAmount(ocr)).toEqual({amount: 3000, fallback: true});
+  });
+
   it('ignores ids, UTRs, account numbers and years', () => {
     const noise = [
       '3 July 2026 at 18:05',
