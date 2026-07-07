@@ -6,6 +6,7 @@ export * from "./types/settings";
 export * from "./types/reconciliation";
 export * from "./constants/default-categories";
 export * from "./constants/firestore-paths";
+export * from "./constants/share-analytics";
 export * from "./transactions";
 export * from "./types/recurring";
 export * from "./recurring";

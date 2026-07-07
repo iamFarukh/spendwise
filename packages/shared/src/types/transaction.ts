@@ -18,9 +18,24 @@ export type TransactionSource =
   | "SMS"
   | "NOTIFICATION"
   | "RECURRING"
-  | "RECONCILIATION";
+  | "RECONCILIATION"
+  | "SHARE";
 
 export type TransactionStatus = "PENDING" | "VERIFIED";
+
+/**
+ * Provenance for transactions imported from shared UPI/app text (Share to
+ * SpendWise). `rawText` is the exact untouched shared string; `parser`/
+ * `parserVersion` record which strategy produced the draft so older imports can
+ * be re-parsed if the parser improves.
+ */
+export interface ImportMeta {
+  rawText: string;
+  sourceApp?: string;
+  importedAt: string;
+  parser: string;
+  parserVersion: number;
+}
 
 export interface TransactionSplit {
   categoryId: string;
@@ -48,6 +63,7 @@ export interface Transaction {
   linkedTransactionId?: string | null;
   recurringId?: string | null;
   source: TransactionSource;
+  importMeta?: ImportMeta | null;
   status: TransactionStatus;
   createdAt: string;
   updatedAt: string;

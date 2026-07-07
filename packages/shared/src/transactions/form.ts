@@ -1,5 +1,10 @@
 import type { Account } from "../types/account";
-import type { Transaction, TransactionStatus } from "../types/transaction";
+import type {
+  ImportMeta,
+  Transaction,
+  TransactionSource,
+  TransactionStatus,
+} from "../types/transaction";
 import { deriveIsGlobalExpense } from "../accounting/is-global-expense";
 
 export type ManualTransactionType =
@@ -22,6 +27,8 @@ export type TransactionFormInput = {
   merchant?: string;
   notes?: string;
   status?: TransactionStatus;
+  source?: TransactionSource;
+  importMeta?: ImportMeta | null;
 };
 
 export function isManualTransactionType(
@@ -184,7 +191,8 @@ export function buildNewTransaction(
       isGlobalExpense: false,
       linkedTransactionId: null,
       recurringId: null,
-      source: "MANUAL",
+      source: input.source ?? "MANUAL",
+      importMeta: input.importMeta ?? null,
       status: "VERIFIED",
       createdAt: now,
       updatedAt: now,
@@ -213,6 +221,7 @@ export function applyFormToTransaction(
     notes: input.notes?.trim() ?? "",
     isGlobalExpense: deriveIsGlobalExpense(input.type),
     status: input.status ?? existing.status,
+    importMeta: input.importMeta ?? existing.importMeta ?? null,
     updatedAt: new Date().toISOString(),
   };
 }
