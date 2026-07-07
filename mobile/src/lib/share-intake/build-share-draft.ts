@@ -18,9 +18,13 @@ export function buildShareDraft(
   recent: Transaction[],
 ): ShareDraft {
   const parsed = parseSharedText(payload.text);
-  parsed.merchant = normalizeMerchant(parsed.merchant);
-  parsed.categoryId = predictCategory(parsed.merchant, categories);
   parsed.sourceApp = payload.sourceApp;
+
+  // Keep the merchant's original casing for display/save; normalize only for
+  // category prediction and duplicate detection (findDuplicate normalizes both
+  // sides internally).
+  const normalized = normalizeMerchant(parsed.merchant);
+  parsed.categoryId = predictCategory(normalized, categories);
 
   const duplicate = findDuplicate(parsed, recent);
   return {parsed, duplicate};

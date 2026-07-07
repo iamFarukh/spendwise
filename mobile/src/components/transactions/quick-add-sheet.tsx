@@ -695,6 +695,15 @@ export function QuickAddSheet({
                   </AppText>
                 </View>
 
+                {shareDraft.parsed.merchant ? (
+                  <AppText variant="sm" muted style={styles.sharePayee}>
+                    {shareDraft.parsed.type === 'INCOME' ? 'From ' : 'Paid to '}
+                    <AppText variant="sm" style={styles.sharePayeeName}>
+                      {shareDraft.parsed.merchant}
+                    </AppText>
+                  </AppText>
+                ) : null}
+
                 {shareDraft.duplicate ? (
                   <View style={[styles.shareBanner, styles.shareBannerDup]}>
                     <AppText variant="sm" style={styles.shareBannerText}>
@@ -1107,6 +1116,8 @@ const styles = StyleSheet.create({
   shareBannerWarn: {backgroundColor: colors.canvas, borderColor: colors.pending},
   shareBannerDup: {backgroundColor: colors.canvas, borderColor: colors.pending},
   shareBannerText: {color: colors.ink700, fontWeight: '600'},
+  sharePayee: {marginBottom: spacing.sm},
+  sharePayeeName: {color: colors.ink900, fontWeight: '700'},
   rawToggle: {
     marginBottom: spacing.xs,
     fontWeight: '700',

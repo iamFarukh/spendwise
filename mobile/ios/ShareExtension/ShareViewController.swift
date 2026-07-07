@@ -82,7 +82,9 @@ class ShareViewController: SLComposeServiceViewController {
       completion(text)
     }
     request.recognitionLevel = .accurate
-    request.usesLanguageCorrection = true
+    // Language correction "fixes" the ₹ glyph into a letter (F/R), corrupting the
+    // amount — keep it off so the raw currency symbol survives for the parser.
+    request.usesLanguageCorrection = false
     let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
     DispatchQueue.global(qos: .userInitiated).async {
       do { try handler.perform([request]) } catch { completion("") }

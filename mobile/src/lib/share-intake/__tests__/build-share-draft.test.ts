@@ -25,8 +25,8 @@ describe('buildShareDraft', () => {
       recent,
     );
     expect(draft.parsed.amount).toBe(850);
-    expect(draft.parsed.merchant).toBe('amazon'); // normalized
-    expect(draft.duplicate?.id).toBe('t1');
+    expect(draft.parsed.merchant).toBe('Amazon Pay India'); // original case kept
+    expect(draft.duplicate?.id).toBe('t1'); // still matches (normalized internally)
   });
 
   it('predicts a category from a known merchant', () => {
