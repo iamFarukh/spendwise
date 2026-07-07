@@ -31,6 +31,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     return true
   }
+
+  // The Share Extension foregrounds the app via spendwise://share after writing
+  // the payload to the App Group. Accept the open; the ShareIntake module reads
+  // the payload on didBecomeActive.
+  func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    return url.scheme == "spendwise"
+  }
 }
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
