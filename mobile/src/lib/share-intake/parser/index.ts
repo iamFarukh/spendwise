@@ -42,7 +42,6 @@ export function parseSharedText(rawText: string): ParsedShare {
 
   if (__DEV__) {
     // Parser debug mode: surface which strategy won and why.
-    // eslint-disable-next-line no-console
     console.info('[share-parser]', {
       parser: best.parserName,
       score: best.score,

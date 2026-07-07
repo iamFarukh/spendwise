@@ -34,6 +34,7 @@ import Animated, {
   ZoomOut,
 } from 'react-native-reanimated';
 import {
+  SHARE_ANALYTICS_EVENTS,
   toDateStringInTimezone,
   validateTransactionForm,
   type ManualTransactionType,
@@ -41,6 +42,8 @@ import {
   type TransactionFormInput,
 } from '@pfos/shared';
 
+import {trackShareEvent} from '@/lib/analytics/share';
+import type {ShareDraft} from '@/lib/share-intake/types';
 import {AppText} from '@/components/ui/app-text';
 import {IconCheck, IconClose, IconGrid} from '@/components/icons';
 import {Lottie} from '@/components/motion/lottie';
@@ -99,6 +102,8 @@ type QuickAddSheetProps = {
   initialType?: QuickAddInitialType;
   /** Prefill fields for duplicate-without-edit mode. */
   prefillFrom?: Transaction | null;
+  /** Review-before-save mode for a transaction shared into the app. */
+  shareDraft?: ShareDraft | null;
 };
 
 const TYPE_OPTIONS: Array<{value: QuickTxnType; label: string}> = [
@@ -141,6 +146,7 @@ export function QuickAddSheet({
   editTxn,
   initialType,
   prefillFrom,
+  shareDraft,
 }: QuickAddSheetProps) {
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -150,6 +156,7 @@ export function QuickAddSheet({
   const {categories} = useCategories();
 
   const [mounted, setMounted] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
   const [txnType, setTxnType] = useState<QuickTxnType>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -206,7 +213,29 @@ export function QuickAddSheet({
       setCustomCategoryName('');
       setSaveCustomCategory(false);
       setTextInputActive(false);
-      if (editTxn && isQuickEditable(editTxn.type)) {
+      setShowRaw(false);
+      if (shareDraft) {
+        // Review-before-save: prefill from the parsed shared transaction. The
+        // parser only ever produces EXPENSE or INCOME.
+        const parsed = shareDraft.parsed;
+        const type: QuickTxnType = parsed.type === 'INCOME' ? 'INCOME' : 'EXPENSE';
+        const primaryId = primaryAccount?.id ?? '';
+        setTxnType(type);
+        setAmount(parsed.amount != null ? String(parsed.amount) : '');
+        if (type === 'INCOME') {
+          setCategoryId('');
+          setIncomeSource(parsed.merchant ?? '');
+          setToAccountId(primaryId);
+          setFromAccountId('');
+        } else {
+          setCategoryId(parsed.categoryId ?? '');
+          setIncomeSource('');
+          setFromAccountId(primaryId);
+          const otherId =
+            assetAccounts.find(account => account.id !== primaryId)?.id ?? '';
+          setToAccountId(otherId || primaryId);
+        }
+      } else if (editTxn && isQuickEditable(editTxn.type)) {
         // Edit mode — prefill from the existing transaction.
         setTxnType(editTxn.type);
         setAmount(editTxn.amount ? String(editTxn.amount) : '');
@@ -247,8 +276,8 @@ export function QuickAddSheet({
   }, [visible]);
 
   useEffect(() => {
-    // Don't clobber the edit / duplicate prefill's accounts.
-    if (visible && primaryAccount && !editTxn && !prefillFrom) {
+    // Don't clobber the edit / duplicate / share prefill's accounts.
+    if (visible && primaryAccount && !editTxn && !prefillFrom && !shareDraft) {
       resetAccountDefaults();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,7 +335,7 @@ export function QuickAddSheet({
     })
     .onEnd(event => {
       if (event.translationY > 120 || event.velocityY > 800) {
-        runOnJS(onClose)();
+        runOnJS(dismiss)();
       } else {
         translateY.value = withSpring(0, SPRINGS.default);
       }
@@ -415,6 +444,14 @@ export function QuickAddSheet({
     });
   }, []);
 
+  // Closing a share review without saving counts as a cancel (analytics only).
+  const dismiss = useCallback(() => {
+    if (shareDraft && !done) {
+      trackShareEvent(SHARE_ANALYTICS_EVENTS.cancelled);
+    }
+    onClose();
+  }, [shareDraft, done, onClose]);
+
   async function handleSave() {
     if (!settings) {
       return;
@@ -519,6 +556,23 @@ export function QuickAddSheet({
         }),
       };
 
+      if (shareDraft) {
+        // Preserve provenance: source + exact raw text + which parser produced it.
+        input.source = 'SHARE';
+        input.importMeta = {
+          rawText: shareDraft.parsed.rawText,
+          sourceApp: shareDraft.parsed.sourceApp,
+          importedAt: new Date().toISOString(),
+          parser: shareDraft.parsed.parserName,
+          parserVersion: shareDraft.parsed.parserVersion,
+        };
+        // The expense flow has no merchant field; carry the parsed payee through
+        // so it isn't lost (unless a one-off custom label already set it).
+        if (txnType === 'EXPENSE' && !input.merchant && shareDraft.parsed.merchant) {
+          input.merchant = shareDraft.parsed.merchant;
+        }
+      }
+
       const validationError = validateTransactionForm(input, accounts);
       if (validationError) {
         toast.error(validationError);
@@ -529,6 +583,21 @@ export function QuickAddSheet({
         await updateTransaction(userId, editTxn, input);
       } else {
         await saveTransaction(userId, input);
+      }
+
+      if (shareDraft) {
+        trackShareEvent(SHARE_ANALYTICS_EVENTS.saved, {
+          parser: shareDraft.parsed.parserName,
+          confidence: shareDraft.parsed.confidence,
+        });
+        if (numericAmount !== shareDraft.parsed.amount) {
+          trackShareEvent(SHARE_ANALYTICS_EVENTS.editedAmount);
+        }
+        const finalMerchant =
+          txnType === 'INCOME' ? incomeSource.trim() : input.merchant ?? '';
+        if ((shareDraft.parsed.merchant ?? '') !== finalMerchant) {
+          trackShareEvent(SHARE_ANALYTICS_EVENTS.editedMerchant);
+        }
       }
 
       const fromName =
@@ -575,7 +644,7 @@ export function QuickAddSheet({
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
       </Animated.View>
 
       <Animated.View style={[styles.sheet, sheetStyle]}>
@@ -599,12 +668,61 @@ export function QuickAddSheet({
 
             <View style={styles.headerRow}>
               <AppText variant="h3">
-                {editTxn ? 'Edit transaction' : 'Quick add'}
+                {shareDraft
+                  ? 'Review shared'
+                  : editTxn
+                    ? 'Edit transaction'
+                    : 'Quick add'}
               </AppText>
-              <PressableScale onPress={onClose} hitSlop={12}>
+              <PressableScale onPress={dismiss} hitSlop={12}>
                 <IconClose size={22} color={colors.ink400} />
               </PressableScale>
             </View>
+
+            {shareDraft ? (
+              <Animated.View entering={FadeIn.duration(200)}>
+                <View
+                  style={[
+                    styles.shareBanner,
+                    shareDraft.parsed.confidence === 'high'
+                      ? styles.shareBannerHigh
+                      : styles.shareBannerWarn,
+                  ]}>
+                  <AppText variant="sm" style={styles.shareBannerText}>
+                    {shareDraft.parsed.confidence === 'high'
+                      ? '✓ Looks good — confirm and save.'
+                      : "⚠ We couldn't read everything. Please verify before saving."}
+                  </AppText>
+                </View>
+
+                {shareDraft.duplicate ? (
+                  <View style={[styles.shareBanner, styles.shareBannerDup]}>
+                    <AppText variant="sm" style={styles.shareBannerText}>
+                      A similar transaction already exists. Saving adds it anyway.
+                    </AppText>
+                  </View>
+                ) : null}
+
+                {shareDraft.parsed.rawText.trim() ? (
+                  <>
+                    <PressableScale
+                      onPress={() => setShowRaw(current => !current)}
+                      hitSlop={8}>
+                      <AppText variant="xs" muted style={styles.rawToggle}>
+                        {showRaw ? 'Hide original message' : 'Show original message'}
+                      </AppText>
+                    </PressableScale>
+                    {showRaw ? (
+                      <Animated.View entering={FadeIn.duration(160)}>
+                        <AppText variant="xs" muted style={styles.rawText}>
+                          {shareDraft.parsed.rawText}
+                        </AppText>
+                      </Animated.View>
+                    ) : null}
+                  </>
+                ) : null}
+              </Animated.View>
+            ) : null}
 
             <View style={styles.typeWrap}>
               <SegmentedControl
@@ -977,6 +1095,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+  },
+  shareBanner: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  shareBannerHigh: {backgroundColor: colors.mint50, borderColor: colors.mint200},
+  shareBannerWarn: {backgroundColor: colors.canvas, borderColor: colors.pending},
+  shareBannerDup: {backgroundColor: colors.canvas, borderColor: colors.pending},
+  shareBannerText: {color: colors.ink700, fontWeight: '600'},
+  rawToggle: {
+    marginBottom: spacing.xs,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  rawText: {
+    marginBottom: spacing.sm,
+    fontVariant: ['tabular-nums'],
+    lineHeight: 18,
   },
   typeWrap: {marginBottom: spacing.sm},
   amountWrap: {
