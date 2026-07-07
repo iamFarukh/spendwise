@@ -1,7 +1,7 @@
 import {type BottomTabBarProps} from '@react-navigation/bottom-tabs';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {type ComponentType, useEffect} from 'react';
+import {type ComponentType, memo, useCallback, useEffect} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Animated, {
@@ -117,19 +117,11 @@ export function AnimatedTabBar({
     return (
       <TabButton
         key={route.key}
+        routeKey={route.key}
         routeName={route.name}
         focused={focused}
         badge={badge}
-        onPress={() => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        }}
+        navigation={navigation}
       />
     );
   });
@@ -159,20 +151,40 @@ export function AnimatedTabBar({
   );
 }
 
-function TabButton({
+/**
+ * Memoized so an unrelated tab's badge/data tick (which re-renders the parent
+ * tab bar) doesn't re-run this button's three animated styles. `onPress` is built
+ * here from stable inputs rather than passed as an inline closure, so props stay
+ * referentially equal across parent re-renders and memo can skip the work — which
+ * keeps the JS thread free to handle the tab press instantly.
+ */
+const TabButton = memo(function TabButton({
+  routeKey,
   routeName,
   focused,
   badge,
-  onPress,
+  navigation,
 }: {
+  routeKey: string;
   routeName: string;
   focused: boolean;
   badge?: number;
-  onPress: () => void;
+  navigation: BottomTabBarProps['navigation'];
 }) {
   const progress = useSharedValue(focused ? 1 : 0);
   const reduceMotion = useReducedMotion();
   const Icon = ICONS[routeName] ?? IconHome;
+
+  const onPress = useCallback(() => {
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: routeKey,
+      canPreventDefault: true,
+    });
+    if (!focused && !event.defaultPrevented) {
+      navigation.navigate(routeName);
+    }
+  }, [navigation, routeKey, routeName, focused]);
 
   useEffect(() => {
     progress.value = reduceMotion
@@ -220,7 +232,7 @@ function TabButton({
       </Animated.Text>
     </PressableScale>
   );
-}
+});
 
 const styles = StyleSheet.create({
   bar: {

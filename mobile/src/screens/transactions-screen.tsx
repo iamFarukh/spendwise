@@ -1,5 +1,5 @@
 import {memo, useCallback, useMemo, useState} from 'react';
-import {SectionList, StyleSheet, TextInput, View} from 'react-native';
+import {Platform, SectionList, StyleSheet, TextInput, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   formatRelativeTransactionDate,
@@ -238,7 +238,10 @@ export function TransactionsScreen() {
         initialNumToRender={12}
         maxToRenderPerBatch={10}
         windowSize={9}
-        removeClippedSubviews
+        // Android-only: clipping off-screen subviews helps there, but on iOS it
+        // detaches/reattaches the animated + gesture rows during fast scroll,
+        // which shows up as blank/flickering cells. iOS keeps them mounted.
+        removeClippedSubviews={Platform.OS === 'android'}
         ListHeaderComponent={
           <ListHeader filter={filter} onFilter={setFilter} error={error} count={count} />
         }
