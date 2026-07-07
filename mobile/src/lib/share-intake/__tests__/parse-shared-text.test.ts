@@ -24,4 +24,21 @@ describe('parseSharedText', () => {
     expect(p.amount).toBeUndefined();
     expect(p.rawText).toBe('Payment Successful');
   });
+
+  it('parses OCR text from a shared Google Pay receipt image', () => {
+    // Shape of on-device OCR (ML Kit / Vision) output for a GPay receipt.
+    const ocr = [
+      '₹850',
+      'Paid to Swiggy',
+      'Completed',
+      '12 Jul 2026, 3:45 pm',
+      'Google Pay',
+      'UPI transaction ID 412345678901',
+    ].join('\n');
+    const p = parseSharedText(ocr);
+    expect(p.parserName).toBe('googlePay');
+    expect(p.amount).toBe(850);
+    expect(p.merchant?.toLowerCase()).toContain('swiggy');
+    expect(p.txnRef).toBe('412345678901');
+  });
 });

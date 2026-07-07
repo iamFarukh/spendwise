@@ -42,16 +42,27 @@ cd mobile/ios && pod install
 ```
 
 ## How it works
-- Extension activates only on **plain text** (`NSExtensionActivationSupportsText`).
+- Extension activates on **plain text** and **images**
+  (`NSExtensionActivationSupportsText` + `...SupportsImageWithMaxCount`). UPI apps
+  (Google Pay / PhonePe) share a **receipt image**, not text.
+- Text is forwarded as-is. Images are run through on-device **Vision** OCR
+  (`VNRecognizeTextRequest`) in the extension and forwarded as text — no extra
+  dependency, Vision is part of iOS. The recognized text hits the same JS parser
+  as typed text.
 - On share it writes `{text, contentType, receivedAt}` to the App Group under
   `pendingShare`, opens `spendwise://share`, and completes.
 - The host app's `ShareIntake` module reads + clears `pendingShare` on
   `getInitialShare()` (cold start) and on `didBecomeActive` (running), emitting
   `shareReceived` to JS.
 
+> No CocoaPods/SPM addition is needed for OCR on iOS — Vision is a system
+> framework. (Android uses the ML Kit `text-recognition` gradle dependency.)
+
 ## Verify (build-time checklist)
 - Share plain text from Notes/Safari → **SpendWise** appears in the share sheet →
   tapping it foregrounds the app and opens the review sheet pre-filled.
+- Share a **receipt screenshot / image** (Photos, or a Google Pay / PhonePe
+  receipt) → SpendWise appears → OCR extracts the text → review sheet pre-filled.
 - Confirm Google Sign-In still works (the app now defines
   `application(_:open:options:)`; it returns `false` for non-`spendwise` URLs —
   verify the Google flow is unaffected, as its SDK handles its own scheme).
