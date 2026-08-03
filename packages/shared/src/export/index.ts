@@ -8,3 +8,4 @@ export * from "./balances";
 export * from "./summary";
 export * from "./meta";
 export * from "./model";
+export * from "./serialize-csv";
