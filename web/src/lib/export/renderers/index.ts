@@ -2,6 +2,7 @@ import type { ExportFormat } from "@pfos/shared";
 
 import type { ExportRenderer } from "../types";
 import { csvRenderer } from "./csv";
+import { excelRenderer } from "./excel";
 import { jsonRenderer } from "./json";
 
 export const RENDERER_RECORD: Partial<
@@ -9,6 +10,7 @@ export const RENDERER_RECORD: Partial<
 > = {
   csv: csvRenderer,
   json: jsonRenderer,
+  xlsx: excelRenderer,
 };
 
 export function getRenderer(format: ExportFormat): ExportRenderer | undefined {
