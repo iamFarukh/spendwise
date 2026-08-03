@@ -117,3 +117,36 @@ export const EXPORT_GROUP_LABELS: Record<ExportGroup, string> = {
   REFUNDS: "Refunds",
   OTHER: "Other Activity",
 };
+
+export type ExportSummary = {
+  income: number;
+  expense: number;
+  net: number;
+  transfers: number;
+  investments: number;
+  refunds: number;
+  other: number;
+  transactionCount: number;
+};
+
+export type ExportCategorySummaryRow = {
+  categoryId: string | null;
+  categoryName: string;
+  amount: number;
+};
+
+export type ExportDailySummaryRow = {
+  date: string;
+  income: number;
+  expense: number;
+  transactions: number;
+};
+
+export type ExportVisualizations = {
+  incomeExpense: {
+    labels: string[];
+    income: number[];
+    expense: number[];
+  };
+  categoryBreakdown: { label: string; amount: number }[];
+};
