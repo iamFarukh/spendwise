@@ -171,8 +171,7 @@ export function buildExportDocument(args: {
   const useStatementRows =
     request.options.runningBalance || selectedAccountIds.length > 1;
 
-  const keepStatementOrder =
-    request.options.runningBalance && selectedAccountIds.length > 1;
+  const keepStatementOrder = request.options.runningBalance;
 
   let flatRows = buildFlatTransactions({
     filtered,

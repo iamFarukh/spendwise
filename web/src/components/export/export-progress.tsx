@@ -24,12 +24,7 @@ type ExportProgressProps = {
 };
 
 function phasesForFormat(format: ExportProgressProps["format"]): ExportPhase[] {
-  const base: ExportPhase[] = [
-    "PREPARING",
-    "FILTERING",
-    "BALANCES",
-    "DOCUMENT",
-  ];
+  const base: ExportPhase[] = ["PREPARING", "DOCUMENT"];
   if (format === "pdf") {
     base.push("CHARTS");
   }

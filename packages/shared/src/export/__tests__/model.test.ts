@@ -128,6 +128,36 @@ describe("buildExportDocument", () => {
     `);
   });
 
+  it("keeps statement order for single account when running balance is on even if sort is newest", () => {
+    const doc = buildExportDocument({
+      request: fixtureExportRequest({
+        accountIds: ["bank"],
+        sort: "newest",
+        options: {
+          runningBalance: true,
+          notes: false,
+          merchant: false,
+          transactionId: false,
+          timestamps: false,
+        },
+      }),
+      transactions: fixtureLedgerTransactions,
+      accounts: fixtureAccounts,
+      categories: fixtureCategories,
+      generatedAt: FIXTURE_GENERATED_AT,
+    });
+
+    expect(doc.filters.effectiveSort).toBe("statement_order");
+    expect(doc.transactions.map((r) => r.transactionId)).toEqual([
+      "txn-income",
+      "txn-expense",
+      "txn-transfer",
+    ]);
+
+    const balances = doc.transactions.map((r) => r.runningBalance);
+    expect(balances).toEqual([105_000, 104_500, 102_500]);
+  });
+
   it("uses one row per transaction for single account without running balance", () => {
     const doc = buildExportDocument({
       request: fixtureExportRequest({

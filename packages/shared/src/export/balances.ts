@@ -74,9 +74,7 @@ function aggregatePeriodTotals(rows: ExportStatementRow[]): {
         income += row.signedAmount;
         break;
       case "EXPENSES":
-        if (row.signedAmount < 0) {
-          expense += -row.signedAmount;
-        }
+        expense += Math.abs(row.signedAmount);
         break;
       case "TRANSFERS":
         if (row.signedAmount > 0) {

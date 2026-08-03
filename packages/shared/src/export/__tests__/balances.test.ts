@@ -349,6 +349,34 @@ describe("buildAccountStatements", () => {
     ).toBe("HDFC");
   });
 
+  it("counts liability account expenses using positive signed amounts", () => {
+    const creditCard = account("cc", {
+      name: "Amex",
+      class: "LIABILITY",
+      kind: "CREDIT_CARD",
+      sortOrder: 0,
+    });
+    const expense = txn({
+      type: "EXPENSE",
+      amount: 750,
+      fromAccountId: "cc",
+      date: "2026-06-12",
+    });
+    const statements = buildAccountStatements({
+      accounts: [creditCard],
+      allLedgerTransactions: [],
+      filteredTransactions: [expense],
+      range,
+      selectedAccountIds: ["cc"],
+      includeRunningBalance: false,
+      categoriesById: categories(),
+      includePending: false,
+    });
+
+    expect(statements[0].rows[0].signedAmount).toBe(750);
+    expect(statements[0].expense).toBe(750);
+  });
+
   it("aggregates income and expense period totals from rows", () => {
     const txns = [
       txn({

@@ -550,10 +550,7 @@ export function ExportCenterModal({
       ? accountList.length
       : exportRequest.accountIds.length;
 
-  const showMultiAccountSortNote =
-    options.runningBalance &&
-    selectedAccountCount > 1 &&
-    (exportRequest.accountIds === "all" || selectedAccountCount > 1);
+  const showStatementSortNote = options.runningBalance;
 
   const inheritedChip = hasInheritedFilters(source, presets);
 
@@ -570,21 +567,12 @@ export function ExportCenterModal({
         format === "pdf"
           ? [
               "PREPARING",
-              "FILTERING",
-              "BALANCES",
               "DOCUMENT",
               "CHARTS",
               "RENDERING",
               "DOWNLOADING",
             ]
-          : [
-              "PREPARING",
-              "FILTERING",
-              "BALANCES",
-              "DOCUMENT",
-              "RENDERING",
-              "DOWNLOADING",
-            ];
+          : ["PREPARING", "DOCUMENT", "RENDERING", "DOWNLOADING"];
       const idx = order.indexOf(phase);
       if (idx <= 0) {
         setCompletedPhases([]);
@@ -954,10 +942,11 @@ export function ExportCenterModal({
                   />
                 ))}
               </div>
-              {showMultiAccountSortNote ? (
+              {showStatementSortNote ? (
                 <p className="text-[12px] font-medium text-ink-500">
-                  With running balance across multiple accounts, rows are sorted
-                  by account, then date, for accurate per-account balances.
+                  {selectedAccountCount > 1
+                    ? "With running balance across multiple accounts, rows are sorted by account, then date, for accurate per-account balances."
+                    : "With running balance enabled, rows stay in date order so balances stay accurate."}
                 </p>
               ) : null}
             </section>

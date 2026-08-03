@@ -45,8 +45,6 @@ export async function runExport(args: {
 
   try {
     await yieldPhase(onPhase, "PREPARING");
-    await yieldPhase(onPhase, "FILTERING");
-    await yieldPhase(onPhase, "BALANCES");
     await yieldPhase(onPhase, "DOCUMENT");
 
     const document = buildExportDocument({
@@ -71,7 +69,17 @@ export async function runExport(args: {
     if (!renderer?.canRender(document)) {
       throw new Error(`Unsupported export format: ${request.format}`);
     }
-    const blob = await renderer.render(document, assets);
+
+    const preRenderMs = Math.round(performance.now() - startedAt);
+    const documentForRender: ExportDocument = {
+      ...document,
+      metadata: {
+        ...document.metadata,
+        generationTimeMs: preRenderMs,
+      },
+    };
+
+    const blob = await renderer.render(documentForRender, assets);
 
     const filename = exportFilename(
       document.metadata.filenameStem,
