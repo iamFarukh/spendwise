@@ -150,3 +150,49 @@ export type ExportVisualizations = {
   };
   categoryBreakdown: { label: string; amount: number }[];
 };
+
+export type ExportDateRange = {
+  start: string;
+  end: string;
+};
+
+export type ExportEffectiveSort = ExportSort | "statement_order";
+
+export type ExportDocumentFilters = {
+  range: ExportDateRange;
+  groups: ExportGroup[];
+  accountIds: string[] | "all";
+  categoryIds: string[] | "all";
+  paymentMethods: string[] | "all";
+  verifiedOnly: boolean;
+  options: ExportColumnOptions;
+  sort: ExportSort;
+  effectiveSort: ExportEffectiveSort;
+};
+
+export type ExportDocumentMetadata = {
+  version: 1;
+  locale: string;
+  timezone: string;
+  currency: string;
+  reportId: string;
+  filenameStem: string;
+  preparedFor: string;
+  source: ExportRequest["source"];
+  format: ExportFormat;
+  generatedAt: string;
+  recordCount: number;
+  generationTimeMs: number;
+};
+
+export type ExportDocument = {
+  metadata: ExportDocumentMetadata;
+  filters: ExportDocumentFilters;
+  summary: ExportSummary;
+  visualizations: ExportVisualizations;
+  categorySummary: ExportCategorySummaryRow[];
+  dailySummary: ExportDailySummaryRow[];
+  largestTransactions: ExportStatementRow[];
+  accounts: ExportAccountStatement[];
+  transactions: ExportStatementRow[];
+};

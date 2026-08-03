@@ -3,12 +3,9 @@ import {
   getMonthRange,
   toDateStringInTimezone,
 } from "../accounting/dates";
-import type { ExportDatePreset } from "./types";
+import type { ExportDatePreset, ExportDateRange } from "./types";
 
-export type ExportDateRange = {
-  start: string;
-  end: string;
-};
+export type { ExportDateRange } from "./types";
 
 export type ExportCustomRange = {
   from: string;

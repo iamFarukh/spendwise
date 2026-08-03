@@ -10,6 +10,16 @@ type ValidationResult =
 
 const SUPPORTED_FORMATS_SET = new Set<string>(SUPPORTED_EXPORT_FORMATS);
 
+export class ExportValidationError extends Error {
+  readonly code: ExportValidationErrorCode;
+
+  constructor(code: ExportValidationErrorCode, message: string) {
+    super(message);
+    this.name = "ExportValidationError";
+    this.code = code;
+  }
+}
+
 export function validateExportRequest(
   request: ExportRequest,
   ctx?: { matchCount?: number },

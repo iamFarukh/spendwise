@@ -7,3 +7,4 @@ export * from "./display";
 export * from "./balances";
 export * from "./summary";
 export * from "./meta";
+export * from "./model";
