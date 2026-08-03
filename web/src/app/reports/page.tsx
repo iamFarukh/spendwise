@@ -13,6 +13,8 @@ import {
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { RequireSetupComplete } from "@/components/auth/require-setup-complete";
+import { useAuth } from "@/components/providers/auth-provider";
+import { ExportCenterModal } from "@/components/export/export-center-modal";
 import { IconCalendar, IconDownload } from "@/components/icons";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
@@ -28,10 +30,7 @@ import { useAllCategories } from "@/hooks/use-all-categories";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useUserSettings } from "@/hooks/use-user-settings";
 import { useSipAnalytics } from "@/hooks/use-sip";
-import {
-  downloadLedgerJson,
-  downloadTransactionsCsv,
-} from "@/lib/reports/export";
+import { exportLocale, reportsExportPresets } from "@/lib/export/presets";
 
 const GRANULARITIES: { id: ReportGranularity; label: string }[] = [
   { id: "DAILY", label: "Daily" },
@@ -51,12 +50,14 @@ export default function ReportsPage() {
 }
 
 function ReportsContent() {
+  const { user } = useAuth();
   const { settings, loading: settingsLoading } = useUserSettings();
   const { accounts, loading: accountsLoading } = useAccounts();
   const { categories, loading: categoriesLoading } = useAllCategories();
   const { transactions, loading: transactionsLoading } = useTransactions();
   const { analytics: sipAnalytics } = useSipAnalytics();
   const [granularity, setGranularity] = useState<ReportGranularity>("MONTHLY");
+  const [exportOpen, setExportOpen] = useState(false);
 
   const timezone = settings?.timezone ?? "Asia/Kolkata";
   const currency = settings?.baseCurrency ?? "INR";
@@ -84,24 +85,20 @@ function ReportsContent() {
   );
 
   const rangeLabel = getReportRangeLabel(granularity);
+
+  const exportPresets = useMemo(
+    () => reportsExportPresets(buckets),
+    [buckets],
+  );
+
+  const preparedFor = user?.displayName ?? user?.email ?? "User";
+  const locale = exportLocale();
+
   const loading =
     settingsLoading ||
     accountsLoading ||
     categoriesLoading ||
     transactionsLoading;
-
-  function handleCsvExport() {
-    downloadTransactionsCsv(transactions, accounts, categories);
-  }
-
-  function handleJsonExport() {
-    downloadLedgerJson({
-      transactions,
-      accounts,
-      categories,
-      settings: settings ?? null,
-    });
-  }
 
   if (loading) {
     return (
@@ -115,16 +112,10 @@ function ReportsContent() {
       subtitle={financialYearLabel}
       showSearch={false}
       headerActions={
-        <>
-          <Button variant="ghost" onClick={handleCsvExport}>
-            <IconDownload />
-            CSV
-          </Button>
-          <Button variant="ghost" onClick={handleJsonExport}>
-            <IconDownload />
-            JSON
-          </Button>
-        </>
+        <Button variant="ghost" onClick={() => setExportOpen(true)}>
+          <IconDownload />
+          Export Report
+        </Button>
       }
     >
       <div>
@@ -168,6 +159,20 @@ function ReportsContent() {
           <SipReportsSection analytics={sipAnalytics} settings={settings} />
         ) : null}
       </div>
+
+      <ExportCenterModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        source="reports"
+        presets={exportPresets}
+        transactions={transactions}
+        accounts={accounts}
+        categories={categories}
+        preparedFor={preparedFor}
+        timezone={timezone}
+        currency={currency}
+        locale={locale}
+      />
     </AppShell>
   );
 }

@@ -11,7 +11,8 @@ import {
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { RequireSetupComplete } from "@/components/auth/require-setup-complete";
-import { IconPlus, IconSearch } from "@/components/icons";
+import { ExportCenterModal } from "@/components/export/export-center-modal";
+import { IconDownload, IconPlus, IconSearch } from "@/components/icons";
 import { TransactionDetailPanel } from "@/components/transactions/transaction-detail-panel";
 import { TransactionTypeIcon } from "@/components/transactions/transaction-type-icon";
 import { useToast } from "@/components/providers/toast-provider";
@@ -45,6 +46,10 @@ import {
   type TransactionTypeFilter,
 } from "@/lib/transactions/filter";
 import { deleteTransaction, verifyTransaction } from "@/lib/transactions/service";
+import {
+  exportLocale,
+  transactionsExportPresets,
+} from "@/lib/export/presets";
 import { cn } from "@/lib/cn";
 
 const TYPE_FILTERS: { id: TransactionTypeFilter; label: string }[] = [
@@ -91,6 +96,7 @@ function TransactionsContent() {
   const [deleting, setDeleting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   // Seed the search box from the global header search (/transactions?q=…).
   useEffect(() => {
@@ -141,6 +147,29 @@ function TransactionsContent() {
   // first visible transaction, so no syncing effect is needed.
   const selected =
     filtered.find((txn) => txn.id === selectedId) ?? filtered[0] ?? null;
+
+  const isCurrentCalendarMonth =
+    monthYear.year === initialMonth.year &&
+    monthYear.month === initialMonth.month;
+
+  const exportPresets = useMemo(
+    () =>
+      transactionsExportPresets({
+        typeFilter,
+        monthStart: monthWindow.start,
+        monthEnd: monthWindow.end,
+        isCurrentCalendarMonth,
+      }),
+    [
+      typeFilter,
+      monthWindow.end,
+      monthWindow.start,
+      isCurrentCalendarMonth,
+    ],
+  );
+
+  const preparedFor = user?.displayName ?? user?.email ?? "User";
+  const locale = exportLocale();
 
   const loading =
     settingsLoading || accountsLoading || categoriesLoading || transactionsLoading;
@@ -215,12 +244,18 @@ function TransactionsContent() {
       subtitle={`${filtered.length} entries · ${monthWindow.label}`}
       showSearch={false}
       headerActions={
-        <Link href="/transactions/new">
-          <Button>
-            <IconPlus />
-            Add
+        <>
+          <Button variant="ghost" onClick={() => setExportOpen(true)}>
+            <IconDownload />
+            Download
           </Button>
-        </Link>
+          <Link href="/transactions/new">
+            <Button>
+              <IconPlus />
+              Add
+            </Button>
+          </Link>
+        </>
       }
     >
       <div className="flex flex-col gap-5 xl:-m-8 xl:h-[calc(100dvh-72px-4rem)] xl:overflow-hidden xl:p-8">
@@ -343,6 +378,20 @@ function TransactionsContent() {
           </div>
         </div>
       </div>
+
+      <ExportCenterModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        source="transactions"
+        presets={exportPresets}
+        transactions={transactions}
+        accounts={accounts}
+        categories={categories}
+        preparedFor={preparedFor}
+        timezone={timezone}
+        currency={currency}
+        locale={locale}
+      />
     </AppShell>
   );
 }
