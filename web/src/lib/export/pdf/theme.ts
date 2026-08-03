@@ -1,0 +1,22 @@
+/** SpendWise brand colors for pdfmake (hex, mapped once from design tokens). */
+export const PDF_THEME = {
+  mint: "#12b886",
+  mintDark: "#0a7d5c",
+  mintLight: "#ecfdf6",
+  mintMuted: "#d2f8e7",
+  income: "#12b886",
+  incomeBg: "#e4f8ef",
+  expense: "#e26a57",
+  expenseStrong: "#b5402e",
+  expenseBg: "#fcede9",
+  ink900: "#0e2a22",
+  ink700: "#2f4d44",
+  ink600: "#4a645b",
+  ink500: "#6b847b",
+  ink400: "#9ab0a8",
+  line: "#e2ece7",
+  lineSoft: "#eef4f1",
+  paper: "#ffffff",
+  canvas: "#f2f7f4",
+  watermark: "#c3d4cd",
+} as const;

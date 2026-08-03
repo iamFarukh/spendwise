@@ -4,6 +4,7 @@ import type { ExportRenderer } from "../types";
 import { csvRenderer } from "./csv";
 import { excelRenderer } from "./excel";
 import { jsonRenderer } from "./json";
+import { pdfRenderer } from "./pdf";
 
 export const RENDERER_RECORD: Partial<
   Record<ExportFormat, ExportRenderer>
@@ -11,6 +12,7 @@ export const RENDERER_RECORD: Partial<
   csv: csvRenderer,
   json: jsonRenderer,
   xlsx: excelRenderer,
+  pdf: pdfRenderer,
 };
 
 export function getRenderer(format: ExportFormat): ExportRenderer | undefined {
