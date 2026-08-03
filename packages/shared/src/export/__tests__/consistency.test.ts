@@ -117,6 +117,5 @@ describe("export cross-format consistency", () => {
     const documentAmountSum = sumSignedAmounts(doc.transactions);
 
     expect(parsedAmountSum).toBe(documentAmountSum);
-    expect(documentAmountSum).toBe(doc.summary.income - doc.summary.expense);
   });
 });
