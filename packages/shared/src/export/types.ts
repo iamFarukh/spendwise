@@ -1,3 +1,5 @@
+import type { TransactionStatus } from "../types/transaction";
+
 export type ExportGroup =
   | "INCOME"
   | "EXPENSES"
@@ -5,6 +7,39 @@ export type ExportGroup =
   | "INVESTMENTS"
   | "REFUNDS"
   | "OTHER";
+
+export type ExportStatementRow = {
+  transactionId: string;
+  date: string;
+  time: string;
+  typeGroup: ExportGroup;
+  status: TransactionStatus;
+  categoryName: string;
+  accountId: string;
+  accountName: string;
+  counterpartyAccountName: string;
+  paymentMethod: string;
+  merchant: string;
+  displayDescription: string;
+  amount: number;
+  signedAmount: number;
+  runningBalance?: number;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExportAccountStatement = {
+  accountId: string;
+  accountName: string;
+  openingBalance: number;
+  closingBalance: number;
+  income: number;
+  expense: number;
+  transferIn: number;
+  transferOut: number;
+  rows: ExportStatementRow[];
+};
 
 export type ExportFormat = "pdf" | "xlsx" | "csv" | "json";
 
