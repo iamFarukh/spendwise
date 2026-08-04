@@ -6,21 +6,25 @@
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import 'react-native-get-random-values';
-import {AppRegistry} from 'react-native';
+import {AppRegistry, LogBox} from 'react-native';
 import {enableScreens, enableFreeze} from 'react-native-screens';
-
-// Native screen optimizations: keep off-screen navigator screens out of the
-// native view hierarchy AND freeze their React tree so blurred tabs / pushed
-// screens stop re-rendering (and pause their animations) on every data tick.
-enableScreens(true);
-enableFreeze(true);
 import notifee from '@notifee/react-native';
 import App from './src/App';
 import {name as appName} from './app.json';
 import {initCrashReporting} from './src/lib/observability/crash-reporting';
 import {handleBackgroundNotificationEvent} from './src/providers/push-notification-provider';
 
+// Native Sentry SDK logs internal cache messages at ERROR level; ignore in dev
+// so they don't trigger red LogBox overlays (crash reporting still works).
+LogBox.ignoreLogs(['Sentry Logger']);
+
 initCrashReporting();
+
+// Native screen optimizations: keep off-screen navigator screens out of the
+// native view hierarchy AND freeze their React tree so blurred tabs / pushed
+// screens stop re-rendering (and pause their animations) on every data tick.
+enableScreens(true);
+enableFreeze(true);
 
 // Hermes lacks crypto.randomUUID; get-random-values only polyfills
 // getRandomValues. @pfos/shared builders rely on randomUUID, so add it here.

@@ -8,13 +8,60 @@ const MAX_LOGICAL_WIDTH = 560;
 const MAX_BITMAP_WIDTH = 1200;
 const MAX_DPR = 2;
 
+/** Stable palette keyed by normalized category name (Food always same color). */
+const CATEGORY_NAMED_COLORS: Record<string, string> = {
+  food: "#e89a5e",
+  groceries: "#d9843f",
+  dining: "#c96b2e",
+  transport: "#5b86e5",
+  travel: "#3f6fd0",
+  fuel: "#4a7ad8",
+  cash: "#6b9e78",
+  shopping: "#c77d9e",
+  entertainment: "#8a7fe0",
+  health: "#e26a57",
+  utilities: "#4a9b8c",
+  rent: "#7a6f5d",
+  housing: "#8b7e6a",
+  education: "#5b86e5",
+  personal: "#9ab0a8",
+  other: "#9ab0a8",
+  uncategorized: "#b0c0b8",
+};
+
 const CATEGORY_FALLBACK_COLORS = [
-  { var: "--expense", fallback: "#E89A5E" },
-  { var: "--invest", fallback: "#5b86e5" },
-  { var: "--transfer", fallback: "#8a7fe0" },
-  { var: null, fallback: "#6B9E78" },
-  { var: null, fallback: "#C77D9E" },
+  "#E89A5E",
+  "#5b86e5",
+  "#8a7fe0",
+  "#6B9E78",
+  "#C77D9E",
+  "#4a9b8c",
+  "#d9843f",
+  "#7a6f5d",
 ] as const;
+
+function hashLabel(label: string): number {
+  let hash = 0;
+  for (let i = 0; i < label.length; i += 1) {
+    hash = (hash * 31 + label.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function colorForCategory(label: string): string {
+  const key = label.trim().toLowerCase();
+  if (CATEGORY_NAMED_COLORS[key]) {
+    return CATEGORY_NAMED_COLORS[key];
+  }
+  for (const [name, color] of Object.entries(CATEGORY_NAMED_COLORS)) {
+    if (key.includes(name)) {
+      return color;
+    }
+  }
+  return CATEGORY_FALLBACK_COLORS[
+    hashLabel(key) % CATEGORY_FALLBACK_COLORS.length
+  ];
+}
 
 type ChartColors = {
   income: string;
@@ -218,27 +265,18 @@ function buildCategorySlices(
     .slice(4)
     .reduce((sum, row) => sum + row.amount, 0);
 
-  const slices: CategorySlice[] = top.map((row, index) => {
-    const palette = CATEGORY_FALLBACK_COLORS[index % CATEGORY_FALLBACK_COLORS.length];
-    const color = palette.var
-      ? resolveCssColor(palette.var, palette.fallback)
-      : palette.fallback;
-    return {
-      label: row.label,
-      amount: row.amount,
-      color,
-      percent: (row.amount / total) * 100,
-    };
-  });
+  const slices: CategorySlice[] = top.map((row) => ({
+    label: row.label,
+    amount: row.amount,
+    color: colorForCategory(row.label),
+    percent: (row.amount / total) * 100,
+  }));
 
   if (otherAmount > 0) {
-    const otherPalette = CATEGORY_FALLBACK_COLORS[3];
     slices.push({
       label: "Other",
       amount: otherAmount,
-      color: otherPalette.var
-        ? resolveCssColor(otherPalette.var, otherPalette.fallback)
-        : otherPalette.fallback,
+      color: colorForCategory("Other"),
       percent: (otherAmount / total) * 100,
     });
   }

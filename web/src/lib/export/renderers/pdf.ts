@@ -8,10 +8,12 @@ import type {
   Alignment,
   Content,
   StyleDictionary,
+  TableCell,
   TDocumentDefinitions,
 } from "pdfmake/interfaces";
 
 const ALIGN_RIGHT: Alignment = "right";
+const ALIGN_CENTER: Alignment = "center";
 
 import { pdfBrandTitleContent, pdfLogoContent } from "../pdf/logo";
 import { PDF_THEME } from "../pdf/theme";
@@ -22,9 +24,9 @@ type PdfMakeInstance = {
   addVirtualFileSystem: (vfs: Record<string, string>) => void;
   addFonts: (fonts: Record<string, Record<string, string>>) => void;
   fonts?: Record<string, unknown>;
-  createPdf: (
-    doc: TDocumentDefinitions,
-  ) => { getBlob: (cb: (blob: Blob) => void) => void };
+  createPdf: (doc: TDocumentDefinitions) => {
+    getBlob: () => Promise<Blob>;
+  };
 };
 
 let pdfMakePromise: Promise<PdfMakeInstance> | null = null;
@@ -114,139 +116,536 @@ function formatPeriodRange(
   }
 }
 
+function periodDayCount(start: string, end: string): number {
+  const a = Date.parse(`${start}T00:00:00.000Z`);
+  const b = Date.parse(`${end}T00:00:00.000Z`);
+  if (Number.isNaN(a) || Number.isNaN(b) || b < a) {
+    return 1;
+  }
+  return Math.floor((b - a) / 86_400_000) + 1;
+}
+
 function isContentPage(pageNumber: number): boolean {
   return pageNumber > 1;
+}
+
+function zebraFill(rowIndex: number): string | null {
+  // rowIndex 0 = header; data rows start at 1
+  return rowIndex > 0 && rowIndex % 2 === 0 ? PDF_THEME.zebra : null;
+}
+
+function thinTableLayout(zebra = true) {
+  return {
+    hLineWidth: (i: number, node: { table: { body: unknown[] } }) =>
+      i === 0 || i === 1 || i === node.table.body.length ? 0.8 : 0.35,
+    vLineWidth: () => 0,
+    hLineColor: () => PDF_THEME.line,
+    paddingLeft: () => 8,
+    paddingRight: () => 8,
+    paddingTop: () => 7,
+    paddingBottom: () => 7,
+    fillColor: (rowIndex: number) => (zebra ? zebraFill(rowIndex) : null),
+  };
+}
+
+/** Bank-statement table: emphasized opening (row 1) and closing (last) rows. */
+function statementTableLayout(rowCount: number) {
+  return {
+    hLineWidth: (i: number, node: { table: { body: unknown[] } }) => {
+      if (i === 0 || i === 1 || i === node.table.body.length) {
+        return 1;
+      }
+      if (i === 2 || i === node.table.body.length - 1) {
+        return 0.8;
+      }
+      return 0.35;
+    },
+    vLineWidth: () => 0,
+    hLineColor: () => PDF_THEME.line,
+    paddingLeft: () => 10,
+    paddingRight: () => 10,
+    paddingTop: () => 9,
+    paddingBottom: () => 9,
+    fillColor: (rowIndex: number) => {
+      if (rowIndex === 1) {
+        return PDF_THEME.openingRow;
+      }
+      if (rowIndex === rowCount - 1) {
+        return PDF_THEME.closingRow;
+      }
+      return zebraFill(rowIndex);
+    },
+  };
+}
+
+function progressBarCanvas(sharePercent: number, width = 72): Content {
+  const clamped = Math.max(0, Math.min(100, sharePercent));
+  const filled = Math.round((clamped / 100) * width);
+  return {
+    canvas: [
+      {
+        type: "rect",
+        x: 0,
+        y: 3,
+        w: width,
+        h: 7,
+        r: 2,
+        color: PDF_THEME.lineSoft,
+      },
+      ...(filled > 0
+        ? [
+            {
+              type: "rect" as const,
+              x: 0,
+              y: 3,
+              w: filled,
+              h: 7,
+              r: 2,
+              color: PDF_THEME.mint,
+            },
+          ]
+        : []),
+    ],
+    width,
+    height: 14,
+  } as Content;
+}
+
+function iconBadge(code: string, bg: string): Content {
+  return {
+    table: {
+      widths: [24],
+      body: [
+        [
+          {
+            text: code,
+            alignment: ALIGN_CENTER,
+            fontSize: 7,
+            bold: true,
+            color: PDF_THEME.paper,
+            fillColor: bg,
+            margin: [0, 4, 0, 3],
+          },
+        ],
+      ],
+    },
+    layout: "noBorders",
+    margin: [0, 0, 0, 5],
+  } as Content;
+}
+
+function signedAmountColor(amount: number): string {
+  if (amount > 0) {
+    return PDF_THEME.income;
+  }
+  if (amount < 0) {
+    return PDF_THEME.expense;
+  }
+  return PDF_THEME.ink900;
+}
+
+/** Hide dormant accounts with no activity and zero balances. */
+function visibleAccounts(
+  accounts: ExportAccountStatement[],
+): ExportAccountStatement[] {
+  return accounts.filter((acct) => {
+    const dormant =
+      acct.rows.length === 0 &&
+      acct.openingBalance === 0 &&
+      acct.closingBalance === 0 &&
+      acct.netChange === 0;
+    return !dormant;
+  });
+}
+
+function sectionDivider(title: string, options?: { pageBreak?: "before" }): Content {
+  return {
+    stack: [
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 2.25,
+            lineColor: PDF_THEME.mint,
+          },
+        ],
+        margin: [0, 0, 0, 10],
+      },
+      { text: title, style: "sectionTitle" },
+    ],
+    margin: [0, 12, 0, 6],
+    pageBreak: options?.pageBreak,
+  };
 }
 
 function buildStyles(): StyleDictionary {
   return {
     coverBrand: {
-      fontSize: 36,
+      fontSize: 42,
       bold: true,
       color: PDF_THEME.mint,
       alignment: "center",
-      margin: [0, 0, 0, 8],
+      margin: [0, 12, 0, 4],
+    },
+    coverEyebrow: {
+      fontSize: 10,
+      bold: true,
+      color: PDF_THEME.ink500,
+      alignment: "center",
+      characterSpacing: 1.2,
+      margin: [0, 20, 0, 6],
     },
     coverTitle: {
-      fontSize: 22,
+      fontSize: 24,
       bold: true,
       color: PDF_THEME.ink900,
       alignment: "center",
-      margin: [0, 0, 0, 24],
+      margin: [0, 0, 0, 8],
+    },
+    coverTagline: {
+      fontSize: 11,
+      color: PDF_THEME.ink600,
+      alignment: "center",
+      margin: [48, 0, 48, 28],
     },
     coverLabel: {
-      fontSize: 10,
+      fontSize: 9,
+      bold: true,
       color: PDF_THEME.ink500,
       alignment: "center",
-      margin: [0, 2, 0, 0],
+      characterSpacing: 0.6,
+      margin: [0, 10, 0, 2],
     },
     coverValue: {
-      fontSize: 13,
+      fontSize: 14,
       color: PDF_THEME.ink900,
       alignment: "center",
-      margin: [0, 0, 0, 12],
+      margin: [0, 0, 0, 2],
     },
     coverConfidential: {
       fontSize: 9,
+      bold: true,
       color: PDF_THEME.expenseStrong,
       alignment: "center",
-      margin: [0, 32, 0, 0],
+      characterSpacing: 1.5,
+      margin: [0, 36, 0, 0],
+    },
+    coverReportId: {
+      fontSize: 8,
+      color: PDF_THEME.ink400,
+      alignment: "center",
+      margin: [0, 6, 0, 0],
+    },
+    coverPreparedLabel: {
+      fontSize: 9,
+      bold: true,
+      color: PDF_THEME.ink500,
+      alignment: "center",
+      characterSpacing: 0.8,
+      margin: [0, 8, 0, 4],
+    },
+    coverPreparedName: {
+      fontSize: 18,
+      bold: true,
+      color: PDF_THEME.ink900,
+      alignment: "center",
+      margin: [0, 0, 0, 4],
+    },
+    coverSecurity: {
+      fontSize: 8,
+      color: PDF_THEME.ink500,
+      alignment: "center",
+      margin: [40, 28, 40, 0],
+    },
+    coverFooter: {
+      fontSize: 8,
+      color: PDF_THEME.ink500,
+      alignment: "center",
+      margin: [0, 16, 0, 0],
     },
     sectionTitle: {
       fontSize: 14,
       bold: true,
       color: PDF_THEME.ink900,
-      margin: [0, 16, 0, 10],
+      margin: [0, 0, 0, 8],
+    },
+    insightLabel: {
+      fontSize: 7.5,
+      bold: true,
+      color: PDF_THEME.ink500,
+      characterSpacing: 0.4,
+      margin: [0, 0, 0, 4],
+    },
+    insightValue: {
+      fontSize: 12,
+      bold: true,
+      color: PDF_THEME.ink900,
+      margin: [0, 0, 0, 3],
+    },
+    insightSub: {
+      fontSize: 7.5,
+      color: PDF_THEME.ink600,
+    },
+    cardIcon: {
+      fontSize: 11,
+      bold: true,
+      color: PDF_THEME.mintDark,
+      margin: [0, 0, 0, 4],
     },
     cardLabel: {
       fontSize: 8,
+      bold: true,
       color: PDF_THEME.ink500,
+      characterSpacing: 0.4,
       margin: [0, 0, 0, 4],
     },
     cardValue: {
+      fontSize: 13,
+      bold: true,
+      color: PDF_THEME.ink900,
+      margin: [0, 0, 0, 3],
+    },
+    cardValueIncome: {
+      fontSize: 13,
+      bold: true,
+      color: PDF_THEME.income,
+      margin: [0, 0, 0, 3],
+    },
+    cardValueExpense: {
+      fontSize: 13,
+      bold: true,
+      color: PDF_THEME.expense,
+      margin: [0, 0, 0, 3],
+    },
+    cardSubtitle: {
+      fontSize: 7.5,
+      color: PDF_THEME.ink500,
+    },
+    tableHeader: {
+      fontSize: 8,
+      bold: true,
+      color: PDF_THEME.ink700,
+      fillColor: PDF_THEME.mintLight,
+    },
+    tableCell: { fontSize: 8.5, color: PDF_THEME.ink900 },
+    tableCellMuted: { fontSize: 8, color: PDF_THEME.ink600 },
+    tableCellBold: { fontSize: 9, bold: true, color: PDF_THEME.ink900 },
+    amountEmphasized: {
+      fontSize: 9.5,
+      bold: true,
+      color: PDF_THEME.ink900,
+    },
+    emptyNote: {
+      fontSize: 9,
+      italics: true,
+      color: PDF_THEME.ink500,
+      margin: [0, 4, 0, 8],
+    },
+    accountTitle: {
+      fontSize: 14,
+      bold: true,
+      color: PDF_THEME.mintDark,
+      margin: [0, 18, 0, 4],
+    },
+    accountMeta: {
+      fontSize: 8.5,
+      color: PDF_THEME.ink500,
+      margin: [0, 0, 0, 8],
+    },
+    chartCaption: {
+      fontSize: 9,
+      bold: true,
+      color: PDF_THEME.ink700,
+      margin: [0, 0, 0, 4],
+    },
+    chartTotalLabel: {
+      fontSize: 8,
+      color: PDF_THEME.ink500,
+      margin: [0, 6, 0, 0],
+    },
+    chartTotalValue: {
       fontSize: 12,
       bold: true,
       color: PDF_THEME.ink900,
     },
-    cardValueIncome: { fontSize: 12, bold: true, color: PDF_THEME.income },
-    cardValueExpense: { fontSize: 12, bold: true, color: PDF_THEME.expense },
-    tableHeader: {
-      fontSize: 9,
-      bold: true,
-      color: PDF_THEME.ink700,
-      fillColor: PDF_THEME.lineSoft,
-    },
-    tableCell: { fontSize: 9, color: PDF_THEME.ink900 },
-    tableCellMuted: { fontSize: 8, color: PDF_THEME.ink600 },
-    accountTitle: {
-      fontSize: 12,
+    appendixHeading: {
+      fontSize: 10,
       bold: true,
       color: PDF_THEME.mintDark,
-      margin: [0, 12, 0, 6],
+      margin: [0, 10, 0, 4],
     },
-    metaLine: { fontSize: 8, color: PDF_THEME.ink600, margin: [0, 2, 0, 0] },
-    footerText: { fontSize: 7, color: PDF_THEME.ink500 },
+    metaLine: { fontSize: 8.5, color: PDF_THEME.ink600, margin: [0, 2, 0, 0] },
+    footerText: { fontSize: 8, color: PDF_THEME.ink500 },
     headerBrand: { fontSize: 11, bold: true, color: PDF_THEME.ink900 },
-    headerSub: { fontSize: 7, color: PDF_THEME.ink500 },
-    brandTitle: { fontSize: 11, bold: true, color: PDF_THEME.ink900 },
-    brandSubtitle: { fontSize: 7, color: PDF_THEME.ink500 },
+    headerSub: { fontSize: 8, color: PDF_THEME.ink500 },
+    brandTitle: { fontSize: 13, bold: true, color: PDF_THEME.ink900 },
+    brandSubtitle: { fontSize: 8, color: PDF_THEME.ink500 },
     logoFallback: {
-      fontSize: 14,
+      fontSize: 18,
+      bold: true,
+      color: PDF_THEME.mint,
+    },
+    logoFallbackLg: {
+      fontSize: 32,
       bold: true,
       color: PDF_THEME.mint,
     },
     watermark: {
-      fontSize: 72,
+      fontSize: 34,
       bold: true,
       color: PDF_THEME.watermark,
-      opacity: 0.35,
+      opacity: 0.06,
     },
   };
 }
 
-function summaryCardsContent(document: ExportDocument): Content {
-  const { summary, metadata } = document;
+function moneyCell(
+  amount: number,
+  currency: string,
+  locale: string,
+  style = "tableCell",
+): TableCell {
+  return {
+    text: formatMoney(amount, currency, locale),
+    style,
+    alignment: ALIGN_RIGHT,
+  };
+}
+
+type InsightCard = {
+  label: string;
+  value: string;
+  subtitle: string;
+  valueColor?: string;
+};
+
+function buildInsightCards(document: ExportDocument): InsightCard[] {
+  const { summary, categorySummary, filters, largestTransactions, metadata, accounts } =
+    document;
   const { currency, locale } = metadata;
-  const fmt = (n: number) => formatMoney(n, currency, locale);
+  const days = periodDayCount(filters.range.start, filters.range.end);
+  const cards: InsightCard[] = [];
 
-  const cards: { label: string; value: string; style?: string }[] = [
-    { label: "Income", value: fmt(summary.income), style: "cardValueIncome" },
-    { label: "Expenses", value: fmt(summary.expense), style: "cardValueExpense" },
-    { label: "Net", value: fmt(summary.net), style: "cardValue" },
-    { label: "Transfers", value: fmt(summary.transfers), style: "cardValue" },
-    { label: "Investments", value: fmt(summary.investments), style: "cardValue" },
-    { label: "Refunds", value: fmt(summary.refunds), style: "cardValue" },
-    { label: "Other activity", value: fmt(summary.other), style: "cardValue" },
-    {
-      label: "Transactions",
-      value: String(summary.transactionCount),
-      style: "cardValue",
-    },
-  ];
+  const largestExpense = largestTransactions.find(
+    (row) => row.typeGroup === "EXPENSES",
+  );
+  if (largestExpense) {
+    cards.push({
+      label: "LARGEST EXPENSE",
+      value: formatMoney(
+        Math.abs(largestExpense.signedAmount),
+        currency,
+        locale,
+      ),
+      subtitle: largestExpense.displayDescription || "Expense",
+      valueColor: PDF_THEME.expense,
+    });
+  }
 
-  const cell = (card: (typeof cards)[number]) => ({
-    stack: [
-      { text: card.label, style: "cardLabel" },
-      { text: card.value, style: card.style ?? "cardValue" },
-    ],
-    fillColor: PDF_THEME.paper,
-    margin: [8, 10, 8, 10],
+  if (categorySummary[0]) {
+    const top = categorySummary[0];
+    cards.push({
+      label: "TOP CATEGORY",
+      value: top.categoryName,
+      subtitle: `${Math.round(top.share)}% · ${formatMoney(top.amount, currency, locale)}`,
+    });
+  }
+
+  if (summary.expense > 0 && days > 0) {
+    cards.push({
+      label: "DAILY AVERAGE",
+      value: formatMoney(summary.expense / days, currency, locale),
+      subtitle: `Across ${days} days`,
+    });
+  }
+
+  const mostActive = [...accounts].sort(
+    (a, b) => b.rows.length - a.rows.length,
+  )[0];
+  if (mostActive && mostActive.rows.length > 0) {
+    cards.push({
+      label: "MOST ACTIVE ACCOUNT",
+      value: mostActive.accountName,
+      subtitle: `${mostActive.rows.length} lines · net ${formatSignedMoney(mostActive.netChange, currency, locale)}`,
+    });
+  }
+
+  cards.push({
+    label: "NET CASH FLOW",
+    value: formatSignedMoney(summary.net, currency, locale),
+    subtitle:
+      summary.net < 0
+        ? "Negative for this period"
+        : summary.net > 0
+          ? "Positive for this period"
+          : "Break-even for this period",
+    valueColor: signedAmountColor(summary.net),
   });
 
-  const row1 = cards.slice(0, 4).map(cell);
-  const row2 = cards.slice(4, 8).map(cell);
+  if (summary.income === 0 && summary.other > 0) {
+    const topOther = summary.otherBreakdown[0]?.label ?? "Other Activity";
+    cards.push({
+      label: "INCOME NOTE",
+      value: formatMoney(0, currency, locale),
+      subtitle: `Positive ledger entries are in Other (${topOther}), not Income`,
+    });
+  }
+
+  return cards.slice(0, 4);
+}
+
+function insightCardsContent(document: ExportDocument): Content | null {
+  const cards = buildInsightCards(document);
+  if (cards.length === 0) {
+    return null;
+  }
+
+  const cell = (card: InsightCard | null) => {
+    if (!card) {
+      return { text: "", margin: [0, 0, 0, 0] };
+    }
+    return {
+      stack: [
+        { text: card.label, style: "insightLabel" },
+        {
+          text: card.value,
+          style: "insightValue",
+          color: card.valueColor ?? PDF_THEME.ink900,
+        },
+        { text: card.subtitle, style: "insightSub" },
+      ],
+      fillColor: PDF_THEME.mintLight,
+      margin: [10, 10, 10, 10],
+    };
+  };
+
+  const slots: Array<InsightCard | null> = [...cards.slice(0, 4)];
+  while (slots.length < 4) {
+    slots.push(null);
+  }
 
   return {
     stack: [
-      { text: "Executive summary", style: "sectionTitle" },
+      {
+        text: "Executive insights",
+        style: "appendixHeading",
+        margin: [0, 12, 0, 6],
+      },
       {
         table: {
-          widths: ["*", "*", "*", "*"],
-          body: [row1, row2] as Content[][],
+          widths: ["*", "*"],
+          body: [
+            [cell(slots[0]!), cell(slots[1]!)],
+            [cell(slots[2]!), cell(slots[3]!)],
+          ] as Content[][],
         },
         layout: {
-          hLineWidth: () => 1,
-          vLineWidth: () => 1,
+          hLineWidth: () => 0.8,
+          vLineWidth: () => 0.8,
           hLineColor: () => PDF_THEME.line,
           vLineColor: () => PDF_THEME.line,
           paddingLeft: () => 0,
@@ -256,46 +655,294 @@ function summaryCardsContent(document: ExportDocument): Content {
         },
       },
     ],
-    pageBreak: "before",
-  } as Content;
+  };
 }
 
-function chartsSection(assets?: ExportAssets): Content | null {
+function summaryCardsContent(document: ExportDocument): Content {
+  const { summary, metadata } = document;
+  const { currency, locale } = metadata;
+  const fmt = (n: number) => formatMoney(n, currency, locale);
+  const days = periodDayCount(
+    document.filters.range.start,
+    document.filters.range.end,
+  );
+
+  type Card = {
+    badge: string;
+    badgeBg: string;
+    label: string;
+    value: string;
+    subtitle: string;
+    valueStyle: string;
+    fill: string;
+  };
+
+  const cards: Card[] = [
+    {
+      badge: "INC",
+      badgeBg: PDF_THEME.income,
+      label: "INCOME",
+      value: fmt(summary.income),
+      subtitle: "Verified inflows",
+      valueStyle: "cardValueIncome",
+      fill: PDF_THEME.incomeBg,
+    },
+    {
+      badge: "EXP",
+      badgeBg: PDF_THEME.expense,
+      label: "EXPENSES",
+      value: fmt(summary.expense),
+      subtitle:
+        days > 0
+          ? `Avg ${fmt(summary.expense / days)} / day`
+          : "Period spending",
+      valueStyle: "cardValueExpense",
+      fill: PDF_THEME.expenseBg,
+    },
+    {
+      badge: "NET",
+      badgeBg: PDF_THEME.mintDark,
+      label: "NET",
+      value: formatSignedMoney(summary.net, currency, locale),
+      subtitle: "Income − expenses",
+      valueStyle: "cardValue",
+      fill: PDF_THEME.mintLight,
+    },
+    {
+      badge: "XFR",
+      badgeBg: PDF_THEME.ink600,
+      label: "TRANSFERS",
+      value: fmt(summary.transfers),
+      subtitle: "Between accounts",
+      valueStyle: "cardValue",
+      fill: PDF_THEME.paper,
+    },
+    {
+      badge: "INV",
+      badgeBg: PDF_THEME.mint,
+      label: "INVESTMENTS",
+      value: fmt(summary.investments),
+      subtitle: "Capital deployed",
+      valueStyle: "cardValue",
+      fill: PDF_THEME.paper,
+    },
+    {
+      badge: "REF",
+      badgeBg: PDF_THEME.income,
+      label: "REFUNDS",
+      value: fmt(summary.refunds),
+      subtitle: "Returned amounts",
+      valueStyle: "cardValue",
+      fill: PDF_THEME.paper,
+    },
+    {
+      badge: "OTH",
+      badgeBg: PDF_THEME.ink500,
+      label: "OTHER",
+      value: fmt(summary.other),
+      subtitle:
+        summary.otherBreakdown[0]?.label
+          ? `Incl. ${summary.otherBreakdown[0].label}`
+          : "Adjustments & opening",
+      valueStyle: "cardValue",
+      fill: PDF_THEME.paper,
+    },
+    {
+      badge: "TXN",
+      badgeBg: PDF_THEME.ink700,
+      label: "TRANSACTIONS",
+      value: String(summary.transactionCount),
+      subtitle: "Unique entries",
+      valueStyle: "cardValue",
+      fill: PDF_THEME.paper,
+    },
+  ];
+
+  const cell = (card: Card) => ({
+    stack: [
+      iconBadge(card.badge, card.badgeBg),
+      { text: card.label, style: "cardLabel" },
+      { text: card.value, style: card.valueStyle },
+      { text: card.subtitle, style: "cardSubtitle" },
+    ],
+    fillColor: card.fill,
+    margin: [10, 10, 10, 10],
+  });
+
+  const row1 = cards.slice(0, 4).map(cell);
+  const row2 = cards.slice(4, 8).map(cell);
+
+  const stack: Content[] = [
+    sectionDivider("Executive summary", { pageBreak: "before" }),
+    {
+      table: {
+        widths: ["*", "*", "*", "*"],
+        body: [row1, row2] as Content[][],
+      },
+      layout: {
+        hLineWidth: () => 0.8,
+        vLineWidth: () => 0.8,
+        hLineColor: () => PDF_THEME.line,
+        vLineColor: () => PDF_THEME.line,
+        paddingLeft: () => 0,
+        paddingRight: () => 0,
+        paddingTop: () => 0,
+        paddingBottom: () => 0,
+      },
+    },
+  ];
+
+  const insights = insightCardsContent(document);
+  if (insights) {
+    stack.push(insights);
+  }
+
+  if (summary.otherBreakdown.length > 0 && summary.other > 0) {
+    stack.push({
+      text: "Other activity breakdown",
+      style: "appendixHeading",
+      margin: [0, 12, 0, 4],
+    });
+    stack.push({
+      table: {
+        headerRows: 1,
+        widths: ["*", "auto", "auto"],
+        body: [
+          [
+            { text: "Type", style: "tableHeader" },
+            { text: "Amount", style: "tableHeader", alignment: ALIGN_RIGHT },
+            { text: "Count", style: "tableHeader", alignment: ALIGN_RIGHT },
+          ],
+          ...summary.otherBreakdown.map((row) => [
+            { text: row.label, style: "tableCell" },
+            moneyCell(row.amount, currency, locale),
+            {
+              text: String(row.transactionCount),
+              style: "tableCell",
+              alignment: ALIGN_RIGHT,
+            },
+          ]),
+        ],
+      },
+      layout: thinTableLayout(),
+    } as Content);
+  }
+
+  return { stack };
+}
+
+function chartsSection(
+  document: ExportDocument,
+  assets?: ExportAssets,
+): Content | null {
   const charts = assets?.charts;
   if (!charts?.incomeExpensePng && !charts?.categoryBreakdownPng) {
     return null;
   }
-  const items: Content[] = [{ text: "Visual overview", style: "sectionTitle" }];
-  const images: Content[] = [];
+
+  const { currency, locale } = document.metadata;
+  const { summary } = document;
+  const chartWidth = 248;
+
+  const items: Content[] = [sectionDivider("Visual overview")];
+  const columns: Content[] = [];
+
   if (charts.incomeExpensePng) {
-    images.push({
+    columns.push({
+      width: "*",
       stack: [
-        { text: "Income vs expense", style: "tableCellMuted", margin: [0, 0, 0, 4] },
-        { image: charts.incomeExpensePng, width: 240 },
-      ],
-    });
-  }
-  if (charts.categoryBreakdownPng) {
-    images.push({
-      stack: [
+        { text: "Income vs expense", style: "chartCaption" },
+        { image: charts.incomeExpensePng, width: chartWidth },
         {
-          text: "Category breakdown",
-          style: "tableCellMuted",
-          margin: [0, 0, 0, 4],
+          columns: [
+            {
+              width: "*",
+              stack: [
+                { text: "Income", style: "chartTotalLabel" },
+                {
+                  text: formatMoney(summary.income, currency, locale),
+                  style: "chartTotalValue",
+                  color: PDF_THEME.income,
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                { text: "Expense", style: "chartTotalLabel" },
+                {
+                  text: formatMoney(summary.expense, currency, locale),
+                  style: "chartTotalValue",
+                  color: PDF_THEME.expense,
+                },
+              ],
+            },
+          ],
         },
-        { image: charts.categoryBreakdownPng, width: 240 },
       ],
-    });
+    } as Content);
   }
-  if (images.length === 1) {
-    items.push(images[0]!);
-  } else {
-    items.push({
-      columns: images.map((img) => ({ stack: (img as { stack: Content[] }).stack, width: "auto" })),
-      columnGap: 16,
-    });
+
+  if (charts.categoryBreakdownPng) {
+    const topCategory = document.categorySummary[0];
+    const categoryCount = document.categorySummary.length;
+    columns.push({
+      width: "*",
+      stack: [
+        { text: "Category breakdown", style: "chartCaption" },
+        { image: charts.categoryBreakdownPng, width: chartWidth },
+        {
+          columns: [
+            {
+              width: "*",
+              stack: [
+                { text: "Total spent", style: "chartTotalLabel" },
+                {
+                  text: formatMoney(summary.expense, currency, locale),
+                  style: "chartTotalValue",
+                },
+              ],
+            },
+            {
+              width: "*",
+              stack: [
+                { text: "Categories", style: "chartTotalLabel" },
+                {
+                  text: String(categoryCount),
+                  style: "chartTotalValue",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          columns: [
+            {
+              width: "*",
+              stack: [
+                { text: "Largest", style: "chartTotalLabel" },
+                {
+                  text: topCategory
+                    ? `${topCategory.categoryName} (${Math.round(topCategory.share)}%)`
+                    : "—",
+                  style: "chartTotalValue",
+                  fontSize: 10,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    } as Content);
   }
-  return { stack: items, pageBreak: "before" } as Content;
+
+  items.push({
+    columns,
+    columnGap: 16,
+    margin: [0, 0, 0, 4],
+  });
+
+  return { stack: items };
 }
 
 function categorySummarySection(document: ExportDocument): Content | null {
@@ -303,80 +950,103 @@ function categorySummarySection(document: ExportDocument): Content | null {
     return null;
   }
   const { currency, locale } = document.metadata;
-  const header = [
-    { text: "Category", style: "tableHeader" },
-    { text: "Amount", style: "tableHeader", alignment: ALIGN_RIGHT },
-  ];
-  const body = document.categorySummary.map((row) => [
-    { text: row.categoryName, style: "tableCell" },
-    {
-      text: formatMoney(row.amount, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-  ]);
   return {
     stack: [
-      { text: "Category summary", style: "sectionTitle" },
+      sectionDivider("Category summary"),
       {
         table: {
           headerRows: 1,
-          widths: ["*", "auto"],
-          body: [header, ...body],
+          widths: ["*", 80, "auto", "auto", "auto"],
+          body: [
+            [
+              { text: "Category", style: "tableHeader" },
+              { text: "Share", style: "tableHeader" },
+              { text: "%", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Amount", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Txns", style: "tableHeader", alignment: ALIGN_RIGHT },
+            ],
+            ...document.categorySummary.map((row) => [
+              { text: row.categoryName, style: "tableCell" },
+              progressBarCanvas(row.share),
+              {
+                text: `${Math.round(row.share)}%`,
+                style: "tableCell",
+                alignment: ALIGN_RIGHT,
+              },
+              moneyCell(row.amount, currency, locale),
+              {
+                text: String(row.transactionCount),
+                style: "tableCell",
+                alignment: ALIGN_RIGHT,
+              },
+            ]),
+          ],
         },
-        layout: "lightHorizontalLines",
+        layout: thinTableLayout(),
       },
     ],
-    pageBreak: "before",
-  };
+  } as Content;
 }
 
 function accountSummarySection(document: ExportDocument): Content {
   const { currency, locale } = document.metadata;
-  const header = [
-    { text: "Account", style: "tableHeader" },
-    { text: "Opening", style: "tableHeader", alignment: ALIGN_RIGHT },
-    { text: "Income", style: "tableHeader", alignment: ALIGN_RIGHT },
-    { text: "Expense", style: "tableHeader", alignment: ALIGN_RIGHT },
-    { text: "Closing", style: "tableHeader", alignment: ALIGN_RIGHT },
-  ];
-  const body = document.accounts.map((acct) => [
-    { text: acct.accountName, style: "tableCell" },
-    {
-      text: formatMoney(acct.openingBalance, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-    {
-      text: formatMoney(acct.income, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-    {
-      text: formatMoney(acct.expense, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-    {
-      text: formatMoney(acct.closingBalance, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-  ]);
+  const accounts = visibleAccounts(document.accounts);
   return {
     stack: [
-      { text: "Account summary", style: "sectionTitle" },
+      sectionDivider("Account summary"),
       {
         table: {
           headerRows: 1,
-          widths: ["*", "auto", "auto", "auto", "auto"],
-          body: [header, ...body],
+          widths: [
+            "*",
+            "auto",
+            "auto",
+            "auto",
+            "auto",
+            "auto",
+            "auto",
+            "auto",
+            "auto",
+            "auto",
+          ],
+          body: [
+            [
+              { text: "Account", style: "tableHeader" },
+              { text: "Opening", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Income", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Expense", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "In", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Out", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Invest", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Refund", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Net", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Closing", style: "tableHeader", alignment: ALIGN_RIGHT },
+            ],
+            ...accounts.map((acct) => [
+              { text: acct.accountName, style: "tableCell" },
+              moneyCell(acct.openingBalance, currency, locale),
+              moneyCell(acct.income, currency, locale),
+              moneyCell(acct.expense, currency, locale),
+              moneyCell(acct.transferIn, currency, locale),
+              moneyCell(acct.transferOut, currency, locale),
+              moneyCell(acct.investments, currency, locale),
+              moneyCell(acct.refunds, currency, locale),
+              {
+                text: formatSignedMoney(acct.netChange, currency, locale),
+                style: "tableCell",
+                alignment: ALIGN_RIGHT,
+                color: signedAmountColor(acct.netChange),
+                bold: true,
+              },
+              moneyCell(acct.closingBalance, currency, locale, "tableCellBold"),
+            ]),
+          ],
         },
-        layout: "lightHorizontalLines",
+        layout: thinTableLayout(),
+        fontSize: 7.5,
       },
     ],
-    pageBreak: document.categorySummary.length > 0 ? undefined : "before",
-  };
+  } as Content;
 }
 
 function statementRowCells(
@@ -386,12 +1056,17 @@ function statementRowCells(
   const { currency, locale } = document.metadata;
   const showBalance = document.filters.options.runningBalance;
   const cells: Content[] = [
-    { text: `${row.date} ${row.time}`, style: "tableCellMuted" },
+    { text: `${row.date} ${row.time}`.trim(), style: "tableCellMuted" },
+    {
+      text: EXPORT_GROUP_LABELS[row.typeGroup],
+      style: "tableCellMuted",
+    },
     { text: row.displayDescription, style: "tableCell" },
     {
       text: formatSignedMoney(row.signedAmount, currency, locale),
-      style: "tableCell",
+      style: "amountEmphasized",
       alignment: ALIGN_RIGHT,
+      color: signedAmountColor(row.signedAmount),
     },
   ];
   if (showBalance) {
@@ -400,7 +1075,7 @@ function statementRowCells(
         row.runningBalance !== undefined
           ? formatMoney(row.runningBalance, currency, locale)
           : "—",
-      style: "tableCell",
+      style: "tableCellBold",
       alignment: ALIGN_RIGHT,
     });
   }
@@ -410,94 +1085,119 @@ function statementRowCells(
 function accountStatementSection(
   account: ExportAccountStatement,
   document: ExportDocument,
-  isFirst: boolean,
 ): Content {
   const { currency, locale } = document.metadata;
   const showBalance = document.filters.options.runningBalance;
   const widths = showBalance
-    ? ["auto", "*", "auto", "auto"]
-    : ["auto", "*", "auto"];
+    ? ["auto", "auto", "*", "auto", "auto"]
+    : ["auto", "auto", "*", "auto"];
   const header: Content[] = [
     { text: "Date", style: "tableHeader" },
+    { text: "Type", style: "tableHeader" },
     { text: "Description", style: "tableHeader" },
     { text: "Amount", style: "tableHeader", alignment: ALIGN_RIGHT },
   ];
   if (showBalance) {
-    header.push({ text: "Balance", style: "tableHeader", alignment: ALIGN_RIGHT });
+    header.push({
+      text: "Balance",
+      style: "tableHeader",
+      alignment: ALIGN_RIGHT,
+    });
   }
 
   const openingRow: Content[] = [
     { text: "—", style: "tableCellMuted" },
-    {
-      text: "Opening balance",
-      style: "tableCell",
-      bold: true,
-    },
+    { text: "", style: "tableCell" },
+    { text: "Opening balance", style: "tableCellBold" },
     { text: "", style: "tableCell" },
   ];
   if (showBalance) {
     openingRow.push({
       text: formatMoney(account.openingBalance, currency, locale),
-      style: "tableCell",
-      bold: true,
+      style: "tableCellBold",
       alignment: ALIGN_RIGHT,
     });
   } else {
-    openingRow[2] = {
+    openingRow[3] = {
       text: formatMoney(account.openingBalance, currency, locale),
-      style: "tableCell",
-      bold: true,
+      style: "tableCellBold",
       alignment: ALIGN_RIGHT,
     };
   }
 
-  const txRows = account.rows.map((row) => statementRowCells(row, document));
-
   const closingRow: Content[] = [
     { text: "—", style: "tableCellMuted" },
-    { text: "Closing balance", style: "tableCell", bold: true },
+    { text: "", style: "tableCell" },
+    { text: "Closing balance", style: "tableCellBold" },
     { text: "", style: "tableCell" },
   ];
   if (showBalance) {
     closingRow.push({
       text: formatMoney(account.closingBalance, currency, locale),
-      style: "tableCell",
-      bold: true,
+      style: "tableCellBold",
       alignment: ALIGN_RIGHT,
     });
   } else {
-    closingRow[2] = {
+    closingRow[3] = {
       text: formatMoney(account.closingBalance, currency, locale),
-      style: "tableCell",
-      bold: true,
+      style: "tableCellBold",
       alignment: ALIGN_RIGHT,
     };
   }
+
+  const emptyRow: TableCell[] = [
+    { text: "—", style: "tableCellMuted" },
+    { text: "", style: "tableCell" },
+    {
+      text: "No transactions during selected period.",
+      style: "emptyNote",
+      colSpan: showBalance ? 3 : 2,
+    },
+    { text: "" },
+  ];
+  if (showBalance) {
+    emptyRow.push({ text: "" });
+  }
+
+  const body: TableCell[][] =
+    account.rows.length === 0
+      ? [header as TableCell[], openingRow as TableCell[], emptyRow, closingRow as TableCell[]]
+      : [
+          header as TableCell[],
+          openingRow as TableCell[],
+          ...account.rows.map(
+            (row) => statementRowCells(row, document) as TableCell[],
+          ),
+          closingRow as TableCell[],
+        ];
 
   return {
     stack: [
       { text: account.accountName, style: "accountTitle" },
       {
+        text: `Net change ${formatSignedMoney(account.netChange, currency, locale)} · ${account.rows.length} line${account.rows.length === 1 ? "" : "s"} · Closing ${formatMoney(account.closingBalance, currency, locale)}`,
+        style: "accountMeta",
+        color: signedAmountColor(account.netChange),
+      },
+      {
         table: {
           headerRows: 1,
           widths,
-          body: [header, openingRow, ...txRows, closingRow],
+          body,
         },
-        layout: "lightHorizontalLines",
+        layout: statementTableLayout(body.length),
       },
     ],
-    pageBreak: isFirst ? "before" : undefined,
-    margin: [0, 0, 0, 8],
-  };
+    margin: [0, 0, 0, 10],
+  } as Content;
 }
 
 function perAccountStatements(document: ExportDocument): Content {
+  const accounts = visibleAccounts(document.accounts);
   return {
     stack: [
-      { text: "Account statements", style: "sectionTitle", pageBreak: "before" },
-      ...document.accounts.map((acct, i) =>
-        accountStatementSection(acct, document, i === 0),
-      ),
+      sectionDivider("Account statements", { pageBreak: "before" }),
+      ...accounts.map((acct) => accountStatementSection(acct, document)),
     ],
   };
 }
@@ -507,40 +1207,43 @@ function dailySummarySection(document: ExportDocument): Content | null {
     return null;
   }
   const { currency, locale } = document.metadata;
-  const header = [
-    { text: "Date", style: "tableHeader" },
-    { text: "Income", style: "tableHeader", alignment: ALIGN_RIGHT },
-    { text: "Expense", style: "tableHeader", alignment: ALIGN_RIGHT },
-    { text: "Transactions", style: "tableHeader", alignment: ALIGN_RIGHT },
-  ];
-  const body = document.dailySummary.map((row) => [
-    { text: row.date, style: "tableCell" },
-    {
-      text: formatMoney(row.income, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-    {
-      text: formatMoney(row.expense, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-    { text: String(row.transactions), style: "tableCell", alignment: ALIGN_RIGHT },
-  ]);
   return {
     stack: [
-      { text: "Daily summary", style: "sectionTitle" },
+      sectionDivider("Daily summary"),
       {
         table: {
           headerRows: 1,
-          widths: ["auto", "auto", "auto", "auto"],
-          body: [header, ...body],
+          widths: ["*", "auto", "auto", "auto", "auto"],
+          body: [
+            [
+              { text: "Date", style: "tableHeader" },
+              { text: "Income", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Expense", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Net", style: "tableHeader", alignment: ALIGN_RIGHT },
+              { text: "Txns", style: "tableHeader", alignment: ALIGN_RIGHT },
+            ],
+            ...document.dailySummary.map((row) => [
+              { text: row.date, style: "tableCell" },
+              moneyCell(row.income, currency, locale),
+              moneyCell(row.expense, currency, locale),
+              {
+                text: formatSignedMoney(row.net, currency, locale),
+                style: "amountEmphasized",
+                alignment: ALIGN_RIGHT,
+                color: signedAmountColor(row.net),
+              },
+              {
+                text: String(row.transactions),
+                style: "tableCell",
+                alignment: ALIGN_RIGHT,
+              },
+            ]),
+          ],
         },
-        layout: "lightHorizontalLines",
+        layout: thinTableLayout(),
       },
     ],
-    pageBreak: "before",
-  };
+  } as Content;
 }
 
 function largestTransactionsSection(document: ExportDocument): Content | null {
@@ -548,36 +1251,42 @@ function largestTransactionsSection(document: ExportDocument): Content | null {
     return null;
   }
   const { currency, locale } = document.metadata;
-  const header = [
-    { text: "Date", style: "tableHeader" },
-    { text: "Description", style: "tableHeader" },
-    { text: "Account", style: "tableHeader" },
-    { text: "Amount", style: "tableHeader", alignment: ALIGN_RIGHT },
-  ];
-  const body = document.largestTransactions.map((row) => [
-    { text: row.date, style: "tableCell" },
-    { text: row.displayDescription, style: "tableCell" },
-    { text: row.accountName, style: "tableCellMuted" },
-    {
-      text: formatSignedMoney(row.signedAmount, currency, locale),
-      style: "tableCell",
-      alignment: ALIGN_RIGHT,
-    },
-  ]);
   return {
     stack: [
-      { text: "Largest transactions", style: "sectionTitle" },
+      sectionDivider("Largest transactions"),
       {
         table: {
           headerRows: 1,
-          widths: ["auto", "*", "auto", "auto"],
-          body: [header, ...body],
+          widths: ["auto", "auto", "*", "auto", "auto"],
+          body: [
+            [
+              { text: "Date", style: "tableHeader" },
+              { text: "Type", style: "tableHeader" },
+              { text: "Description", style: "tableHeader" },
+              { text: "Account", style: "tableHeader" },
+              { text: "Amount", style: "tableHeader", alignment: ALIGN_RIGHT },
+            ],
+            ...document.largestTransactions.map((row) => [
+              { text: row.date, style: "tableCell" },
+              {
+                text: EXPORT_GROUP_LABELS[row.typeGroup],
+                style: "tableCellMuted",
+              },
+              { text: row.displayDescription, style: "tableCell" },
+              { text: row.accountName, style: "tableCellMuted" },
+              {
+                text: formatSignedMoney(row.signedAmount, currency, locale),
+                style: "amountEmphasized",
+                alignment: ALIGN_RIGHT,
+                color: signedAmountColor(row.signedAmount),
+              },
+            ]),
+          ],
         },
-        layout: "lightHorizontalLines",
+        layout: thinTableLayout(),
       },
     ],
-    pageBreak: "before",
-  };
+  } as Content;
 }
 
 function describeFilterSelection(
@@ -612,39 +1321,71 @@ function appendixSection(document: ExportDocument): Content {
     optionLines.push("Timestamps");
   }
 
-  const lines = [
-    `Report ID: ${metadata.reportId}`,
-    `Export version: ${metadata.version}`,
-    `Generation time: ${metadata.generationTimeMs} ms`,
-    `Generated at: ${formatGeneratedDate(metadata.generatedAt, metadata.locale, metadata.timezone)}`,
-    "",
-    "Filters applied",
-    formatPeriodRange(filters.range.start, filters.range.end, metadata.locale),
-    `Groups: ${groupLabels}`,
-    describeFilterSelection("Accounts", filters.accountIds),
-    describeFilterSelection("Categories", filters.categoryIds),
-    describeFilterSelection("Payment methods", filters.paymentMethods),
-    `Verified only: ${filters.verifiedOnly ? "Yes" : "No"}`,
-    `Sort: ${filters.sort}${filters.effectiveSort !== filters.sort ? ` (effective: ${filters.effectiveSort})` : ""}`,
-    `Additional columns: ${optionLines.length ? optionLines.join(", ") : "None"}`,
-    `Source: ${metadata.source}`,
-    `Locale / currency: ${metadata.locale} / ${metadata.currency}`,
-  ];
+  const days = periodDayCount(filters.range.start, filters.range.end);
 
   return {
     stack: [
-      { text: "Appendix", style: "sectionTitle", pageBreak: "before" },
-      ...lines.map((line) =>
-        line === ""
-          ? ({ text: " ", margin: [0, 4, 0, 0] } as Content)
-          : ({ text: line, style: "metaLine" } as Content),
-      ),
+      sectionDivider("Appendix", { pageBreak: "before" }),
+      { text: "Report identity", style: "appendixHeading" },
+      { text: `Report ID: ${metadata.reportId}`, style: "metaLine" },
+      { text: `Export version: ${metadata.version}`, style: "metaLine" },
+      {
+        text: `Generated: ${formatGeneratedDate(metadata.generatedAt, metadata.locale, metadata.timezone)}`,
+        style: "metaLine",
+      },
+      {
+        text: `Build time: ${metadata.generationTimeMs} ms`,
+        style: "metaLine",
+      },
+      { text: `Source: ${metadata.source}`, style: "metaLine" },
+
+      { text: "Statement scope", style: "appendixHeading" },
+      {
+        text: formatPeriodRange(
+          filters.range.start,
+          filters.range.end,
+          metadata.locale,
+        ),
+        style: "metaLine",
+      },
+      { text: `Duration: ${days} days`, style: "metaLine" },
+      { text: `Groups: ${groupLabels}`, style: "metaLine" },
+      {
+        text: describeFilterSelection("Accounts", filters.accountIds),
+        style: "metaLine",
+      },
+      {
+        text: describeFilterSelection("Categories", filters.categoryIds),
+        style: "metaLine",
+      },
+      {
+        text: describeFilterSelection("Payment methods", filters.paymentMethods),
+        style: "metaLine",
+      },
+      {
+        text: `Verified only: ${filters.verifiedOnly ? "Yes" : "No"}`,
+        style: "metaLine",
+      },
+      {
+        text: `Sort: ${filters.sort}${filters.effectiveSort !== filters.sort ? ` (effective: ${filters.effectiveSort})` : ""}`,
+        style: "metaLine",
+      },
+      {
+        text: `Additional columns: ${optionLines.length ? optionLines.join(", ") : "None"}`,
+        style: "metaLine",
+      },
+
+      { text: "Locale", style: "appendixHeading" },
+      {
+        text: `${metadata.locale} · ${metadata.currency} · ${metadata.timezone}`,
+        style: "metaLine",
+      },
     ],
-  } as Content;
+  };
 }
 
-function coverPage(document: ExportDocument): Content {
-  const { metadata, filters } = document;
+function coverPage(document: ExportDocument, assets?: ExportAssets): Content {
+  const { metadata, filters, summary } = document;
   const period = formatPeriodRange(
     filters.range.start,
     filters.range.end,
@@ -655,21 +1396,71 @@ function coverPage(document: ExportDocument): Content {
     metadata.locale,
     metadata.timezone,
   );
+  const days = periodDayCount(filters.range.start, filters.range.end);
+  const netFlowLabel =
+    summary.net < 0 ? "Negative net cash flow" : summary.net > 0 ? "Positive net cash flow" : "Break-even period";
 
   return {
     stack: [
+      {
+        columns: [
+          { width: "*", text: "" },
+          {
+            width: "auto",
+            stack: [pdfLogoContent(assets, "xl")],
+            alignment: ALIGN_CENTER,
+          },
+          { width: "*", text: "" },
+        ],
+        margin: [0, 28, 0, 0],
+      },
       { text: "SpendWise", style: "coverBrand" },
-      { text: "Personal Finance Statement", style: "coverTitle" },
-      { text: "Prepared for", style: "coverLabel" },
-      { text: metadata.preparedFor || "—", style: "coverValue" },
-      { text: "Statement period", style: "coverLabel" },
+      { text: "PERSONAL FINANCE STATEMENT", style: "coverEyebrow" },
+      { text: "Financial Activity Report", style: "coverTitle" },
+      {
+        text: "A complete summary of your income, spending, transfers, and account balances for the selected period.",
+        style: "coverTagline",
+      },
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 140,
+            y1: 0,
+            x2: 375,
+            y2: 0,
+            lineWidth: 2,
+            lineColor: PDF_THEME.mint,
+          },
+        ],
+        margin: [0, 4, 0, 18],
+      },
+      { text: "PREPARED EXCLUSIVELY FOR", style: "coverPreparedLabel" },
+      {
+        text: metadata.preparedFor || "—",
+        style: "coverPreparedName",
+      },
+      { text: "STATEMENT PERIOD", style: "coverLabel" },
       { text: period, style: "coverValue" },
-      { text: "Generated on", style: "coverLabel" },
+      {
+        text: `${days}-day statement · ${summary.transactionCount} transactions · ${netFlowLabel}`,
+        style: "coverTagline",
+        margin: [24, 6, 24, 10],
+      },
+      { text: "GENERATED ON", style: "coverLabel" },
       { text: generatedOn, style: "coverValue" },
       { text: "CONFIDENTIAL", style: "coverConfidential" },
-      { text: metadata.reportId, style: "coverLabel", margin: [0, 8, 0, 0] },
+      { text: metadata.reportId, style: "coverReportId" },
+      {
+        text: "Generated securely by SpendWise. This report is read-only and intended for the recipient named above.",
+        style: "coverSecurity",
+      },
+      {
+        text: "www.spendwise.app",
+        style: "coverFooter",
+      },
     ],
-    margin: [48, 120, 48, 48],
+    margin: [40, 16, 40, 32],
   };
 }
 
@@ -684,11 +1475,11 @@ export function buildPdfDocumentDefinition(
     metadata.timezone,
   );
 
-  const content: Content[] = [coverPage(document)];
+  const content: Content[] = [coverPage(document, assets)];
 
   content.push(summaryCardsContent(document));
 
-  const charts = chartsSection(assets);
+  const charts = chartsSection(document, assets);
   if (charts) {
     content.push(charts);
   }
@@ -723,7 +1514,7 @@ export function buildPdfDocumentDefinition(
       producer: "SpendWise Export Center",
     },
     pageSize: "A4",
-    pageMargins: [40, 72, 40, 56],
+    pageMargins: [40, 68, 40, 58],
     defaultStyle: {
       font: "Roboto",
       fontSize: 10,
@@ -731,14 +1522,35 @@ export function buildPdfDocumentDefinition(
     },
     styles: buildStyles(),
     background(currentPage) {
+      if (currentPage === 1) {
+        return {
+          canvas: [
+            {
+              type: "rect",
+              x: 0,
+              y: 0,
+              w: 595.28,
+              h: 210,
+              color: PDF_THEME.mintLight,
+            },
+            {
+              type: "rect",
+              x: 0,
+              y: 210,
+              w: 595.28,
+              h: 6,
+              color: PDF_THEME.mintMuted,
+            },
+          ],
+        };
+      }
       if (!isContentPage(currentPage)) {
         return undefined;
       }
       return {
         text: "SpendWise",
         style: "watermark",
-        alignment: "center",
-        margin: [0, 280, 0, 0],
+        absolutePosition: { x: 120, y: 380 },
       };
     },
     header(currentPage) {
@@ -746,22 +1558,22 @@ export function buildPdfDocumentDefinition(
         return null;
       }
       return {
-        margin: [40, 24, 40, 0],
+        margin: [40, 16, 40, 0],
         columns: [
           {
-            columns: [pdfLogoContent(assets), pdfBrandTitleContent()],
+            columns: [pdfLogoContent(assets, "sm"), pdfBrandTitleContent()],
             width: "*",
           },
           {
             width: "auto",
             stack: [
-              { text: metadata.reportId, style: "headerBrand", alignment: ALIGN_RIGHT },
               {
-                text: "Confidential",
+                text: metadata.reportId,
                 style: "headerSub",
                 alignment: ALIGN_RIGHT,
               },
             ],
+            margin: [0, 8, 0, 0],
           },
         ],
       };
@@ -771,24 +1583,50 @@ export function buildPdfDocumentDefinition(
         return null;
       }
       return {
-        margin: [40, 0, 40, 24],
-        columns: [
+        margin: [40, 6, 40, 18],
+        stack: [
           {
-            width: "*",
-            text: `Page ${currentPage} of ${pageCount}`,
-            style: "footerText",
+            canvas: [
+              {
+                type: "line",
+                x1: 0,
+                y1: 0,
+                x2: 515,
+                y2: 0,
+                lineWidth: 0.8,
+                lineColor: PDF_THEME.line,
+              },
+            ],
+            margin: [0, 0, 0, 10],
           },
           {
-            width: "auto",
-            text: "Generated by SpendWise • www.spendwise.app",
-            style: "footerText",
-            alignment: "center",
-          },
-          {
-            width: "*",
-            text: `${generatedLabel} • ${metadata.reportId}`,
-            style: "footerText",
-            alignment: ALIGN_RIGHT,
+            columns: [
+              {
+                width: "*",
+                stack: [
+                  { text: "Generated by SpendWise", style: "footerText" },
+                  {
+                    text: generatedLabel,
+                    style: "footerText",
+                    margin: [0, 2, 0, 0],
+                  },
+                ],
+              },
+              {
+                width: "auto",
+                text: "www.spendwise.app",
+                style: "footerText",
+                alignment: ALIGN_CENTER,
+                margin: [16, 4, 16, 0],
+              },
+              {
+                width: "*",
+                text: `Page ${currentPage} / ${pageCount}`,
+                style: "footerText",
+                alignment: ALIGN_RIGHT,
+                margin: [0, 4, 0, 0],
+              },
+            ],
           },
         ],
       };
@@ -806,15 +1644,9 @@ export async function renderExportPdf(
   }
   const pdfMake = await loadPdfMake();
   const docDefinition = buildPdfDocumentDefinition(document, assets);
-  return new Promise((resolve, reject) => {
-    try {
-      pdfMake.createPdf(docDefinition).getBlob((blob) => {
-        resolve(blob);
-      });
-    } catch (err) {
-      reject(err);
-    }
-  });
+  // pdfmake 0.3+: getBlob() returns a Promise (no callback).
+  const blob = await pdfMake.createPdf(docDefinition).getBlob();
+  return blob;
 }
 
 export const pdfRenderer: ExportRenderer = {

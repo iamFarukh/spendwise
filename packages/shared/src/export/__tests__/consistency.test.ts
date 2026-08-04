@@ -89,6 +89,7 @@ describe("export cross-format consistency", () => {
         "investments": 0,
         "net": 4500,
         "other": 0,
+        "otherBreakdown": [],
         "refunds": 0,
         "transactionCount": 3,
         "transfers": 2000,

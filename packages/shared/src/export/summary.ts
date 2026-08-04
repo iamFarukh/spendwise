@@ -1,13 +1,23 @@
 import type { Category } from "../types/category";
-import type { Transaction } from "../types/transaction";
+import type { Transaction, TransactionType } from "../types/transaction";
 import type {
   ExportAccountStatement,
   ExportCategorySummaryRow,
   ExportDailySummaryRow,
+  ExportOtherBreakdownRow,
   ExportStatementRow,
   ExportSummary,
   ExportVisualizations,
 } from "./types";
+
+const OTHER_TYPE_LABELS: Partial<Record<TransactionType, string>> = {
+  OPENING: "Opening balance",
+  REDEMPTION: "Redemption",
+  LOAN_GIVEN: "Loan given",
+  LOAN_RECEIVED: "Loan received",
+  LOAN_SETTLED: "Loan settled",
+  RECON_ADJUST: "Reconciliation adjustment",
+};
 
 function firstRowPerTransaction(
   flatRows: ExportStatementRow[],
@@ -25,6 +35,45 @@ function absAmount(row: ExportStatementRow): number {
   return Math.abs(row.signedAmount);
 }
 
+function buildOtherBreakdown(
+  uniqueRows: ExportStatementRow[],
+): ExportOtherBreakdownRow[] {
+  const buckets = new Map<
+    TransactionType,
+    { amount: number; transactionCount: number }
+  >();
+
+  for (const row of uniqueRows) {
+    if (row.typeGroup !== "OTHER") {
+      continue;
+    }
+    const existing = buckets.get(row.transactionType);
+    if (existing) {
+      existing.amount += absAmount(row);
+      existing.transactionCount += 1;
+    } else {
+      buckets.set(row.transactionType, {
+        amount: absAmount(row),
+        transactionCount: 1,
+      });
+    }
+  }
+
+  return [...buckets.entries()]
+    .map(([transactionType, bucket]) => ({
+      transactionType,
+      label: OTHER_TYPE_LABELS[transactionType] ?? transactionType,
+      amount: bucket.amount,
+      transactionCount: bucket.transactionCount,
+    }))
+    .sort((a, b) => {
+      if (b.amount !== a.amount) {
+        return b.amount - a.amount;
+      }
+      return a.label.localeCompare(b.label);
+    });
+}
+
 export function buildExportSummary(
   _statements: ExportAccountStatement[],
   flatRows: ExportStatementRow[],
@@ -36,7 +85,9 @@ export function buildExportSummary(
   let refunds = 0;
   let other = 0;
 
-  for (const row of firstRowPerTransaction(flatRows)) {
+  const uniqueRows = firstRowPerTransaction(flatRows);
+
+  for (const row of uniqueRows) {
     switch (row.typeGroup) {
       case "INCOME":
         income += row.signedAmount;
@@ -54,7 +105,7 @@ export function buildExportSummary(
         refunds += row.amount;
         break;
       case "OTHER":
-        other += row.amount;
+        other += absAmount(row);
         break;
       default:
         break;
@@ -71,6 +122,7 @@ export function buildExportSummary(
     investments,
     refunds,
     other,
+    otherBreakdown: buildOtherBreakdown(uniqueRows),
     transactionCount: transactionIds.size,
   };
 }
@@ -79,25 +131,42 @@ export function buildCategorySummary(
   filtered: Transaction[],
   categoriesById: Map<string, Category>,
 ): ExportCategorySummaryRow[] {
-  const totals = new Map<string | null, number>();
+  const totals = new Map<
+    string | null,
+    { amount: number; transactionIds: Set<string> }
+  >();
 
   for (const t of filtered) {
     if (t.type !== "EXPENSE" && t.type !== "LIABILITY_PAYMENT") {
       continue;
     }
     const key = t.categoryId ?? null;
-    totals.set(key, (totals.get(key) ?? 0) + t.amount);
+    let bucket = totals.get(key);
+    if (!bucket) {
+      bucket = { amount: 0, transactionIds: new Set() };
+      totals.set(key, bucket);
+    }
+    bucket.amount += t.amount;
+    bucket.transactionIds.add(t.id);
   }
 
+  const totalSpend = [...totals.values()].reduce((sum, b) => sum + b.amount, 0);
+
   const rows: ExportCategorySummaryRow[] = [];
-  for (const [categoryId, amount] of totals) {
-    if (amount === 0) {
+  for (const [categoryId, bucket] of totals) {
+    if (bucket.amount === 0) {
       continue;
     }
     const categoryName = categoryId
       ? (categoriesById.get(categoryId)?.name ?? categoryId)
       : "Uncategorized";
-    rows.push({ categoryId, categoryName, amount });
+    rows.push({
+      categoryId,
+      categoryName,
+      amount: bucket.amount,
+      share: totalSpend > 0 ? (bucket.amount / totalSpend) * 100 : 0,
+      transactionCount: bucket.transactionIds.size,
+    });
   }
 
   rows.sort((a, b) => {
@@ -115,17 +184,28 @@ export function buildDailySummary(
 ): ExportDailySummaryRow[] {
   const byDate = new Map<
     string,
-    { income: number; expense: number; txnIds: Set<string> }
+    { income: number; expense: number; txnIds: Set<string>; seen: Set<string> }
   >();
 
   for (const row of flatRows) {
     let bucket = byDate.get(row.date);
     if (!bucket) {
-      bucket = { income: 0, expense: 0, txnIds: new Set() };
+      bucket = {
+        income: 0,
+        expense: 0,
+        txnIds: new Set(),
+        seen: new Set(),
+      };
       byDate.set(row.date, bucket);
     }
     bucket.txnIds.add(row.transactionId);
-    if (row.typeGroup === "INCOME") {
+    // One contribution per transaction per day (avoid transfer double-rows).
+    if (bucket.seen.has(row.transactionId)) {
+      continue;
+    }
+    bucket.seen.add(row.transactionId);
+
+    if (row.typeGroup === "INCOME" || row.typeGroup === "REFUNDS") {
       bucket.income += absAmount(row);
     } else if (row.typeGroup === "EXPENSES") {
       bucket.expense += absAmount(row);
@@ -138,6 +218,7 @@ export function buildDailySummary(
       date,
       income,
       expense,
+      net: income - expense,
       transactions: txnIds.size,
     }));
 }

@@ -62,11 +62,18 @@ function aggregatePeriodTotals(rows: ExportStatementRow[]): {
   expense: number;
   transferIn: number;
   transferOut: number;
+  investments: number;
+  refunds: number;
+  other: number;
+  netChange: number;
 } {
   let income = 0;
   let expense = 0;
   let transferIn = 0;
   let transferOut = 0;
+  let investments = 0;
+  let refunds = 0;
+  let other = 0;
 
   for (const row of rows) {
     switch (row.typeGroup) {
@@ -83,12 +90,32 @@ function aggregatePeriodTotals(rows: ExportStatementRow[]): {
           transferOut += -row.signedAmount;
         }
         break;
+      case "INVESTMENTS":
+        investments += Math.abs(row.signedAmount);
+        break;
+      case "REFUNDS":
+        refunds += Math.abs(row.signedAmount);
+        break;
+      case "OTHER":
+        other += Math.abs(row.signedAmount);
+        break;
       default:
         break;
     }
   }
 
-  return { income, expense, transferIn, transferOut };
+  const netChange = rows.reduce((sum, row) => sum + row.signedAmount, 0);
+
+  return {
+    income,
+    expense,
+    transferIn,
+    transferOut,
+    investments,
+    refunds,
+    other,
+    netChange,
+  };
 }
 
 function buildStatementRow(
@@ -108,6 +135,7 @@ function buildStatementRow(
     date: txn.date,
     time: formatExportRowTime(txn.createdAt),
     typeGroup: getExportGroup(txn.type),
+    transactionType: txn.type,
     status: txn.status,
     categoryName,
     accountId,

@@ -40,6 +40,16 @@ export function matchesTypeFilter(
   return txn.type === filter;
 }
 
+export function matchesAccountFilter(
+  txn: Transaction,
+  accountId: string | null | undefined,
+): boolean {
+  if (!accountId) {
+    return true;
+  }
+  return txn.fromAccountId === accountId || txn.toAccountId === accountId;
+}
+
 export function filterTransactions(
   transactions: Transaction[],
   options: {
@@ -48,6 +58,7 @@ export function filterTransactions(
     monthEnd: string;
     search?: string;
     status?: "ALL" | "PENDING" | "VERIFIED";
+    accountId?: string | null;
   },
 ): Transaction[] {
   const query = options.search?.trim().toLowerCase() ?? "";
@@ -55,6 +66,7 @@ export function filterTransactions(
   return transactions
     .filter((txn) => txn.type !== "OPENING")
     .filter((txn) => matchesTypeFilter(txn, options.typeFilter))
+    .filter((txn) => matchesAccountFilter(txn, options.accountId))
     .filter((txn) =>
       isDateInRange(txn.date, options.monthStart, options.monthEnd),
     )

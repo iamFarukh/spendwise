@@ -3,18 +3,22 @@ import type { ExportFormat, ExportRequest } from "./types";
 const REPORT_ID_SUFFIX_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const ILLEGAL_FILENAME_CHARS = /[/\\:*?"<>|\x00-\x1f]/g;
 
-function formatUtcYmd(date: Date): string {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function formatReportIdDate(date: Date): string {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}${m}${d}`;
+}
+
+/** UTC `YYYYMMDD_HHmmss` — filesystem-safe and unique per second. */
+function formatFilenameTimestamp(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  const ss = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${y}${m}${d}_${hh}${mm}${ss}`;
 }
 
 function randomReportSuffix(): string {
@@ -28,30 +32,6 @@ function randomReportSuffix(): string {
   return suffix;
 }
 
-function parseIsoDateParts(iso: string): { y: number; m: number; d: number } {
-  const [y, m, d] = iso.split("-").map(Number);
-  return { y: y!, m: m!, d: d! };
-}
-
-function isFullCalendarMonth(range: { start: string; end: string }): boolean {
-  const start = parseIsoDateParts(range.start);
-  const end = parseIsoDateParts(range.end);
-  if (start.d !== 1 || start.y !== end.y || start.m !== end.m) {
-    return false;
-  }
-  const lastDay = new Date(Date.UTC(start.y, start.m, 0)).getUTCDate();
-  return end.d === lastDay;
-}
-
-function monthYearLabel(isoStart: string): string {
-  const { y, m } = parseIsoDateParts(isoStart);
-  const month = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-US", {
-    month: "long",
-    timeZone: "UTC",
-  });
-  return `${month}_${y}`;
-}
-
 export function createReportId(now: Date = new Date()): string {
   return `SW-${formatReportIdDate(now)}-${randomReportSuffix()}`;
 }
@@ -63,25 +43,18 @@ export function sanitizeFilenameStem(stem: string): string {
     .replace(/\s+/g, "_");
 }
 
+/**
+ * Prefills a unique editable stem: `report_YYYYMMDD_HHmmss`.
+ * Format/source/range are accepted for API stability; uniqueness comes from `generatedAt`.
+ */
 export function buildDefaultFilenameStem(args: {
   format: ExportFormat;
   source: ExportRequest["source"];
   range: { start: string; end: string };
   generatedAt: Date;
 }): string {
-  const { format, source, range, generatedAt } = args;
-
-  if (format === "json" || source === "settings") {
-    return `SpendWise_Backup_${formatUtcYmd(generatedAt)}`;
-  }
-
-  if (range.start === "1970-01-01") {
-    return "SpendWise_Transactions_All_Time";
-  }
-
-  if (isFullCalendarMonth(range)) {
-    return `SpendWise_Transactions_${monthYearLabel(range.start)}`;
-  }
-
-  return `SpendWise_Transactions_${range.start}_to_${range.end}`;
+  void args.format;
+  void args.source;
+  void args.range;
+  return `report_${formatFilenameTimestamp(args.generatedAt)}`;
 }

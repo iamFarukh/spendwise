@@ -28,8 +28,22 @@ function row(
   const signedAmount =
     overrides.signedAmount ??
     (overrides.typeGroup === "EXPENSES" ? -overrides.amount : overrides.amount);
+  const transactionType =
+    overrides.transactionType ??
+    (overrides.typeGroup === "INCOME"
+      ? "INCOME"
+      : overrides.typeGroup === "EXPENSES"
+        ? "EXPENSE"
+        : overrides.typeGroup === "TRANSFERS"
+          ? "TRANSFER"
+          : overrides.typeGroup === "INVESTMENTS"
+            ? "INVESTMENT"
+            : overrides.typeGroup === "REFUNDS"
+              ? "REFUND"
+              : "OPENING");
   return {
     time: "",
+    transactionType,
     status: "VERIFIED",
     categoryName: "",
     accountId: "bank",
@@ -85,6 +99,42 @@ describe("buildExportSummary", () => {
     expect(summary.transfers).toBe(2_000);
     expect(summary.transactionCount).toBe(3);
   });
+
+  it("breaks down OTHER activity by ledger type", () => {
+    const flatRows = [
+      row({
+        transactionId: "open",
+        date: "2026-01-01",
+        typeGroup: "OTHER",
+        transactionType: "OPENING",
+        amount: 50_000,
+      }),
+      row({
+        transactionId: "loan",
+        date: "2026-02-01",
+        typeGroup: "OTHER",
+        transactionType: "LOAN_GIVEN",
+        amount: 5_000,
+        signedAmount: -5_000,
+      }),
+    ];
+    const summary = buildExportSummary([], flatRows);
+    expect(summary.other).toBe(55_000);
+    expect(summary.otherBreakdown).toEqual([
+      {
+        transactionType: "OPENING",
+        label: "Opening balance",
+        amount: 50_000,
+        transactionCount: 1,
+      },
+      {
+        transactionType: "LOAN_GIVEN",
+        label: "Loan given",
+        amount: 5_000,
+        transactionCount: 1,
+      },
+    ]);
+  });
 });
 
 describe("buildCategorySummary", () => {
@@ -118,13 +168,19 @@ describe("buildCategorySummary", () => {
     ];
     const out = buildCategorySummary(filtered, categories([["c1", "Food"]]));
     expect(out).toEqual([
-      { categoryId: "c1", categoryName: "Food", amount: 300 },
+      {
+        categoryId: "c1",
+        categoryName: "Food",
+        amount: 300,
+        share: 100,
+        transactionCount: 2,
+      },
     ]);
   });
 });
 
 describe("buildDailySummary", () => {
-  it("groups by date with income/expense abs sums and unique txn counts", () => {
+  it("groups by date with income/expense abs sums, net, and unique txn counts", () => {
     const flatRows = [
       row({
         transactionId: "a",
@@ -144,10 +200,28 @@ describe("buildDailySummary", () => {
         typeGroup: "EXPENSES",
         amount: 50,
       }),
+      row({
+        transactionId: "d",
+        date: "2026-06-11",
+        typeGroup: "REFUNDS",
+        amount: 20,
+      }),
     ];
     expect(buildDailySummary(flatRows)).toEqual([
-      { date: "2026-06-10", income: 1_000, expense: 100, transactions: 2 },
-      { date: "2026-06-11", income: 0, expense: 50, transactions: 1 },
+      {
+        date: "2026-06-10",
+        income: 1_000,
+        expense: 100,
+        net: 900,
+        transactions: 2,
+      },
+      {
+        date: "2026-06-11",
+        income: 20,
+        expense: 50,
+        net: -30,
+        transactions: 2,
+      },
     ]);
   });
 });

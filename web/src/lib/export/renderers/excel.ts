@@ -100,9 +100,24 @@ function addSummarySheet(
 
   sheet.addRow([]);
   const categoryHeaderRowNumber = sheet.rowCount + 1;
-  sheet.addRow(["Category", "Amount"]);
+  sheet.addRow(["Category", "Amount", "Share %", "Transactions"]);
   for (const row of document.categorySummary) {
-    sheet.addRow([row.categoryName, row.amount]);
+    sheet.addRow([
+      row.categoryName,
+      row.amount,
+      Math.round(row.share),
+      row.transactionCount,
+    ]);
+  }
+
+  if (summary.otherBreakdown.length > 0) {
+    sheet.addRow([]);
+    const otherHeaderRow = sheet.rowCount + 1;
+    sheet.addRow(["Other activity type", "Amount", "Transactions"]);
+    for (const row of summary.otherBreakdown) {
+      sheet.addRow([row.label, row.amount, row.transactionCount]);
+    }
+    sheet.getRow(otherHeaderRow).font = { bold: true };
   }
 
   sheet.getRow(1).font = { bold: true };
@@ -116,18 +131,30 @@ function addAccountsSheet(
   const sheet = workbook.addWorksheet("Accounts");
   sheet.addRow([
     "Account",
-    "Opening balance",
-    "Closing balance",
+    "Opening",
     "Income",
     "Expense",
+    "Transfer in",
+    "Transfer out",
+    "Investments",
+    "Refunds",
+    "Other",
+    "Net change",
+    "Closing",
   ]);
   for (const account of document.accounts) {
     sheet.addRow([
       account.accountName,
       account.openingBalance,
-      account.closingBalance,
       account.income,
       account.expense,
+      account.transferIn,
+      account.transferOut,
+      account.investments,
+      account.refunds,
+      account.other,
+      account.netChange,
+      account.closingBalance,
     ]);
   }
   sheet.getRow(1).font = { bold: true };

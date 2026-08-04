@@ -295,7 +295,7 @@ function SearchableCheckboxList({
           Clear visible
         </button>
       </div>
-      <ul className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-line bg-paper p-2">
+      <ul className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-line bg-paper p-2 sm:max-h-56">
         {filtered.length === 0 ? (
           <li className="px-2 py-1 text-[13px] text-ink-400">No matches</li>
         ) : (
@@ -387,6 +387,8 @@ export function ExportCenterModal({
   );
   const [filenameStem, setFilenameStem] = useState("");
   const [filenameTouched, setFilenameTouched] = useState(false);
+  /** Bumps on each modal open so the default stem gets a fresh timestamp. */
+  const [filenameEpoch, setFilenameEpoch] = useState(0);
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
@@ -423,6 +425,7 @@ export function ExportCenterModal({
     setOptions(defaultOptions(presets.options));
     setSort(presets.sort ?? "newest");
     setFilenameTouched(false);
+    setFilenameEpoch((n) => n + 1);
     setFilenameStem("");
     setValidationMessage(null);
     setErrorMessage(null);
@@ -466,7 +469,8 @@ export function ExportCenterModal({
           generatedAt: new Date(),
         }),
       ),
-    [format, source, resolvedRange],
+    // Fresh Date on each modal open (filenameEpoch) and when format/range change.
+    [format, source, resolvedRange, filenameEpoch],
   );
 
   useEffect(() => {
@@ -654,7 +658,8 @@ export function ExportCenterModal({
       onClose={handleClose}
       dismissible={dismissible}
       labelledBy={titleId}
-      className="flex max-h-[min(90dvh,820px)] max-w-2xl flex-col gap-0 overflow-hidden p-0"
+      size="xl"
+      className="flex max-h-[min(92dvh,880px)] flex-col gap-0 overflow-hidden p-0"
     >
       <header className="sticky top-0 z-10 border-b border-line bg-paper px-6 py-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -830,21 +835,23 @@ export function ExportCenterModal({
               </div>
             </section>
 
-            <SearchableCheckboxList
-              label="Accounts"
-              searchPlaceholder="Search accounts"
-              items={accountList.map((a) => ({ id: a.id, label: a.name }))}
-              selectedIds={selectedAccountIds}
-              onChange={setSelectedAccountIds}
-            />
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <SearchableCheckboxList
+                label="Accounts"
+                searchPlaceholder="Search accounts"
+                items={accountList.map((a) => ({ id: a.id, label: a.name }))}
+                selectedIds={selectedAccountIds}
+                onChange={setSelectedAccountIds}
+              />
 
-            <SearchableCheckboxList
-              label="Categories"
-              searchPlaceholder="Search categories"
-              items={categoryList.map((c) => ({ id: c.id, label: c.name }))}
-              selectedIds={selectedCategoryIds}
-              onChange={setSelectedCategoryIds}
-            />
+              <SearchableCheckboxList
+                label="Categories"
+                searchPlaceholder="Search categories"
+                items={categoryList.map((c) => ({ id: c.id, label: c.name }))}
+                selectedIds={selectedCategoryIds}
+                onChange={setSelectedCategoryIds}
+              />
+            </div>
 
             <SearchableCheckboxList
               label="Payment methods"
@@ -875,6 +882,7 @@ export function ExportCenterModal({
 
             <section className="space-y-4">
               <SectionHeading>Additional options</SectionHeading>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-3 rounded-lg border border-line bg-paper p-4">
                 <p className="text-[12px] font-bold uppercase text-ink-400">
                   Transaction details
@@ -928,6 +936,7 @@ export function ExportCenterModal({
                   </label>
                 ))}
               </div>
+              </div>
             </section>
 
             <section className="space-y-3">
@@ -957,6 +966,8 @@ export function ExportCenterModal({
                 <div className="min-w-0 flex-1">
                   <Input
                     label="File name"
+                    placeholder="report_YYYYMMDD_HHmmss"
+                    hint="Prefills a unique name. Edit anytime before download."
                     value={filenameStem}
                     onChange={(e) => {
                       setFilenameTouched(true);

@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/cn";
+
+const PANEL_SIZE_CLASS = {
+  md: "max-w-[480px]",
+  lg: "max-w-2xl",
+  xl: "max-w-4xl",
+} as const;
 
 type ModalProps = {
   open: boolean;
@@ -12,12 +19,19 @@ type ModalProps = {
   labelledBy?: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Panel width. Use this instead of passing `max-w-*` via `className` —
+   * `cn` does not dedupe Tailwind utilities, so a className max-width would
+   * fight the default `max-w-[480px]`.
+   */
+  size?: keyof typeof PANEL_SIZE_CLASS;
 };
 
 /**
  * Accessible, animated modal: backdrop fade + panel pop on enter, reverse on
  * exit (honoring prefers-reduced-motion via globals.css). Traps focus, restores
  * it on close, and closes on Escape / backdrop click when dismissible.
+ * Portaled to `document.body` so parent stacking contexts cannot bury it.
  */
 export function Modal({
   open,
@@ -26,11 +40,17 @@ export function Modal({
   labelledBy,
   children,
   className,
+  size = "md",
 }: ModalProps) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   // Keep the panel mounted through the exit animation.
   useEffect(() => {
@@ -91,14 +111,14 @@ export function Modal({
     };
   }, [open, dismissible, onClose]);
 
-  if (!mounted) {
+  if (!mounted || !portalReady) {
     return null;
   }
 
-  return (
+  return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-ink-900/45 p-4",
+        "fixed inset-0 z-[var(--z-modal)] grid place-items-center bg-ink-900/45 p-4 sm:p-6",
         closing ? "modal-backdrop-exit" : "modal-backdrop-enter",
       )}
       onClick={() => {
@@ -114,7 +134,8 @@ export function Modal({
         aria-labelledby={labelledBy}
         tabIndex={-1}
         className={cn(
-          "w-full max-w-[480px] rounded-xl border border-line bg-paper p-6 shadow-lg outline-none",
+          "w-full rounded-xl border border-line bg-paper p-6 shadow-lg outline-none",
+          PANEL_SIZE_CLASS[size],
           closing ? "modal-panel-exit" : "modal-panel-enter",
           className,
         )}
@@ -122,6 +143,7 @@ export function Modal({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

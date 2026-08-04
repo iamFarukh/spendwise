@@ -36,17 +36,24 @@ export function initCrashReporting(): void {
     return;
   }
 
+  const sentryDebug = Config.SENTRY_DEBUG?.trim() === 'true';
+
   Sentry.init({
     dsn,
-    debug: __DEV__,
+    // Native Sentry logs benign cache housekeeping (e.g. envelope delete races)
+    // as ERROR when debug is on — React Native surfaces those as red LogBox screens.
+    debug: sentryDebug,
     sendDefaultPii: true,
-    enableLogs: true,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1,
-    integrations: [
-      Sentry.mobileReplayIntegration(),
-      Sentry.feedbackIntegration(),
-    ],
+    // Structured logs + console capture create extra envelopes; keep dev builds quiet.
+    enableLogs: !__DEV__,
+    replaysSessionSampleRate: __DEV__ ? 0 : 0.1,
+    replaysOnErrorSampleRate: __DEV__ ? 0 : 1,
+    integrations: __DEV__
+      ? []
+      : [
+          Sentry.mobileReplayIntegration(),
+          Sentry.feedbackIntegration(),
+        ],
     tracesSampleRate: __DEV__ ? 1.0 : 0.2,
   });
 }

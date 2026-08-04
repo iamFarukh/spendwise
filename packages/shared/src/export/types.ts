@@ -1,4 +1,4 @@
-import type { TransactionStatus } from "../types/transaction";
+import type { TransactionStatus, TransactionType } from "../types/transaction";
 
 export type ExportGroup =
   | "INCOME"
@@ -13,6 +13,8 @@ export type ExportStatementRow = {
   date: string;
   time: string;
   typeGroup: ExportGroup;
+  /** Original ledger type (used for Other Activity breakdown and labels). */
+  transactionType: TransactionType;
   status: TransactionStatus;
   categoryName: string;
   accountId: string;
@@ -38,6 +40,10 @@ export type ExportAccountStatement = {
   expense: number;
   transferIn: number;
   transferOut: number;
+  investments: number;
+  refunds: number;
+  other: number;
+  netChange: number;
   rows: ExportStatementRow[];
 };
 
@@ -118,6 +124,13 @@ export const EXPORT_GROUP_LABELS: Record<ExportGroup, string> = {
   OTHER: "Other Activity",
 };
 
+export type ExportOtherBreakdownRow = {
+  transactionType: TransactionType;
+  label: string;
+  amount: number;
+  transactionCount: number;
+};
+
 export type ExportSummary = {
   income: number;
   expense: number;
@@ -126,6 +139,8 @@ export type ExportSummary = {
   investments: number;
   refunds: number;
   other: number;
+  /** Breakdown of OTHER-group activity by ledger type (e.g. Opening). */
+  otherBreakdown: ExportOtherBreakdownRow[];
   transactionCount: number;
 };
 
@@ -133,12 +148,16 @@ export type ExportCategorySummaryRow = {
   categoryId: string | null;
   categoryName: string;
   amount: number;
+  /** Share of total category spend, 0–100. */
+  share: number;
+  transactionCount: number;
 };
 
 export type ExportDailySummaryRow = {
   date: string;
   income: number;
   expense: number;
+  net: number;
   transactions: number;
 };
 

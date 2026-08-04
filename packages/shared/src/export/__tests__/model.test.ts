@@ -83,6 +83,7 @@ describe("buildExportDocument", () => {
       investments: 0,
       refunds: 0,
       other: 0,
+      otherBreakdown: [],
       transactionCount: 3,
     });
 
@@ -113,6 +114,7 @@ describe("buildExportDocument", () => {
           "investments": 0,
           "net": 4500,
           "other": 0,
+          "otherBreakdown": [],
           "refunds": 0,
           "transactionCount": 3,
           "transfers": 2000,

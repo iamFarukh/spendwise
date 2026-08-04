@@ -5,11 +5,10 @@ import { PDF_THEME } from "./theme";
 import type { ExportAssets } from "../types";
 
 /** Mint “SW” mark as PNG data URL (no external asset required). */
-function spendWiseMarkPngDataUrl(): string {
+function spendWiseMarkPngDataUrl(size = 96): string {
   if (typeof document === "undefined") {
     return "";
   }
-  const size = 64;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -17,43 +16,66 @@ function spendWiseMarkPngDataUrl(): string {
   if (!ctx) {
     return "";
   }
-  const r = 14;
+  const r = Math.round(size * 0.22);
   ctx.fillStyle = PDF_THEME.mint;
   ctx.beginPath();
   ctx.roundRect(0, 0, size, size, r);
   ctx.fill();
   ctx.fillStyle = PDF_THEME.paper;
-  ctx.font = "bold 28px system-ui, sans-serif";
+  ctx.font = `bold ${Math.round(size * 0.42)}px system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("SW", size / 2, size / 2 + 1);
   return canvas.toDataURL("image/png");
 }
 
-let cachedMark: string | null = null;
+const markCache = new Map<number, string>();
 
-function getMarkDataUrl(): string {
-  if (!cachedMark) {
-    cachedMark = spendWiseMarkPngDataUrl();
+function getMarkDataUrl(size: number): string {
+  const cached = markCache.get(size);
+  if (cached) {
+    return cached;
   }
-  return cachedMark;
+  const generated = spendWiseMarkPngDataUrl(size);
+  markCache.set(size, generated);
+  return generated;
 }
 
-/** Header logo: PNG from assets, generated mark, or text fallback. */
-export function pdfLogoContent(assets?: ExportAssets): Content {
-  const png = assets?.logoPng ?? getMarkDataUrl();
+export type PdfLogoSize = "sm" | "md" | "lg" | "xl";
+
+const LOGO_PX: Record<PdfLogoSize, number> = {
+  sm: 38,
+  md: 48,
+  lg: 72,
+  xl: 88,
+};
+
+const LOGO_SRC: Record<PdfLogoSize, number> = {
+  sm: 76,
+  md: 96,
+  lg: 144,
+  xl: 176,
+};
+
+/** Header / cover logo: PNG from assets, generated mark, or text fallback. */
+export function pdfLogoContent(
+  assets?: ExportAssets,
+  size: PdfLogoSize = "sm",
+): Content {
+  const px = LOGO_PX[size];
+  const png = assets?.logoPng ?? getMarkDataUrl(LOGO_SRC[size]);
   if (png) {
     return {
       image: png,
-      width: 28,
-      height: 28,
-      margin: [0, 0, 8, 0],
+      width: px,
+      height: px,
+      margin: [0, 0, 10, 0],
     };
   }
   return {
     text: "SW",
-    style: "logoFallback",
-    margin: [0, 0, 8, 0],
+    style: size === "xl" || size === "lg" ? "logoFallbackLg" : "logoFallback",
+    margin: [0, 0, 10, 0],
   };
 }
 
