@@ -15,9 +15,11 @@ import {
   IconShield,
   IconTrend,
 } from "@/components/icons";
+import { ExportCenterModal } from "@/components/export/export-center-modal";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppLoading } from "@/components/motion/app-loading";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useToast } from "@/components/providers/toast-provider";
 import { SettingsInlineSelect } from "@/components/settings/settings-inline-select";
 import { SettingsProfileCard } from "@/components/settings/settings-profile-card";
 import { SettingsRow } from "@/components/settings/settings-row";
@@ -31,10 +33,14 @@ import { useAllCategories } from "@/hooks/use-all-categories";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useUserSettings } from "@/hooks/use-user-settings";
 import { getFirestoreErrorMessage } from "@/lib/firebase/errors";
+import { downloadBlob } from "@/lib/export/download";
 import {
-  downloadLedgerJson,
-  downloadTransactionsCsv,
-} from "@/lib/reports/export";
+  buildSettingsQuickJsonRequest,
+  exportLocale,
+  settingsExportPresets,
+} from "@/lib/export/presets";
+import { runExport } from "@/lib/export/runner";
+import { downloadLedgerJson } from "@/lib/reports/export";
 import { CURRENCIES, TIMEZONES } from "@/lib/setup/constants";
 import { formatBackupTimestamp } from "@/lib/settings/display";
 import { backupLedger } from "@/lib/settings/backup";
@@ -85,6 +91,7 @@ export default function SettingsPage() {
 
 function SettingsContent() {
   const { user } = useAuth();
+  const toast = useToast();
   const { settings, loading: settingsLoading } = useUserSettings();
   const { accounts, loading: accountsLoading } = useAccounts();
   const { categories, loading: categoriesLoading } = useAllCategories();
@@ -99,6 +106,8 @@ function SettingsContent() {
   const [backingUp, setBackingUp] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [quickJsonBusy, setQuickJsonBusy] = useState(false);
 
   const activeAccounts = useMemo(
     () => accounts.filter((account) => !account.archived),
@@ -161,6 +170,11 @@ function SettingsContent() {
   const email = user?.email ?? "";
   const initial = displayName.charAt(0).toUpperCase();
   const timezone = settings?.timezone ?? DEFAULT_USER_SETTINGS.timezone;
+  const currency = settings?.baseCurrency ?? DEFAULT_USER_SETTINGS.baseCurrency;
+  const preparedFor = user?.displayName ?? user?.email ?? "User";
+  const locale = exportLocale();
+
+  const exportPresets = useMemo(() => settingsExportPresets(), []);
 
   const loading =
     settingsLoading ||
@@ -183,6 +197,37 @@ function SettingsContent() {
       setSaveError(getFirestoreErrorMessage(err, "Could not save settings."));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleQuickJsonExport() {
+    if (!settings) {
+      return;
+    }
+
+    setQuickJsonBusy(true);
+    try {
+      const request = buildSettingsQuickJsonRequest({
+        preparedFor,
+        timezone,
+        currency,
+        locale,
+      });
+      const { blob, filename } = await runExport({
+        request,
+        transactions,
+        accounts,
+        categories,
+        onPhase: () => {},
+      });
+      downloadBlob(filename, blob);
+      toast.success("JSON backup downloaded.");
+    } catch (err) {
+      toast.error(
+        getFirestoreErrorMessage(err, "Could not export JSON backup."),
+      );
+    } finally {
+      setQuickJsonBusy(false);
     }
   }
 
@@ -398,31 +443,19 @@ function SettingsContent() {
 
             <SettingsRow
               title="Export data"
-              description="Download your full ledger as CSV or JSON"
+              description="Download your ledger via Export Center (CSV, Excel, PDF, or JSON)"
             >
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() =>
-                    downloadTransactionsCsv(transactions, accounts, categories)
-                  }
-                >
-                  CSV
+              <div className="flex flex-wrap gap-2">
+                <Button variant="soft" onClick={() => setExportOpen(true)}>
+                  <IconDownload />
+                  Export
                 </Button>
                 <Button
                   variant="ghost"
-                  size="md"
-                  onClick={() =>
-                    downloadLedgerJson({
-                      transactions,
-                      accounts,
-                      categories,
-                      settings: settings ?? null,
-                    })
-                  }
+                  onClick={() => void handleQuickJsonExport()}
+                  disabled={quickJsonBusy}
                 >
-                  JSON
+                  {quickJsonBusy ? "Exporting…" : "Quick JSON"}
                 </Button>
               </div>
             </SettingsRow>
@@ -490,6 +523,20 @@ function SettingsContent() {
           <SettingsSecurityCard />
         </aside>
       </div>
+
+      <ExportCenterModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        source="settings"
+        presets={exportPresets}
+        transactions={transactions}
+        accounts={accounts}
+        categories={categories}
+        preparedFor={preparedFor}
+        timezone={timezone}
+        currency={currency}
+        locale={locale}
+      />
     </AppShell>
   );
 }

@@ -63,8 +63,9 @@
 
   --z-sticky: 30;
   --z-dropdown: 40;
-  --z-modal: 50;
-  --z-toast: 60;
+  /* Modal above sticky chrome; toast stays above modal for in-dialog feedback. */
+  --z-modal: 80;
+  --z-toast: 90;
 
   /* Single source of truth for disabled affordances. */
   --opacity-disabled: 0.55;

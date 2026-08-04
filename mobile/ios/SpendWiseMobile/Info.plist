@@ -32,6 +32,16 @@
 				<string>com.googleusercontent.apps.966953659387-vrdssm2ks1flh7vsel1225ngclai011q</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.spendwisemobile.share</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>spendwise</string>
+			</array>
+		</dict>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

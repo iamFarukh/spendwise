@@ -131,6 +131,11 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // On-device OCR for Share to SpendWise — reads text from shared receipt
+    // images (Google Pay / PhonePe share images, not text). Bundled Latin model
+    // so it works offline with no Play Services model download.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

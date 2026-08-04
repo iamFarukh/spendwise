@@ -43,6 +43,7 @@ const SOURCE_LABELS: Record<TransactionSource, string> = {
   NOTIFICATION: "Notification",
   RECURRING: "Recurring template",
   RECONCILIATION: "Reconciliation",
+  SHARE: "Shared",
 };
 
 export function getTransactionTypeLabel(type: TransactionType): string {

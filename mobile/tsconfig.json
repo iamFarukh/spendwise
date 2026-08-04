@@ -8,5 +8,6 @@
     "strict": true,
     "types": ["react-native"]
   },
-  "include": ["src/**/*", "App.tsx", "index.js"]
+  "include": ["src/**/*", "App.tsx", "index.js"],
+  "exclude": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"]
 }

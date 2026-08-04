@@ -1,0 +1,217 @@
+import type { TransactionStatus, TransactionType } from "../types/transaction";
+
+export type ExportGroup =
+  | "INCOME"
+  | "EXPENSES"
+  | "TRANSFERS"
+  | "INVESTMENTS"
+  | "REFUNDS"
+  | "OTHER";
+
+export type ExportStatementRow = {
+  transactionId: string;
+  date: string;
+  time: string;
+  typeGroup: ExportGroup;
+  /** Original ledger type (used for Other Activity breakdown and labels). */
+  transactionType: TransactionType;
+  status: TransactionStatus;
+  categoryName: string;
+  accountId: string;
+  accountName: string;
+  counterpartyAccountName: string;
+  paymentMethod: string;
+  merchant: string;
+  displayDescription: string;
+  amount: number;
+  signedAmount: number;
+  runningBalance?: number;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExportAccountStatement = {
+  accountId: string;
+  accountName: string;
+  openingBalance: number;
+  closingBalance: number;
+  income: number;
+  expense: number;
+  transferIn: number;
+  transferOut: number;
+  investments: number;
+  refunds: number;
+  other: number;
+  netChange: number;
+  rows: ExportStatementRow[];
+};
+
+export type ExportFormat = "pdf" | "xlsx" | "csv" | "json";
+
+export type ExportSort =
+  | "newest"
+  | "oldest"
+  | "highest_amount"
+  | "lowest_amount";
+
+export type ExportColumnOptions = {
+  runningBalance: boolean;
+  notes: boolean;
+  merchant: boolean;
+  transactionId: boolean;
+  timestamps: boolean;
+};
+
+export type ExportRequest = {
+  exportVersion: 1;
+  format: ExportFormat;
+  source: "transactions" | "reports" | "settings";
+  datePreset: ExportDatePreset;
+  customRange?: { from: string; to: string };
+  groups: ExportGroup[];
+  accountIds: string[] | "all";
+  categoryIds: string[] | "all";
+  paymentMethods: string[] | "all";
+  verifiedOnly: boolean;
+  options: ExportColumnOptions;
+  sort: ExportSort;
+  filenameStem: string;
+  preparedFor: string;
+  timezone: string;
+  currency: string;
+  locale: string;
+};
+
+export type ExportValidationErrorCode =
+  | "INVALID_RANGE"
+  | "NO_ACCOUNTS"
+  | "NO_GROUPS"
+  | "EMPTY_FILENAME"
+  | "UNSUPPORTED_FORMAT"
+  | "UNSUPPORTED_LOCALE"
+  | "NO_MATCHES";
+
+export const SUPPORTED_EXPORT_FORMATS: readonly ExportFormat[] = [
+  "pdf",
+  "xlsx",
+  "csv",
+  "json",
+];
+
+export type ExportDatePreset =
+  | "today"
+  | "yesterday"
+  | "this_week"
+  | "last_week"
+  | "this_month"
+  | "last_month"
+  | "last_3_months"
+  | "last_6_months"
+  | "this_year"
+  | "last_year"
+  | "all_time"
+  | "custom";
+
+export const UNSPECIFIED_PAYMENT_METHOD = "__unspecified__" as const;
+
+export const EXPORT_GROUP_LABELS: Record<ExportGroup, string> = {
+  INCOME: "Income",
+  EXPENSES: "Expenses",
+  TRANSFERS: "Transfers",
+  INVESTMENTS: "Investments",
+  REFUNDS: "Refunds",
+  OTHER: "Other Activity",
+};
+
+export type ExportOtherBreakdownRow = {
+  transactionType: TransactionType;
+  label: string;
+  amount: number;
+  transactionCount: number;
+};
+
+export type ExportSummary = {
+  income: number;
+  expense: number;
+  net: number;
+  transfers: number;
+  investments: number;
+  refunds: number;
+  other: number;
+  /** Breakdown of OTHER-group activity by ledger type (e.g. Opening). */
+  otherBreakdown: ExportOtherBreakdownRow[];
+  transactionCount: number;
+};
+
+export type ExportCategorySummaryRow = {
+  categoryId: string | null;
+  categoryName: string;
+  amount: number;
+  /** Share of total category spend, 0–100. */
+  share: number;
+  transactionCount: number;
+};
+
+export type ExportDailySummaryRow = {
+  date: string;
+  income: number;
+  expense: number;
+  net: number;
+  transactions: number;
+};
+
+export type ExportVisualizations = {
+  incomeExpense: {
+    labels: string[];
+    income: number[];
+    expense: number[];
+  };
+  categoryBreakdown: { label: string; amount: number }[];
+};
+
+export type ExportDateRange = {
+  start: string;
+  end: string;
+};
+
+export type ExportEffectiveSort = ExportSort | "statement_order";
+
+export type ExportDocumentFilters = {
+  range: ExportDateRange;
+  groups: ExportGroup[];
+  accountIds: string[] | "all";
+  categoryIds: string[] | "all";
+  paymentMethods: string[] | "all";
+  verifiedOnly: boolean;
+  options: ExportColumnOptions;
+  sort: ExportSort;
+  effectiveSort: ExportEffectiveSort;
+};
+
+export type ExportDocumentMetadata = {
+  version: 1;
+  locale: string;
+  timezone: string;
+  currency: string;
+  reportId: string;
+  filenameStem: string;
+  preparedFor: string;
+  source: ExportRequest["source"];
+  format: ExportFormat;
+  generatedAt: string;
+  recordCount: number;
+  generationTimeMs: number;
+};
+
+export type ExportDocument = {
+  metadata: ExportDocumentMetadata;
+  filters: ExportDocumentFilters;
+  summary: ExportSummary;
+  visualizations: ExportVisualizations;
+  categorySummary: ExportCategorySummaryRow[];
+  dailySummary: ExportDailySummaryRow[];
+  largestTransactions: ExportStatementRow[];
+  accounts: ExportAccountStatement[];
+  transactions: ExportStatementRow[];
+};

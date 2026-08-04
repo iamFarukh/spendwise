@@ -14,6 +14,7 @@ import {NotificationProvider} from '@/providers/notification-provider';
 import {NotificationRunner} from '@/providers/notification-runner';
 import {PushNotificationProvider} from '@/providers/push-notification-provider';
 import {RecurringRunner} from '@/providers/recurring-runner';
+import {ShareIntakeProvider} from '@/providers/share-intake-provider';
 import {ToastProvider} from '@/providers/toast-provider';
 import {wrapWithSentry} from '@/lib/observability/crash-reporting';
 import {colors} from '@/constants/theme';
@@ -32,11 +33,13 @@ function App() {
                     <ToastProvider>
                     <ActionSheetProvider>
                       <AddSheetProvider>
-                        <PushNotificationProvider>
-                          <RecurringRunner />
-                          <NotificationRunner />
-                          <RootNavigator />
-                        </PushNotificationProvider>
+                        <ShareIntakeProvider>
+                          <PushNotificationProvider>
+                            <RecurringRunner />
+                            <NotificationRunner />
+                            <RootNavigator />
+                          </PushNotificationProvider>
+                        </ShareIntakeProvider>
                       </AddSheetProvider>
                     </ActionSheetProvider>
                     </ToastProvider>

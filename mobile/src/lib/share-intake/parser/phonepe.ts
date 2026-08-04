@@ -1,0 +1,58 @@
+import {extractAmount} from './extract';
+import type {ParsedFields, ParserResult, ParserStrategy} from './types';
+
+const SIGNAL_RE = /\bphonepe\b|transaction id\s*t\d/i;
+const PAYEE_RE = /(?:payment of.*?to|paid to|to)\s+([A-Za-z0-9 &._-]{2,40})/i;
+const REF_RE = /transaction id\s*[:#]?\s*(T?[A-Za-z0-9]{6,})/i;
+const INCOME_RE = /\b(received|credited)\b/i;
+
+export const phonePeParser: ParserStrategy = {
+  name: 'phonePe',
+  version: 1,
+  parse(text: string): ParserResult {
+    if (!SIGNAL_RE.test(text)) {
+      return {
+        parserName: this.name,
+        parserVersion: this.version,
+        score: 0,
+        fieldsFound: [],
+        fields: {},
+      };
+    }
+    const fields: ParsedFields = {};
+    const fieldsFound: ParserResult['fieldsFound'] = [];
+
+    const amount = extractAmount(text);
+    if (amount.amount != null) {
+      fields.amount = amount.amount;
+      fieldsFound.push('amount');
+    }
+    const payee = text.match(PAYEE_RE);
+    if (payee) {
+      fields.merchant = payee[1].split('\n')[0].trim();
+      fieldsFound.push('merchant');
+    }
+    const ref = text.match(REF_RE);
+    if (ref) {
+      fields.txnRef = ref[1];
+      fieldsFound.push('txnRef');
+    }
+    fields.type = INCOME_RE.test(text) ? 'INCOME' : 'EXPENSE';
+
+    // A fallback (OCR-recovered) amount caps the score into "medium" so the
+    // user is prompted to verify before saving.
+    const core = (fields.amount != null ? 1 : 0) + (fields.merchant ? 1 : 0);
+    let score = Math.min(100, 60 + core * 15 + (fields.txnRef ? 5 : 0));
+    if (amount.fallback) {
+      score = Math.min(score, 72);
+    }
+
+    return {
+      parserName: this.name,
+      parserVersion: this.version,
+      score,
+      fieldsFound,
+      fields,
+    };
+  },
+};

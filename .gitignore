@@ -48,3 +48,6 @@ mobile/ios/build/
 mobile/ios/Pods/
 mobile/.env
 mobile/.env.ios
+
+# Local git worktrees
+.worktrees/

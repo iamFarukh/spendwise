@@ -11,8 +11,10 @@ import {
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { RequireSetupComplete } from "@/components/auth/require-setup-complete";
-import { IconPlus, IconSearch } from "@/components/icons";
+import { ExportCenterModal } from "@/components/export/export-center-modal";
+import { IconDownload, IconPlus } from "@/components/icons";
 import { TransactionDetailPanel } from "@/components/transactions/transaction-detail-panel";
+import { TransactionFilterBar } from "@/components/transactions/transaction-filter-bar";
 import { TransactionTypeIcon } from "@/components/transactions/transaction-type-icon";
 import { useToast } from "@/components/providers/toast-provider";
 import { AppShell } from "@/components/layout/app-shell";
@@ -20,7 +22,6 @@ import { AppLoading } from "@/components/motion/app-loading";
 import { StaggerItem } from "@/components/motion/stagger";
 import { TabCrossfade } from "@/components/motion/tab-crossfade";
 import { EmptyState, EmptyStateAction } from "@/components/ui/empty-state";
-import { FilterChip } from "@/components/ui/filter-chip";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
@@ -45,17 +46,11 @@ import {
   type TransactionTypeFilter,
 } from "@/lib/transactions/filter";
 import { deleteTransaction, verifyTransaction } from "@/lib/transactions/service";
+import {
+  exportLocale,
+  transactionsExportPresets,
+} from "@/lib/export/presets";
 import { cn } from "@/lib/cn";
-
-const TYPE_FILTERS: { id: TransactionTypeFilter; label: string }[] = [
-  { id: "ALL", label: "All" },
-  { id: "EXPENSE", label: "Expense" },
-  { id: "INCOME", label: "Income" },
-  { id: "TRANSFER", label: "Transfer" },
-  { id: "INVESTMENT", label: "Investment" },
-  { id: "REFUND", label: "Refund" },
-  { id: "BILL_PAYMENT", label: "Bill payment" },
-];
 
 export default function TransactionsPage() {
   return (
@@ -86,11 +81,13 @@ function TransactionsContent() {
   const toast = useToast();
   const [monthYear, setMonthYear] = useState(initialMonth);
   const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("ALL");
+  const [accountFilter, setAccountFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   // Seed the search box from the global header search (/transactions?q=…).
   useEffect(() => {
@@ -106,6 +103,21 @@ function TransactionsContent() {
     monthYear.month,
   );
 
+  const activeAccounts = useMemo(
+    () => accounts.filter((account) => !account.archived),
+    [accounts],
+  );
+
+  // Drop a stale account selection if that account was archived/removed.
+  useEffect(() => {
+    if (
+      accountFilter &&
+      !activeAccounts.some((account) => account.id === accountFilter)
+    ) {
+      setAccountFilter(null);
+    }
+  }, [accountFilter, activeAccounts]);
+
   const accountsById = useMemo(
     () => new Map(accounts.map((a) => [a.id, a])),
     [accounts],
@@ -119,6 +131,7 @@ function TransactionsContent() {
     () =>
       filterTransactions(transactions, {
         typeFilter,
+        accountId: accountFilter,
         monthStart: monthWindow.start,
         monthEnd: monthWindow.end,
         search,
@@ -126,6 +139,7 @@ function TransactionsContent() {
     [
       transactions,
       typeFilter,
+      accountFilter,
       monthWindow.end,
       monthWindow.start,
       search,
@@ -141,6 +155,31 @@ function TransactionsContent() {
   // first visible transaction, so no syncing effect is needed.
   const selected =
     filtered.find((txn) => txn.id === selectedId) ?? filtered[0] ?? null;
+
+  const isCurrentCalendarMonth =
+    monthYear.year === initialMonth.year &&
+    monthYear.month === initialMonth.month;
+
+  const exportPresets = useMemo(
+    () =>
+      transactionsExportPresets({
+        typeFilter,
+        accountId: accountFilter,
+        monthStart: monthWindow.start,
+        monthEnd: monthWindow.end,
+        isCurrentCalendarMonth,
+      }),
+    [
+      typeFilter,
+      accountFilter,
+      monthWindow.end,
+      monthWindow.start,
+      isCurrentCalendarMonth,
+    ],
+  );
+
+  const preparedFor = user?.displayName ?? user?.email ?? "User";
+  const locale = exportLocale();
 
   const loading =
     settingsLoading || accountsLoading || categoriesLoading || transactionsLoading;
@@ -215,63 +254,39 @@ function TransactionsContent() {
       subtitle={`${filtered.length} entries · ${monthWindow.label}`}
       showSearch={false}
       headerActions={
-        <Link href="/transactions/new">
-          <Button>
-            <IconPlus />
-            Add
+        <>
+          <Button variant="ghost" onClick={() => setExportOpen(true)}>
+            <IconDownload />
+            Download
           </Button>
-        </Link>
+          <Link href="/transactions/new">
+            <Button>
+              <IconPlus />
+              Add
+            </Button>
+          </Link>
+        </>
       }
     >
       <div className="flex flex-col gap-5 xl:-m-8 xl:h-[calc(100dvh-72px-4rem)] xl:overflow-hidden xl:p-8">
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex min-h-0 min-w-0 flex-col gap-4">
             <div className="shrink-0">
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                {TYPE_FILTERS.map((filter) => (
-                  <FilterChip
-                    key={filter.id}
-                    label={filter.label}
-                    active={typeFilter === filter.id}
-                    onClick={() => setTypeFilter(filter.id)}
-                  />
-                ))}
-
-                <span className="flex-1" />
-
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(-1)}
-                  className="rounded-pill border border-line bg-paper px-3 py-1.5 text-[13px] font-bold text-ink-600 hover:bg-tint"
-                >
-                  ←
-                </button>
-                <span className="rounded-pill border border-line bg-paper px-3.5 py-1.5 text-[13px] font-bold text-ink-600">
-                  {monthWindow.label}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(1)}
-                  className="rounded-pill border border-line bg-paper px-3 py-1.5 text-[13px] font-bold text-ink-600 hover:bg-tint"
-                >
-                  →
-                </button>
-              </div>
-
-              <div className="mb-4 flex h-10 max-w-sm items-center gap-2 rounded-pill border border-line bg-canvas px-3.5 text-[13px] font-semibold text-ink-400">
-                <IconSearch />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search merchant or note"
-                  className="w-full border-none bg-transparent text-ink-900 outline-none placeholder:font-medium placeholder:text-ink-400"
-                />
-              </div>
+              <TransactionFilterBar
+                typeFilter={typeFilter}
+                onTypeFilterChange={setTypeFilter}
+                accountFilter={accountFilter}
+                onAccountFilterChange={setAccountFilter}
+                accounts={activeAccounts}
+                search={search}
+                onSearchChange={setSearch}
+                monthLabel={monthWindow.label}
+                onShiftMonth={shiftMonth}
+              />
 
               {error ? (
                 <p
-                  className="rounded-md border border-expense/30 bg-expense-bg px-4 py-3 text-sm font-semibold text-expense"
+                  className="mt-4 rounded-md border border-expense/30 bg-expense-bg px-4 py-3 text-sm font-semibold text-expense"
                   role="alert"
                 >
                   {error}
@@ -281,14 +296,14 @@ function TransactionsContent() {
 
             <div className="min-h-0 flex-1 xl:overflow-y-auto">
               <TabCrossfade
-                panelKey={`${monthWindow.start}-${typeFilter}-${search}`}
+                panelKey={`${monthWindow.start}-${typeFilter}-${accountFilter ?? "all"}-${search}`}
               >
                 <div className="overflow-hidden rounded-lg border border-line bg-paper">
                   {filtered.length === 0 ? (
                     <EmptyState
                       animation="receipt-search"
                       title="No transactions found"
-                      description="Nothing matches these filters. Try a different month or type — or add one now."
+                      description="Nothing matches these filters. Try a different month, type, or account — or add one now."
                       action={
                         <EmptyStateAction href="/transactions/new">
                           Add a transaction
@@ -343,6 +358,20 @@ function TransactionsContent() {
           </div>
         </div>
       </div>
+
+      <ExportCenterModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        source="transactions"
+        presets={exportPresets}
+        transactions={transactions}
+        accounts={accounts}
+        categories={categories}
+        preparedFor={preparedFor}
+        timezone={timezone}
+        currency={currency}
+        locale={locale}
+      />
     </AppShell>
   );
 }

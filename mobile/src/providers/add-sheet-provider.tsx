@@ -12,12 +12,14 @@ import {
   QuickAddSheet,
   type QuickAddInitialType,
 } from '@/components/transactions/quick-add-sheet';
+import type {ShareDraft} from '@/lib/share-intake/types';
 import {useAuth} from '@/providers/auth-provider';
 
 export type AddSheetOpenOptions = {
   editTxn?: Transaction | null;
   initialType?: QuickAddInitialType;
   prefillFrom?: Transaction | null;
+  shareDraft?: ShareDraft | null;
 };
 
 type AddSheetContextValue = {
@@ -62,12 +64,14 @@ export function AddSheetProvider({children}: {children: ReactNode}) {
   const [editTxn, setEditTxn] = useState<Transaction | null>(null);
   const [initialType, setInitialType] = useState<QuickAddInitialType | undefined>();
   const [prefillFrom, setPrefillFrom] = useState<Transaction | null>(null);
+  const [shareDraft, setShareDraft] = useState<ShareDraft | null>(null);
 
   const open = useCallback((arg?: Transaction | AddSheetOpenOptions | null) => {
     const options = normalizeOpenOptions(arg);
     setEditTxn(options.editTxn ?? null);
     setInitialType(options.initialType);
     setPrefillFrom(options.prefillFrom ?? null);
+    setShareDraft(options.shareDraft ?? null);
     setVisible(true);
   }, []);
   const close = useCallback(() => {
@@ -75,6 +79,7 @@ export function AddSheetProvider({children}: {children: ReactNode}) {
     setEditTxn(null);
     setInitialType(undefined);
     setPrefillFrom(null);
+    setShareDraft(null);
   }, []);
 
   const value = useMemo(() => ({open, close}), [open, close]);
@@ -90,6 +95,7 @@ export function AddSheetProvider({children}: {children: ReactNode}) {
           editTxn={editTxn}
           initialType={initialType}
           prefillFrom={prefillFrom}
+          shareDraft={shareDraft}
         />
       ) : null}
     </AddSheetContext.Provider>
