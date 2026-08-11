@@ -16,6 +16,7 @@ import {
   IconPlus,
   IconRepeat,
   IconSearch,
+  IconTrend,
   IconWallet,
 } from "@/components/icons";
 import { PageEnter } from "@/components/motion/page-enter";
@@ -41,6 +42,7 @@ const overviewNav: NavItem[] = [
 
 const manageNavBase: Omit<NavItem, "badge">[] = [
   { href: "/recurring", label: "Recurring", icon: <IconRepeat /> },
+  { href: "/sip", label: "SIPs", icon: <IconTrend /> },
   { href: "/subscriptions", label: "Subscriptions", icon: <IconCard /> },
   { href: "/reports", label: "Reports", icon: <IconChart /> },
   { href: "/pending", label: "Pending", icon: <IconClock /> },
